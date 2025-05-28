@@ -1,2 +1,188 @@
-export {}
-console.log("HELLO WORLD FROM BGSCRIPTS")
+import { exportTable, validateTableData, cleanTableData } from './lib/export';
+import { getUserSettings, getUserSubscription, saveLastExportTime } from './lib/storage';
+import type { ChromeMessage, TableData, ExportOptions, ExportResult } from './types';
+
+// Обработчик сообщений от content scripts
+chrome.runtime.onMessage.addListener((
+  message: ChromeMessage,
+  sender,
+  sendResponse
+) => {
+  console.log('Background: Received message', message.type);
+
+  switch (message.type) {
+    case 'EXPORT_TABLE':
+      handleTableExport(message.payload, sendResponse);
+      return true; // Указывает, что ответ будет асинхронным
+
+    case 'GET_SETTINGS':
+      handleGetSettings(sendResponse);
+      return true;
+
+    case 'UPDATE_SETTINGS':
+      handleUpdateSettings(message.payload, sendResponse);
+      return true;
+
+    case 'CHECK_SUBSCRIPTION':
+      handleCheckSubscription(sendResponse);
+      return true;
+
+    default:
+      sendResponse({ error: 'Unknown message type' });
+      return false;
+  }
+});
+
+// Обработка экспорта таблицы
+const handleTableExport = async (
+  payload: { tableData: TableData; options: ExportOptions },
+  sendResponse: (response: any) => void
+): Promise<void> => {
+  try {
+    const { tableData, options } = payload;
+
+    // Валидация данных таблицы
+    if (!validateTableData(tableData)) {
+      sendResponse({
+        success: false,
+        error: 'Invalid table data',
+      });
+      return;
+    }
+
+    // Проверка подписки пользователя
+    const subscription = await getUserSubscription();
+    if (subscription && subscription.planType === 'free') {
+      if (subscription.exportsUsed >= subscription.exportsLimit) {
+        sendResponse({
+          success: false,
+          error: 'Export limit reached. Please upgrade to Pro.',
+        });
+        return;
+      }
+    }
+
+    // Очистка данных таблицы
+    const cleanedTableData = cleanTableData(tableData);
+
+    // Экспорт таблицы
+    const result: ExportResult = await exportTable(cleanedTableData, options);
+
+    if (result.success && result.downloadUrl) {
+      // Скачивание файла через Chrome Downloads API
+      const downloadId = await chrome.downloads.download({
+        url: result.downloadUrl,
+        filename: result.filename,
+        saveAs: false,
+      });
+
+      // Сохранение времени последнего экспорта
+      await saveLastExportTime();
+
+      // Обновление счетчика экспортов для Free пользователей
+      if (subscription && subscription.planType === 'free') {
+        // TODO: Обновить счетчик в Supabase
+      }
+
+      sendResponse({
+        success: true,
+        filename: result.filename,
+        downloadId,
+      });
+
+      // Показ уведомления
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icon-48.png',
+        title: 'TabXport',
+        message: `Table exported as ${result.filename}`,
+      });
+    } else {
+      sendResponse({
+        success: false,
+        error: result.error || 'Export failed',
+      });
+    }
+  } catch (error) {
+    console.error('Export error:', error);
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+// Получение настроек пользователя
+const handleGetSettings = async (sendResponse: (response: any) => void): Promise<void> => {
+  try {
+    const settings = await getUserSettings();
+    sendResponse({ success: true, settings });
+  } catch (error) {
+    console.error('Get settings error:', error);
+    sendResponse({
+      success: false,
+      error: 'Failed to get settings',
+    });
+  }
+};
+
+// Обновление настроек пользователя
+const handleUpdateSettings = async (
+  payload: any,
+  sendResponse: (response: any) => void
+): Promise<void> => {
+  try {
+    // TODO: Implement settings update
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error('Update settings error:', error);
+    sendResponse({
+      success: false,
+      error: 'Failed to update settings',
+    });
+  }
+};
+
+// Проверка подписки пользователя
+const handleCheckSubscription = async (sendResponse: (response: any) => void): Promise<void> => {
+  try {
+    const subscription = await getUserSubscription();
+    sendResponse({ success: true, subscription });
+  } catch (error) {
+    console.error('Check subscription error:', error);
+    sendResponse({
+      success: false,
+      error: 'Failed to check subscription',
+    });
+  }
+};
+
+// Обработчик установки расширения
+chrome.runtime.onInstalled.addListener((details) => {
+  console.log('TabXport: Extension installed', details.reason);
+  
+  if (details.reason === 'install') {
+    // Показ welcome уведомления
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'assets/icon-48.png',
+      title: 'TabXport Installed!',
+      message: 'Start exporting tables from AI chats to Excel/CSV',
+    });
+  }
+});
+
+// Обработчик ошибок скачивания
+chrome.downloads.onChanged.addListener((downloadDelta) => {
+  if (downloadDelta.error) {
+    console.error('Download error:', downloadDelta.error);
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'assets/icon-48.png',
+      title: 'TabXport Error',
+      message: 'Failed to download exported file',
+    });
+  }
+});
+
+console.log('TabXport: Background script loaded');

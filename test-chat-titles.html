@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Market Analysis Dashboard - Q4 2024</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+    
+    .header p {
+      margin: 10px 0 0 0;
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    
+    .section {
+      padding: 30px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .section:last-child {
+      border-bottom: none;
+    }
+    
+    .section h2 {
+      margin: 0 0 20px 0;
+      color: #1f2937;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .description {
+      background: #f3f4f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      color: #374151;
+      line-height: 1.6;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+      text-transform: uppercase;
+      font-size: 0.875rem;
+      letter-spacing: 0.05em;
+    }
+    
+    tr:hover {
+      background: #f9fafb;
+    }
+    
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .status-excellent { background: #d1fae5; color: #065f46; }
+    .status-good { background: #dbeafe; color: #1e40af; }
+    .status-fair { background: #fef3c7; color: #92400e; }
+    .status-poor { background: #fee2e2; color: #991b1b; }
+    
+    .metric-positive { color: #059669; font-weight: 600; }
+    .metric-negative { color: #dc2626; font-weight: 600; }
+    .metric-neutral { color: #6b7280; font-weight: 600; }
+    
+    .chat-title-simulation {
+      background: #ecfccb;
+      border: 2px solid #a3e635;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .chat-title-simulation h3 {
+      margin: 0 0 10px 0;
+      color: #365314;
+    }
+    
+    .chat-title-simulation p {
+      margin: 0;
+      color: #4d7c0f;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🧪 Chat Title Extraction Test</h1>
+      <p>Testing intelligent filename generation from chat titles</p>
+    </div>
+    
+    <div class="section">
+      <div class="chat-title-simulation">
+        <h3>🎯 Test Scenario: "Market Analysis Dashboard - Q4 2024"</h3>
+        <p>
+          This page simulates a chat titled "Market Analysis Dashboard - Q4 2024".
+          When you export tables from this page, the files should be named like:
+          <strong>Market_Analysis_Dashboard_-_Q4_2024_Table_2025-01-28T...</strong>
+        </p>
+      </div>
+      
+      <h2>📊 Sales Performance by Region (Q4 2024)</h2>
+      <div class="description">
+        Regional sales data showing performance metrics across different territories.
+        This table should export with a meaningful filename based on the chat title.
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Region</th>
+            <th>Revenue ($M)</th>
+            <th>Growth (%)</th>
+            <th>Customers</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>North America</td>
+            <td class="metric-positive">$245.8</td>
+            <td class="metric-positive">+12.3%</td>
+            <td>15,432</td>
+            <td><span class="status-badge status-excellent">Excellent</span></td>
+          </tr>
+          <tr>
+            <td>Europe</td>
+            <td class="metric-positive">$189.2</td>
+            <td class="metric-positive">+8.7%</td>
+            <td>12,108</td>
+            <td><span class="status-badge status-good">Good</span></td>
+          </tr>
+          <tr>
+            <td>Asia Pacific</td>
+            <td class="metric-positive">$156.4</td>
+            <td class="metric-positive">+15.2%</td>
+            <td>9,876</td>
+            <td><span class="status-badge status-excellent">Excellent</span></td>
+          </tr>
+          <tr>
+            <td>Latin America</td>
+            <td class="metric-neutral">$78.9</td>
+            <td class="metric-positive">+5.1%</td>
+            <td>4,521</td>
+            <td><span class="status-badge status-fair">Fair</span></td>
+          </tr>
+          <tr>
+            <td>Africa</td>
+            <td class="metric-neutral">$34.2</td>
+            <td class="metric-negative">-2.4%</td>
+            <td>1,987</td>
+            <td><span class="status-badge status-poor">Poor</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>💰 Product Performance Matrix</h2>
+      <div class="description">
+        Detailed breakdown of product performance metrics for strategic planning.
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Product Line</th>
+            <th>Units Sold</th>
+            <th>Revenue Share</th>
+            <th>Profit Margin</th>
+            <th>Market Position</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Premium Software</td>
+            <td>23,456</td>
+            <td class="metric-positive">42.3%</td>
+            <td class="metric-positive">68.2%</td>
+            <td><span class="status-badge status-excellent">Leader</span></td>
+          </tr>
+          <tr>
+            <td>Enterprise Solutions</td>
+            <td>8,902</td>
+            <td class="metric-positive">31.7%</td>
+            <td class="metric-positive">71.5%</td>
+            <td><span class="status-badge status-excellent">Leader</span></td>
+          </tr>
+          <tr>
+            <td>Mobile Apps</td>
+            <td>45,621</td>
+            <td class="metric-neutral">18.9%</td>
+            <td class="metric-neutral">34.1%</td>
+            <td><span class="status-badge status-good">Challenger</span></td>
+          </tr>
+          <tr>
+            <td>Cloud Services</td>
+            <td>12,087</td>
+            <td class="metric-neutral">7.1%</td>
+            <td class="metric-positive">58.7%</td>
+            <td><span class="status-badge status-fair">Follower</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>📈 Quarterly Comparison</h2>
+      <div class="description">
+        Quarter-over-quarter comparison showing business growth trends and seasonal patterns.
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Quarter</th>
+            <th>Total Revenue</th>
+            <th>Operating Costs</th>
+            <th>Net Profit</th>
+            <th>ROI</th>
+            <th>Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Q1 2024</td>
+            <td>$167.3M</td>
+            <td>$98.4M</td>
+            <td class="metric-positive">$68.9M</td>
+            <td class="metric-positive">41.2%</td>
+            <td><span class="status-badge status-good">↗ Growing</span></td>
+          </tr>
+          <tr>
+            <td>Q2 2024</td>
+            <td>$192.7M</td>
+            <td>$109.2M</td>
+            <td class="metric-positive">$83.5M</td>
+            <td class="metric-positive">43.3%</td>
+            <td><span class="status-badge status-excellent">↗ Accelerating</span></td>
+          </tr>
+          <tr>
+            <td>Q3 2024</td>
+            <td>$201.8M</td>
+            <td>$115.6M</td>
+            <td class="metric-positive">$86.2M</td>
+            <td class="metric-positive">42.7%</td>
+            <td><span class="status-badge status-good">↗ Steady</span></td>
+          </tr>
+          <tr>
+            <td>Q4 2024</td>
+            <td>$234.1M</td>
+            <td>$127.8M</td>
+            <td class="metric-positive">$106.3M</td>
+            <td class="metric-positive">45.4%</td>
+            <td><span class="status-badge status-excellent">🚀 Peak</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>🎯 Testing Instructions</h2>
+      <div class="description">
+        <h3>How to Test Chat Title Extraction:</h3>
+        <ol>
+          <li><strong>Load Extension:</strong> Make sure TabXport extension is loaded and active</li>
+          <li><strong>Look for Export Buttons:</strong> You should see small "Export" buttons next to each table</li>
+          <li><strong>Export Tables:</strong> Click the export buttons to download tables</li>
+          <li><strong>Check Filenames:</strong> Downloaded files should be named like:<br>
+              <code>Market_Analysis_Dashboard_-_Q4_2024_Table_2025-01-28T...</code>
+          </li>
+          <li><strong>Verify Functionality:</strong> The chat title "Market Analysis Dashboard - Q4 2024" from the page title should be extracted and used in the filename</li>
+        </ol>
+        
+        <h3>Expected Behavior:</h3>
+        <ul>
+          <li>✅ Chat title extracted from page title</li>
+          <li>✅ Special characters cleaned (spaces → underscores)</li>
+          <li>✅ Length limited for file system compatibility</li>
+          <li>✅ Timestamp added for uniqueness</li>
+          <li>✅ File extension based on selected format</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Simulate different chat platforms by adding some elements they might have
+    const nav = document.createElement('nav');
+    nav.innerHTML = '<div class="active-chat">Market Analysis Dashboard - Q4 2024</div>';
+    document.body.prepend(nav);
+    
+    // Add some conversation-like elements for more realistic testing
+    const conversation = document.createElement('div');
+    conversation.className = 'conversation-title';
+    conversation.textContent = 'Market Analysis Dashboard - Q4 2024';
+    conversation.style.display = 'none';
+    document.body.appendChild(conversation);
+    
+    console.log('Chat Title Test Page loaded - Page title:', document.title);
+  </script>
+</body>
+</html> 

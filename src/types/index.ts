@@ -4,9 +4,10 @@ export interface TableData {
   id: string;
   headers: string[];
   rows: string[][];
-  source: 'chatgpt' | 'claude' | 'gemini' | 'other';
+  source: 'chatgpt' | 'claude' | 'gemini' | 'deepseek' | 'other';
   timestamp: number;
   url: string;
+  chatTitle?: string; // Название чата для генерации имени файла
 }
 
 export interface ExportOptions {

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Platform Title Test - Data Science Project Analysis</title>
+  <meta name="title" content="Data Science Project Analysis">
+  <meta property="og:title" content="Data Science Project Analysis - AI Chat">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    
+    .platform-test {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      background: white;
+    }
+    
+    .platform-test h2 {
+      margin: 0 0 15px 0;
+      color: #1f2937;
+      font-size: 1.25rem;
+    }
+    
+    .claude-structure {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+    
+    .deepseek-structure {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+    
+    .chatgpt-structure {
+      border-color: #10b981;
+      background: #ecfdf5;
+    }
+    
+    .gemini-structure {
+      border-color: #8b5cf6;
+      background: #f3e8ff;
+    }
+    
+    /* Claude-like elements */
+    .sidebar {
+      display: none; /* Hidden but accessible via JS */
+    }
+    
+    .sidebar .active {
+      background: #f3f4f6;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+    
+    .conversation-title {
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    /* DeepSeek-like elements */
+    .chat-list .selected {
+      background: #dbeafe;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+    
+    .chat-title {
+      font-weight: 600;
+      color: #1e40af;
+    }
+    
+    /* Shared elements */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+    
+    .user-message {
+      background: #f3f4f6;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 4px solid #3b82f6;
+    }
+    
+    .assistant-message {
+      background: #f9fafb;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border-left: 4px solid #10b981;
+    }
+    
+    .test-info {
+      background: #ecfccb;
+      border: 1px solid #a3e635;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Platform Title Extraction Test</h1>
+  <p>This page simulates different AI platform structures to test title extraction functionality.</p>
+  
+  <!-- Claude Structure Test -->
+  <div class="platform-test claude-structure">
+    <h2>🟡 Claude Structure Test</h2>
+    <div class="test-info">
+      Expected title: "Data Science Project Analysis" (from page title or sidebar)
+    </div>
+    
+    <!-- Hidden sidebar that mimics Claude -->
+    <div class="sidebar" style="display: none;">
+      <div class="active conversation-title">Data Science Project Analysis</div>
+      <div>Previous conversation</div>
+      <div>Another chat</div>
+    </div>
+    
+    <!-- Visible elements that might contain title -->
+    <div data-testid="conversation-title">Data Science Project Analysis</div>
+    <header>
+      <h1>Data Science Project Analysis</h1>
+    </header>
+    
+    <div class="user-message" data-testid="user-message">
+      Can you create a table comparing different machine learning algorithms?
+    </div>
+    
+    <div class="assistant-message">
+      <table>
+        <thead>
+          <tr>
+            <th>Algorithm</th>
+            <th>Type</th>
+            <th>Use Case</th>
+            <th>Accuracy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Random Forest</td>
+            <td>Ensemble</td>
+            <td>Classification/Regression</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>SVM</td>
+            <td>Linear</td>
+            <td>Classification</td>
+            <td>Medium-High</td>
+          </tr>
+          <tr>
+            <td>Neural Network</td>
+            <td>Deep Learning</td>
+            <td>Complex Patterns</td>
+            <td>Very High</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- DeepSeek Structure Test -->
+  <div class="platform-test deepseek-structure">
+    <h2>🔵 DeepSeek Structure Test</h2>
+    <div class="test-info">
+      Expected title: "Data Science Project Analysis" (from sidebar or interface)
+    </div>
+    
+    <!-- Hidden sidebar elements -->
+    <div class="chat-list" style="display: none;">
+      <div class="selected chat-title">Data Science Project Analysis</div>
+      <div class="chat-item">Other conversation</div>
+    </div>
+    
+    <!-- Visible interface elements -->
+    <div class="conversation-title">Data Science Project Analysis</div>
+    <div class="chat-header">
+      <h2>Data Science Project Analysis</h2>
+    </div>
+    
+    <div class="user-message">
+      Show me a comparison of data preprocessing techniques
+    </div>
+    
+    <div class="assistant-message">
+      <table>
+        <thead>
+          <tr>
+            <th>Technique</th>
+            <th>Purpose</th>
+            <th>When to Use</th>
+            <th>Impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Normalization</td>
+            <td>Scale features</td>
+            <td>Different scales</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>Encoding</td>
+            <td>Convert categorical</td>
+            <td>Non-numeric data</td>
+            <td>Essential</td>
+          </tr>
+          <tr>
+            <td>Imputation</td>
+            <td>Handle missing values</td>
+            <td>Incomplete data</td>
+            <td>Medium</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- ChatGPT Structure Test -->
+  <div class="platform-test chatgpt-structure">
+    <h2>🟢 ChatGPT Structure Test</h2>
+    <div class="test-info">
+      Expected title: "Data Science Project Analysis" (from navigation or page title)
+    </div>
+    
+    <!-- Hidden navigation -->
+    <nav style="display: none;">
+      <div class="bg-gray-800 active-chat">Data Science Project Analysis</div>
+      <div aria-current="page">Data Science Project Analysis</div>
+    </nav>
+    
+    <div class="user-message" data-message-author-role="user">
+      Create a table of different data visualization tools
+    </div>
+    
+    <div class="assistant-message" data-message-author-role="assistant">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Type</th>
+            <th>Best For</th>
+            <th>Learning Curve</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tableau</td>
+            <td>Commercial</td>
+            <td>Business Intelligence</td>
+            <td>Medium</td>
+          </tr>
+          <tr>
+            <td>Matplotlib</td>
+            <td>Python Library</td>
+            <td>Scientific Plots</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>D3.js</td>
+            <td>JavaScript Library</td>
+            <td>Interactive Web Viz</td>
+            <td>Very High</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Gemini Structure Test -->
+  <div class="platform-test gemini-structure">
+    <h2>🟣 Gemini Structure Test</h2>
+    <div class="test-info">
+      Expected title: "Data Science Project Analysis" (from page title or first message)
+    </div>
+    
+    <div data-testid="conversation-title">Data Science Project Analysis</div>
+    
+    <div class="user-message">
+      Can you show me a comparison of different database types for data science?
+    </div>
+    
+    <div class="assistant-message" data-response-id="response1">
+      <table>
+        <thead>
+          <tr>
+            <th>Database Type</th>
+            <th>Use Case</th>
+            <th>Performance</th>
+            <th>Scalability</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PostgreSQL</td>
+            <td>Relational Data</td>
+            <td>High</td>
+            <td>Good</td>
+          </tr>
+          <tr>
+            <td>MongoDB</td>
+            <td>Document Storage</td>
+            <td>High</td>
+            <td>Excellent</td>
+          </tr>
+          <tr>
+            <td>Redis</td>
+            <td>Caching</td>
+            <td>Very High</td>
+            <td>Good</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Universal Fallback Test -->
+  <div class="platform-test">
+    <h2>🌐 Universal Fallback Test</h2>
+    <div class="test-info">
+      Expected title: Content from first user message (fallback strategy)
+    </div>
+    
+    <div role="user">
+      Analyze the performance metrics for our machine learning models
+    </div>
+    
+    <div class="assistant-message">
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1-Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Model A</td>
+            <td>0.85</td>
+            <td>0.82</td>
+            <td>0.84</td>
+          </tr>
+          <tr>
+            <td>Model B</td>
+            <td>0.78</td>
+            <td>0.91</td>
+            <td>0.84</td>
+          </tr>
+          <tr>
+            <td>Model C</td>
+            <td>0.92</td>
+            <td>0.75</td>
+            <td>0.83</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    // Simulate platform-specific elements being added dynamically
+    document.addEventListener('DOMContentLoaded', () => {
+      // Add Claude-like sidebar
+      const claudeSidebar = document.createElement('aside');
+      claudeSidebar.innerHTML = `
+        <div data-testid="chat-list">
+          <button data-testid="chat-item" aria-current="page">Data Science Project Analysis</button>
+          <button data-testid="chat-item">Previous Chat</button>
+        </div>
+      `;
+      claudeSidebar.style.display = 'none';
+      document.body.appendChild(claudeSidebar);
+      
+      // Add DeepSeek-like elements
+      const deepseekNav = document.createElement('div');
+      deepseekNav.className = 'sidebar-chat-item active';
+      deepseekNav.textContent = 'Data Science Project Analysis';
+      deepseekNav.style.display = 'none';
+      document.body.appendChild(deepseekNav);
+      
+      // Simulate localStorage for DeepSeek
+      try {
+        localStorage.setItem('currentChatTitle', 'Data Science Project Analysis');
+      } catch (e) {
+        console.log('Cannot set localStorage in test environment');
+      }
+      
+      console.log('Platform test page loaded');
+      console.log('Page title:', document.title);
+      console.log('Expected extraction: "Data Science Project Analysis"');
+    });
+  </script>
+</body>
+</html> 

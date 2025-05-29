@@ -14,6 +14,17 @@ export const generateFilename = (
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
   const source = tableData.source.charAt(0).toUpperCase() + tableData.source.slice(1);
   
+  // Используем название чата если доступно, иначе используем стандартное имя
+  if (tableData.chatTitle && tableData.chatTitle !== `${source}_Chat`) {
+    // Очищаем название чата от недопустимых символов (дополнительная очистка)
+    const cleanChatTitle = tableData.chatTitle
+      .replace(/[<>:"/\\|?*]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 40); // Ограничиваем длину для имени файла
+    
+    return `${cleanChatTitle}_Table_${timestamp}.${format}`;
+  }
+  
   return `${source}_Table_${timestamp}.${format}`;
 };
 

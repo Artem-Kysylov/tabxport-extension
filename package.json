@@ -1,8 +1,8 @@
 {
   "name": "tabxport-extension",
-  "displayName": "TabXport - AI Table Exporter",
-  "version": "0.1.0",
-  "description": "Export tables from AI chats (ChatGPT, Claude, Gemini) to Excel/CSV with Google Drive integration",
+  "displayName": "TabXport",
+  "version": "0.2.3",
+  "description": "Export tables from AI chat platforms (ChatGPT, Claude, Gemini, DeepSeek) to Excel/CSV with intelligent filename generation",
   "author": "TabXport Team",
   "scripts": {
     "dev": "plasmo dev",
@@ -32,6 +32,8 @@
       "https://chat.openai.com/*",
       "https://claude.ai/*",
       "https://gemini.google.com/*",
+      "https://chat.deepseek.com/*",
+      "https://deepseek.com/*",
       "https://www.googleapis.com/*",
       "file:///*"
     ],

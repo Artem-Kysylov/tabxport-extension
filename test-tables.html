@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TabXport Test Tables</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+    
+    .header p {
+      margin: 10px 0 0 0;
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+    
+    .platform {
+      margin: 40px;
+      padding: 30px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      background: #f9fafb;
+    }
+    
+    .platform-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #374151;
+      border-bottom: 2px solid #d1d5db;
+      padding-bottom: 10px;
+    }
+    
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+    }
+    
+    .test-title {
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin-bottom: 15px;
+      color: #1f2937;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 12px;
+      text-align: left;
+    }
+    
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    td {
+      background: white;
+    }
+    
+    tr:nth-child(even) td {
+      background: #f9fafb;
+    }
+    
+    pre {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      margin: 15px 0;
+    }
+    
+    code {
+      background: #e5e7eb;
+      color: #374151;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    }
+    
+    .message {
+      margin: 20px 0;
+      padding: 20px;
+      border-left: 4px solid #3b82f6;
+      background: #eff6ff;
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .message.assistant {
+      border-left-color: #10b981;
+      background: #ecfdf5;
+    }
+    
+    .response {
+      margin: 20px 0;
+      padding: 20px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+    
+    .div-table {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: #d1d5db;
+      border: 1px solid #d1d5db;
+      margin: 15px 0;
+    }
+    
+    .div-table > div {
+      background: white;
+      padding: 12px;
+    }
+    
+    .div-table > div:nth-child(-n+3) {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 TabXport Test Suite</h1>
+      <p>Testing table detection across AI platforms: ChatGPT, Claude, Gemini & DeepSeek</p>
+    </div>
+
+    <!-- ChatGPT Platform Tests -->
+    <div class="platform">
+      <div class="platform-title">🤖 ChatGPT Platform</div>
+      
+      <div class="test-section">
+        <div class="test-title">Standard HTML Table</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Programming Language</th>
+              <th>First Appeared</th>
+              <th>Paradigm</th>
+              <th>Typing</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>JavaScript</td>
+              <td>1995</td>
+              <td>Multi-paradigm</td>
+              <td>Dynamic</td>
+            </tr>
+            <tr>
+              <td>Python</td>
+              <td>1991</td>
+              <td>Multi-paradigm</td>
+              <td>Dynamic</td>
+            </tr>
+            <tr>
+              <td>TypeScript</td>
+              <td>2012</td>
+              <td>Object-oriented</td>
+              <td>Static</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="message assistant" data-message-author-role="assistant">
+        <div class="test-title">ChatGPT Response with Markdown Table</div>
+        <pre><code>| Framework | Release Year | Language | Type |
+|-----------|--------------|----------|------|
+| React     | 2013         | JavaScript | Library |
+| Vue.js    | 2014         | JavaScript | Framework |
+| Angular   | 2010         | TypeScript | Framework |
+| Svelte    | 2016         | JavaScript | Compiler |</code></pre>
+      </div>
+    </div>
+
+    <!-- Claude Platform Tests -->
+    <div class="platform">
+      <div class="platform-title">🎭 Claude Platform</div>
+      
+      <div class="test-section">
+        <div class="test-title">Claude Assistant Response</div>
+        <div class="response">
+          <pre><code>Here's a comparison of different AI models:
+
+| Model | Company | Parameters | Strengths |
+|-------|---------|------------|-----------|
+| GPT-4 | OpenAI | ~1.8T | Reasoning, Code |
+| Claude-3 | Anthropic | ~175B | Safety, Analysis |
+| Gemini | Google | ~540B | Multimodal |
+| DeepSeek | DeepSeek | ~67B | Code, Math |</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gemini Platform Tests -->
+    <div class="platform">
+      <div class="platform-title">💎 Gemini Platform</div>
+      
+      <div class="test-section" data-response-id="gemini-1">
+        <div class="test-title">Gemini Response Container</div>
+        <div class="model-response">
+          <table>
+            <tr>
+              <th>Cloud Provider</th>
+              <th>Founded</th>
+              <th>Market Share</th>
+              <th>Key Services</th>
+            </tr>
+            <tr>
+              <td>AWS</td>
+              <td>2006</td>
+              <td>32%</td>
+              <td>EC2, S3, Lambda</td>
+            </tr>
+            <tr>
+              <td>Azure</td>
+              <td>2010</td>
+              <td>23%</td>
+              <td>VMs, Blob, Functions</td>
+            </tr>
+            <tr>
+              <td>Google Cloud</td>
+              <td>2008</td>
+              <td>10%</td>
+              <td>Compute, Storage, ML</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DeepSeek Platform Tests -->
+    <div class="platform">
+      <div class="platform-title">🔍 DeepSeek Platform</div>
+      
+      <div class="test-section">
+        <div class="test-title">DeepSeek Assistant Response</div>
+        <div class="chat-message assistant-message">
+          <div class="message-content">
+            <p>Here's a comprehensive comparison of different database systems:</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Database</th>
+                  <th>Type</th>
+                  <th>ACID</th>
+                  <th>Use Case</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>PostgreSQL</td>
+                  <td>Relational</td>
+                  <td>Yes</td>
+                  <td>Complex queries</td>
+                </tr>
+                <tr>
+                  <td>MongoDB</td>
+                  <td>Document</td>
+                  <td>Partial</td>
+                  <td>Flexible schema</td>
+                </tr>
+                <tr>
+                  <td>Redis</td>
+                  <td>Key-Value</td>
+                  <td>No</td>
+                  <td>Caching</td>
+                </tr>
+                <tr>
+                  <td>Cassandra</td>
+                  <td>Column</td>
+                  <td>No</td>
+                  <td>Big Data</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <div class="test-title">DeepSeek Code Block with Markdown Table</div>
+        <div class="response">
+          <pre class="code-block"><code>| Algorithm | Time Complexity | Space Complexity | Use Case |
+|-----------|-----------------|------------------|----------|
+| QuickSort | O(n log n) avg  | O(log n)        | General sorting |
+| MergeSort | O(n log n)      | O(n)            | Stable sorting |
+| HeapSort  | O(n log n)      | O(1)            | In-place sorting |
+| BubbleSort| O(n²)           | O(1)            | Educational |</code></pre>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <div class="test-title">DeepSeek Div-based Table</div>
+        <div class="message">
+          <div class="div-table">
+            <div>Technology</div>
+            <div>Category</div>
+            <div>Popularity</div>
+            <div>React</div>
+            <div>Frontend</div>
+            <div>High</div>
+            <div>Node.js</div>
+            <div>Backend</div>
+            <div>High</div>
+            <div>Docker</div>
+            <div>DevOps</div>
+            <div>Medium</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- General Tests -->
+    <div class="platform">
+      <div class="platform-title">🌐 General Platform Tests</div>
+      
+      <div class="test-section">
+        <div class="test-title">Simple Data Table</div>
+        <table>
+          <tr>
+            <th>Metric</th>
+            <th>Q1</th>
+            <th>Q2</th>
+            <th>Q3</th>
+            <th>Q4</th>
+          </tr>
+          <tr>
+            <td>Revenue</td>
+            <td>$100K</td>
+            <td>$150K</td>
+            <td>$200K</td>
+            <td>$250K</td>
+          </tr>
+          <tr>
+            <td>Users</td>
+            <td>1000</td>
+            <td>1500</td>
+            <td>2200</td>
+            <td>3000</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simulate DeepSeek URL for testing
+    if (window.location.search.includes('deepseek')) {
+      document.title = 'DeepSeek - Test Tables';
+      console.log('Simulating DeepSeek environment');
+    }
+  </script>
+</body>
+</html> 

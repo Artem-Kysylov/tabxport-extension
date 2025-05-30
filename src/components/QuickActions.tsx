@@ -1,122 +1,64 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-interface QuickActionsProps {
-  onOpenTestPage?: () => void;
-  onOpenOptions?: () => void;
-  onRefreshTables?: () => void;
-}
-
-const QuickActions: React.FC<QuickActionsProps> = ({ 
-  onOpenTestPage, 
-  onOpenOptions, 
-  onRefreshTables 
-}) => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
+export const QuickActions: React.FC = () => {
   const handleRefreshTables = async () => {
-    setIsRefreshing(true);
     try {
-      // Отправляем сообщение всем активным табам для обновления
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      for (const tab of tabs) {
-        if (tab.id) {
-          chrome.tabs.sendMessage(tab.id, { type: 'REFRESH_TABLES' });
-        }
-      }
-      onRefreshTables?.();
+      await chrome.runtime.sendMessage({ type: 'REFRESH_TABLES' });
+      // Показываем уведомление об успехе
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icon-48.png',
+        title: 'TabXport',
+        message: 'Tables refreshed successfully',
+      });
     } catch (error) {
       console.error('Failed to refresh tables:', error);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 1000);
     }
   };
 
-  const handleOpenTestPage = () => {
-    chrome.tabs.create({ 
-      url: chrome.runtime.getURL('test-page.html') 
-    });
-    onOpenTestPage?.();
+  const handleOpenDocs = () => {
+    chrome.tabs.create({ url: 'https://tabxport.com/docs' });
   };
 
-  const handleOpenOptions = () => {
-    chrome.runtime.openOptionsPage();
-    onOpenOptions?.();
+  const handleReportIssue = () => {
+    chrome.tabs.create({ url: 'https://tabxport.com/support' });
   };
-
-  const actions = [
-    {
-      id: 'refresh',
-      label: 'Refresh Tables',
-      icon: '🔄',
-      description: 'Scan current page for tables',
-      onClick: handleRefreshTables,
-      loading: isRefreshing,
-    },
-    {
-      id: 'test',
-      label: 'Test Page',
-      icon: '🧪',
-      description: 'Open test page with sample tables',
-      onClick: handleOpenTestPage,
-    },
-    {
-      id: 'options',
-      label: 'Advanced Settings',
-      icon: '⚙️',
-      description: 'Open full options page',
-      onClick: handleOpenOptions,
-    },
-  ];
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Actions</h3>
-      
-      <div className="grid grid-cols-1 gap-2">
-        {actions.map((action) => (
-          <button
-            key={action.id}
-            onClick={action.onClick}
-            disabled={action.loading}
-            className="flex items-center p-3 text-left bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="flex-shrink-0 mr-3">
-              {action.loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-500"></div>
-              ) : (
-                <span className="text-lg">{action.icon}</span>
-              )}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">
-                {action.label}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {action.description}
-              </p>
-            </div>
-            
-            <div className="flex-shrink-0 ml-2">
-              <svg
-                className="h-4 w-4 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </div>
-          </button>
-        ))}
+    <div className="space-y-3">
+      <button
+        onClick={handleRefreshTables}
+        className="w-full flex items-center justify-between px-4 py-2 bg-emerald-50 text-emerald-700 rounded-md hover:bg-emerald-100 transition-colors"
+      >
+        <span className="flex items-center">
+          <span className="mr-2">🔄</span>
+          Refresh Tables
+        </span>
+        <span className="text-xs text-emerald-600">Ctrl+Shift+R</span>
+      </button>
+
+      <button
+        onClick={handleOpenDocs}
+        className="w-full flex items-center px-4 py-2 bg-gray-50 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+      >
+        <span className="mr-2">📚</span>
+        Documentation
+      </button>
+
+      <button
+        onClick={handleReportIssue}
+        className="w-full flex items-center px-4 py-2 bg-gray-50 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+      >
+        <span className="mr-2">🐛</span>
+        Report an Issue
+      </button>
+
+      <div className="mt-4 p-3 bg-blue-50 rounded-md">
+        <h3 className="text-sm font-medium text-blue-800 mb-2">Pro Tip</h3>
+        <p className="text-xs text-blue-600">
+          Use the keyboard shortcut Ctrl+Shift+E (Cmd+Shift+E on Mac) to quickly export the last detected table.
+        </p>
       </div>
     </div>
   );
-};
-
-export default QuickActions; 
+}; 

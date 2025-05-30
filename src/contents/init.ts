@@ -1,33 +1,110 @@
 import { addSpinnerCSS } from './components/export-button';
 import { scanAndProcessTables, setupMutationObserver } from './components/dom-observer';
 
+// Функция для проверки поддерживаемых платформ
+const isSupportedPlatform = (): boolean => {
+  const url = window.location.href;
+  console.log('TabXport: Checking platform support for URL:', url);
+  
+  const supportedDomains = [
+    'chat.openai.com',
+    'chatgpt.com',
+    'claude.ai',
+    'gemini.google.com',
+    'bard.google.com',
+    'chat.deepseek.com',
+    'deepseek.com'
+  ];
+  
+  const isSupported = supportedDomains.some(domain => {
+    const matches = url.includes(domain);
+    console.log(`TabXport: Checking domain '${domain}': ${matches}`);
+    return matches;
+  });
+  
+  console.log('TabXport: Platform support result:', isSupported);
+  return isSupported;
+};
+
 // Функция для проверки готовности DOM
 const isDOMReady = (): boolean => {
   const url = window.location.href;
   
+  console.log('TabXport: Checking DOM readiness for URL:', url);
+  
   // Проверяем наличие ключевых элементов интерфейса для каждой платформы
   if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) {
-    return !!document.querySelector('main, [class*="conversation-"]');
+    const elements = document.querySelector('main, [class*="conversation-"]');
+    console.log('TabXport: ChatGPT DOM elements found:', !!elements);
+    return !!elements;
   }
   if (url.includes('claude.ai')) {
-    return !!document.querySelector('.chat-messages, .message-container');
+    const elements = document.querySelector('.chat-messages, .message-container, .prose, [class*="message"]');
+    console.log('TabXport: Claude DOM elements found:', !!elements);
+    return !!elements;
   }
   if (url.includes('gemini.google.com') || url.includes('bard.google.com')) {
-    return !!document.querySelector('mat-card, .message-container');
+    const elements = document.querySelector('mat-card, .message-container, [data-response-id], .conversation-turn');
+    console.log('TabXport: Gemini DOM elements found:', !!elements);
+    return !!elements;
   }
   if (url.includes('chat.deepseek.com') || url.includes('deepseek.com')) {
-    return !!document.querySelector('.chat-container, .message-list');
+    // Проверяем более широкий набор селекторов для DeepSeek
+    const selectors = [
+      '.chat-container',
+      '.message-list', 
+      '.chat-content',
+      '.conversation',
+      '.messages',
+      '.chat-main',
+      '.chat-area',
+      '.message-container',
+      '.chat-box',
+      '[class*="chat"]',
+      '[class*="message"]',
+      '[class*="conversation"]',
+      'main',
+      '.main-content',
+      '#app',
+      '.app',
+      '.content'
+    ];
+    
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        console.log(`TabXport: DeepSeek DOM ready - found element with selector: ${selector}`);
+        return true;
+      }
+    }
+    
+    // Если ничего не найдено, проверяем базовую структуру страницы
+    const hasBody = document.body && document.body.children.length > 0;
+    const hasScripts = document.querySelectorAll('script').length > 0;
+    console.log('TabXport: DeepSeek basic page structure - body:', hasBody, 'scripts:', hasScripts);
+    
+    if (hasBody && hasScripts) {
+      console.log('TabXport: DeepSeek DOM considered ready based on basic structure');
+      return true;
+    }
+    
+    console.log('TabXport: DeepSeek DOM not ready yet');
+    return false;
   }
   
   // Для других платформ проверяем базовые элементы
-  return !!document.querySelector('main, .main-content, .chat-container');
+  const elements = document.querySelector('main, .main-content, .chat-container, body');
+  console.log('TabXport: Other platform DOM elements found:', !!elements);
+  return !!elements;
 };
 
 // Функция для ожидания готовности DOM
 const waitForDOM = async (): Promise<void> => {
-  const maxAttempts = 10;
-  const interval = 500;
+  const maxAttempts = 10; // Уменьшаем количество попыток
+  const interval = 500; // Уменьшаем интервал до 500ms
   let attempts = 0;
+  
+  console.log('TabXport: Starting DOM readiness check...');
   
   while (!isDOMReady() && attempts < maxAttempts) {
     await new Promise(resolve => setTimeout(resolve, interval));
@@ -36,9 +113,12 @@ const waitForDOM = async (): Promise<void> => {
   }
   
   if (!isDOMReady()) {
-    console.warn('TabXport: DOM readiness timeout, proceeding with initialization');
+    console.warn('TabXport: DOM readiness timeout, proceeding with initialization anyway');
+    console.log('TabXport: Current document state:', document.readyState);
+    console.log('TabXport: Body children count:', document.body?.children.length || 0);
+    console.log('TabXport: Available elements count:', document.querySelectorAll('*').length);
   } else {
-    console.log('TabXport: DOM is ready');
+    console.log('TabXport: DOM is ready after', attempts, 'attempts');
   }
 };
 
@@ -60,6 +140,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Инициализация content script
 export const init = async (): Promise<void> => {
   console.log('TabXport: Content script loaded');
+  
+  // Проверяем, что мы на поддерживаемой платформе
+  if (!isSupportedPlatform()) {
+    console.log('TabXport: Current platform is not supported, skipping initialization');
+    return;
+  }
+  
+  console.log('TabXport: Platform is supported, proceeding with initialization');
   
   // Ждем готовности DOM перед инициализацией
   await waitForDOM();

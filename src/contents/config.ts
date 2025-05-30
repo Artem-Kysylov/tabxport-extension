@@ -8,11 +8,7 @@ export const config: PlasmoCSConfig = {
     'https://gemini.google.com/*',
     'https://bard.google.com/*',
     'https://chat.deepseek.com/*',
-    'https://deepseek.com/*',
-    'https://x.com/*',
-    'https://twitter.com/*',
-    'file:///*',
-    'http://localhost:*/*'
+    'https://deepseek.com/*'
   ],
   all_frames: false,
 }; 

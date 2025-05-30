@@ -49,12 +49,21 @@ const getTargetContainers = (): HTMLElement[] => {
 
 // Функция для проверки релевантности мутации
 const shouldProcessMutation = (mutation: MutationRecord): boolean => {
-  // Игнорируем изменения в наших кнопках
+  // Игнорируем изменения в наших кнопках и UI элементах
   if (mutation.target instanceof HTMLElement) {
     const targetEl = mutation.target;
-    if (targetEl.tagName === 'BUTTON' && 
-        (targetEl.textContent?.includes('Export') || 
-         targetEl.getAttribute('title')?.includes('Export'))) {
+    if (targetEl.tagName === 'BUTTON' || 
+        targetEl.classList.contains('text-input-field') ||
+        targetEl.classList.contains('input') ||
+        targetEl.classList.contains('toolbar') ||
+        targetEl.classList.contains('menu') ||
+        targetEl.classList.contains('dropdown') ||
+        targetEl.classList.contains('modal') ||
+        targetEl.classList.contains('popup') ||
+        targetEl.classList.contains('tooltip') ||
+        targetEl.id?.includes('input') ||
+        targetEl.id?.includes('toolbar') ||
+        targetEl.id?.includes('menu')) {
       return false;
     }
   }
@@ -65,38 +74,37 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
       // Проверяем на наличие таблиц или потенциальных контейнеров таблиц
       if (node.tagName === 'TABLE' || 
           node.tagName === 'PRE' || 
-          node.tagName === 'CODE' ||
-          node.querySelector('table, pre, code')) {
+          node.tagName === 'CODE') {
         return true;
       }
 
       // Для div элементов проверяем более тщательно
       if (node.tagName === 'DIV') {
+        // Игнорируем UI элементы
+        if (node.classList.contains('text-input-field') ||
+            node.classList.contains('input') ||
+            node.classList.contains('toolbar') ||
+            node.classList.contains('menu') ||
+            node.classList.contains('dropdown') ||
+            node.classList.contains('modal') ||
+            node.classList.contains('popup') ||
+            node.classList.contains('tooltip') ||
+            node.id?.includes('input') ||
+            node.id?.includes('toolbar') ||
+            node.id?.includes('menu')) {
+          return false;
+        }
+
+        // Проверяем только если div содержит потенциальные табличные данные
         const hasTableLikeContent = 
-          node.textContent?.includes('|') || 
           node.querySelector('table, pre, code') ||
-          (node.children.length >= 2 && Array.from(node.children).some(child => 
-            child.textContent?.includes('|') || 
-            child.tagName === 'TABLE' ||
-            child.tagName === 'PRE' ||
-            child.tagName === 'CODE'
-          ));
+          (node.textContent?.includes('|') && 
+           node.textContent?.split('\n').length > 2 &&
+           node.textContent?.split('|').length >= 3);
         
         if (hasTableLikeContent) {
           return true;
         }
-      }
-    }
-  }
-
-  // Проверяем удаленные узлы
-  for (const node of Array.from(mutation.removedNodes)) {
-    if (node instanceof HTMLElement) {
-      if (node.tagName === 'TABLE' || 
-          node.tagName === 'PRE' || 
-          node.tagName === 'CODE' ||
-          node.querySelector('table, pre, code')) {
-        return true;
       }
     }
   }
@@ -211,123 +219,24 @@ export const scanAndProcessTables = (): void => {
   }
 };
 
-// Функция для добавления кнопки экспорта к таблице
-const addExportButton = (tableElement: HTMLElement): void => {
-  try {
-    // Проверяем, не добавлена ли уже кнопка
-    if (addedButtons.has(tableElement)) {
-      console.log('TabXport: Button already exists for this table element');
-      return;
-    }
-
-    // Дополнительная проверка - ищем существующие кнопки для этой таблицы по содержимому
-    const tableContent = tableElement.textContent?.trim().substring(0, 100) || '';
-    let foundExistingButton = false;
-    
-    addedButtons.forEach((button, existingTable) => {
-      const existingContent = existingTable.textContent?.trim().substring(0, 100) || '';
-      if (existingContent === tableContent && existingContent.length > 10) {
-        console.log('TabXport: Found existing button for table with same content, skipping');
-        foundExistingButton = true;
-      }
-    });
-    
-    if (foundExistingButton) {
-      return;
-    }
-
-    console.log('TabXport: Extracting table data for new button...');
-    const tableData = extractTableData(tableElement);
-    if (!tableData) {
-      console.log('TabXport: Failed to extract table data');
-      return;
-    }
-
-    console.log('TabXport: Table data extracted successfully:', tableData);
-    
-    // Добавляем небольшую задержку для стабилизации DOM
-    setTimeout(() => {
-      try {
-        console.log('TabXport: Calculating button position...');
-        const position = calculateButtonPosition(tableElement);
-        console.log('TabXport: Button position calculated:', position);
-        
-        const button = createExportButton(tableData, position);
-        console.log('TabXport: Export button created');
-        
-        // Убеждаемся, что контейнер имеет relative позиционирование
-        const containerStyle = window.getComputedStyle(position.container);
-        if (containerStyle.position === 'static') {
-          position.container.style.position = 'relative';
-          console.log('TabXport: Set container position to relative');
-        }
-        
-        // Проверяем, что нет других кнопок в той же позиции
-        const existingButtonsAtPosition = document.querySelectorAll('button').length;
-        console.log(`TabXport: Total buttons in document before adding: ${existingButtonsAtPosition}`);
-        
-        // Добавляем кнопку в контейнер
-        position.container.appendChild(button);
-        console.log('TabXport: Button added to container:', position.container.tagName);
-        
-        // Проверяем, что кнопка действительно в DOM и видна
-        setTimeout(() => {
-          try {
-            const isInDOM = document.contains(button);
-            const isVisible = button.offsetParent !== null;
-            const computedStyle = window.getComputedStyle(button);
-            
-            console.log('TabXport: Button verification:');
-            console.log('  - In DOM:', isInDOM);
-            console.log('  - Visible (offsetParent):', isVisible);
-            console.log('  - Display:', computedStyle.display);
-            console.log('  - Visibility:', computedStyle.visibility);
-            console.log('  - Opacity:', computedStyle.opacity);
-            console.log('  - Position:', computedStyle.position);
-            console.log('  - Z-index:', computedStyle.zIndex);
-            console.log('  - Top:', computedStyle.top);
-            console.log('  - Left:', computedStyle.left);
-            
-            if (!isInDOM || !isVisible) {
-              console.log('TabXport: Button is not visible, trying to fix...');
-              // Перепозиционируем кнопку
-              const newPosition = calculateButtonPosition(tableElement);
-              button.style.top = `${newPosition.y}px`;
-              button.style.left = `${newPosition.x}px`;
-              button.style.display = 'flex';
-              button.style.visibility = 'visible';
-              button.style.opacity = '1';
-            }
-          } catch (verificationError) {
-            console.error('TabXport: Error during button verification:', verificationError);
-          }
-        }, 100);
-        
-        // Сохраняем ссылку на кнопку
-        addedButtons.set(tableElement, button);
-        console.log('TabXport: Button reference saved in Map, total buttons:', addedButtons.size);
-
-      } catch (creationError) {
-        console.error('TabXport: Error during button creation:', creationError);
-      }
-    }, 250);
-  } catch (error) {
-    console.error('TabXport: Critical error in addExportButton:', error);
-  }
-};
-
 // Настройка MutationObserver для отслеживания динамических изменений
 let scanTimeout: NodeJS.Timeout | null = null;
 let lastScanTime = 0;
+let observer: MutationObserver | null = null;
 
 export const setupMutationObserver = (): void => {
+  // Если уже есть активный observer, отключаем его
+  if (observer) {
+    observer.disconnect();
+  }
+
   const targetContainers = getTargetContainers();
   console.log('TabXport: Setting up observers for containers:', targetContainers.length);
 
-  const observer = new MutationObserver((mutations) => {
+  observer = new MutationObserver((mutations) => {
     // Предотвращаем слишком частое сканирование
     const now = Date.now();
-    if (now - lastScanTime < 1000) {
+    if (now - lastScanTime < 2000) { // Увеличиваем минимальный интервал до 2 секунд
       return;
     }
 
@@ -344,37 +253,124 @@ export const setupMutationObserver = (): void => {
         scanAndProcessTables();
         lastScanTime = Date.now();
         scanTimeout = null;
-      }, 800);
+      }, 1500); // Увеличиваем задержку для стабилизации DOM
     }
   });
 
-  // Наблюдаем за каждым контейнером
-  targetContainers.forEach(container => {
-    observer.observe(container, {
+  // Наблюдаем только за основными контейнерами
+  const mainContainer = targetContainers[0]; // Берем только первый основной контейнер
+  if (mainContainer) {
+    observer.observe(mainContainer, {
       childList: true,
       subtree: true,
       characterData: false,
       attributes: false
     });
-    console.log('TabXport: Observing container:', container.tagName, container.className);
-  });
+    console.log('TabXport: Observing main container:', mainContainer.tagName, mainContainer.className);
+  }
 
-  // Периодическое обновление целевых контейнеров
+  // Обновляем наблюдение каждые 10 секунд (вместо 5)
   setInterval(() => {
     const newContainers = getTargetContainers();
-    const currentContainers = targetContainers;
+    const mainContainer = newContainers[0];
     
-    // Добавляем наблюдение за новыми контейнерами
-    newContainers.forEach(container => {
-      if (!currentContainers.includes(container)) {
-        observer.observe(container, {
-          childList: true,
-          subtree: true,
-          characterData: false,
-          attributes: false
-        });
-        console.log('TabXport: Added observation for new container:', container.tagName, container.className);
+    if (mainContainer && observer) {
+      observer.disconnect();
+      observer.observe(mainContainer, {
+        childList: true,
+        subtree: true,
+        characterData: false,
+        attributes: false
+      });
+      console.log('TabXport: Updated observation for main container:', mainContainer.tagName, mainContainer.className);
+    }
+  }, 10000);
+};
+
+// Функция для добавления кнопки экспорта к таблице
+const addExportButton = (tableElement: HTMLElement): void => {
+  try {
+    // Проверяем, не добавлена ли уже кнопка для этой таблицы
+    if (addedButtons.has(tableElement)) {
+      const existingButton = addedButtons.get(tableElement);
+      if (existingButton && document.contains(existingButton)) {
+        console.log('TabXport: Button already exists for this table');
+        return;
+      } else {
+        // Если кнопка существует в Map, но не в DOM, удаляем её из Map
+        addedButtons.delete(tableElement);
       }
-    });
-  }, 5000);
+    }
+
+    // Проверяем видимость таблицы
+    if (!tableElement.offsetParent) {
+      console.log('TabXport: Table is not visible, skipping button addition');
+      return;
+    }
+
+    // Извлекаем данные таблицы
+    console.log('TabXport: Extracting table data...');
+    const tableData = extractTableData(tableElement);
+    if (!tableData || !tableData.headers.length && !tableData.rows.length) {
+      console.log('TabXport: Invalid table data, skipping button addition');
+      return;
+    }
+
+    // Добавляем кнопку с увеличенной задержкой
+    setTimeout(() => {
+      try {
+        console.log('TabXport: Calculating button position...');
+        const position = calculateButtonPosition(tableElement);
+        
+        if (!position) {
+          console.log('TabXport: Could not calculate button position');
+          return;
+        }
+        
+        console.log('TabXport: Button position calculated:', position);
+        
+        const button = createExportButton(tableData, position);
+        console.log('TabXport: Export button created');
+        
+        // Убеждаемся, что контейнер имеет relative позиционирование
+        const containerStyle = window.getComputedStyle(position.container);
+        if (containerStyle.position === 'static') {
+          position.container.style.position = 'relative';
+        }
+        
+        // Добавляем кнопку в контейнер
+        position.container.appendChild(button);
+        
+        // Проверяем видимость кнопки и пытаемся исправить, если она не видна
+        setTimeout(() => {
+          if (!document.contains(button) || !button.offsetParent) {
+            console.log('TabXport: Button is not visible, trying to fix...');
+            button.style.display = 'flex';
+            button.style.visibility = 'visible';
+            button.style.opacity = '1';
+            button.style.zIndex = '9999';
+            
+            // Пересчитываем позицию
+            const newPosition = calculateButtonPosition(tableElement);
+            if (newPosition) {
+              button.style.top = `${newPosition.y}px`;
+              button.style.left = `${newPosition.x}px`;
+            }
+          }
+          
+          // Сохраняем ссылку на кнопку только если она успешно добавлена
+          if (document.contains(button)) {
+            addedButtons.set(tableElement, button);
+            console.log('TabXport: Button successfully added and saved');
+          }
+        }, 500);
+        
+      } catch (creationError) {
+        console.error('TabXport: Error during button creation:', creationError);
+      }
+    }, 1000); // Увеличенная задержка перед добавлением кнопки
+    
+  } catch (error) {
+    console.error('TabXport: Critical error in addExportButton:', error);
+  }
 }; 

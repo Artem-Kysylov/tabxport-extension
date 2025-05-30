@@ -5,7 +5,7 @@ interface SubscriptionStatusProps {
   onUpgradeClick: () => void;
 }
 
-export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgradeClick }) => {
+const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgradeClick }) => {
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -123,4 +123,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgrad
       </div>
     </div>
   );
-}; 
+};
+
+export default SubscriptionStatus; 

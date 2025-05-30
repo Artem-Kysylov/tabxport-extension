@@ -1,9 +1,6 @@
 import { exportTable, validateTableData, cleanTableData } from './lib/export';
 import { getUserSettings, getUserSubscription, saveLastExportTime } from './lib/storage';
 import type { ChromeMessage, TableData, ExportOptions, ExportResult } from './types';
-import { MessagingService } from './services/messaging';
-
-const messagingService = new MessagingService();
 
 // Обработчик сообщений от content scripts
 chrome.runtime.onMessage.addListener((
@@ -12,10 +9,28 @@ chrome.runtime.onMessage.addListener((
   sendResponse
 ) => {
   console.log('Background: Received message', message.type);
-  
-  // Передаем обработку сообщения в MessagingService
-  messagingService.handleMessage(message, sender, sendResponse);
-  return true; // Указывает, что ответ будет асинхронным
+
+  switch (message.type) {
+    case 'EXPORT_TABLE':
+      handleTableExport(message.payload, sendResponse);
+      return true; // Указывает, что ответ будет асинхронным
+
+    case 'GET_SETTINGS':
+      handleGetSettings(sendResponse);
+      return true;
+
+    case 'UPDATE_SETTINGS':
+      handleUpdateSettings(message.payload, sendResponse);
+      return true;
+
+    case 'CHECK_SUBSCRIPTION':
+      handleCheckSubscription(sendResponse);
+      return true;
+
+    default:
+      sendResponse({ error: 'Unknown message type' });
+      return false;
+  }
 });
 
 // Обработка экспорта таблицы

@@ -40,7 +40,7 @@ export interface ExportResult {
   downloadUrl?: string;
 }
 
-// Типы для payload сообщений
+// Типы для различных сообщений
 export interface ExportTablePayload {
   tableData: TableData;
   options: ExportOptions;
@@ -54,21 +54,11 @@ export interface CheckSubscriptionPayload {
   userId: string;
 }
 
-// Типизированные сообщения для разных действий
-export type ChromeMessageType = 
-  | 'EXPORT_TABLE'
-  | 'GET_SETTINGS'
-  | 'UPDATE_SETTINGS'
-  | 'CHECK_SUBSCRIPTION'
-  | 'REFRESH_TABLES';
-
-// Типизированная структура сообщений
-export type ChromeMessage = 
-  | { type: 'EXPORT_TABLE'; payload: ExportTablePayload }
-  | { type: 'GET_SETTINGS' }
-  | { type: 'UPDATE_SETTINGS'; payload: UpdateSettingsPayload }
-  | { type: 'CHECK_SUBSCRIPTION'; payload: CheckSubscriptionPayload }
-  | { type: 'REFRESH_TABLES' };
+// Сообщения между content script и background
+export interface ChromeMessage {
+  type: 'EXPORT_TABLE' | 'GET_SETTINGS' | 'UPDATE_SETTINGS' | 'CHECK_SUBSCRIPTION' | 'REFRESH_TABLES';
+  payload?: any;
+}
 
 export interface TableDetectionResult {
   element: HTMLElement;

@@ -1,7 +1,9 @@
-export { chatGPTTitleExtractor } from './chatgpt-title-extractor';
-export { claudeTitleExtractor } from './claude-title-extractor';
-export { deepseekTitleExtractor } from './deepseek-title-extractor';
-export { geminiTitleExtractor } from './gemini-title-extractor';
+import { chatGPTTitleExtractor } from './chatgpt-title-extractor';
+import { claudeTitleExtractor } from './claude-title-extractor';
+import { deepseekTitleExtractor } from './deepseek-title-extractor';
+import { geminiTitleExtractor } from './gemini-title-extractor';
+
+export { chatGPTTitleExtractor, claudeTitleExtractor, deepseekTitleExtractor, geminiTitleExtractor };
 
 export const getTitleExtractor = (url: string) => {
   if (url.includes('chat.openai.com') || url.includes('chatgpt.com')) {

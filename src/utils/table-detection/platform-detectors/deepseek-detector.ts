@@ -16,7 +16,7 @@ export const deepseekDetector: PlatformDetector = {
     const elements: HTMLElement[] = [];
     const processedElements = new Set<HTMLElement>();
     
-    // First find all HTML tables on the page
+    // First find all HTML tables on the page with special handling for large tables
     const allHTMLTables = document.querySelectorAll('table');
     logger.debug(`Found ${allHTMLTables.length} total HTML tables on page`);
     
@@ -26,14 +26,46 @@ export const deepseekDetector: PlatformDetector = {
       logger.debug(`Table rows: ${(table as HTMLTableElement).rows.length}`);
       logger.debug(`Table visible: ${htmlTable.offsetParent !== null}`);
       
+      const rect = htmlTable.getBoundingClientRect();
+      const isLargeTable = rect.height > 300 || rect.width > 600 || (table as HTMLTableElement).rows.length > 10;
+      const isVeryWideTable = rect.width > window.innerWidth * 0.8 || rect.right > window.innerWidth - 60;
+      
+      logger.debug(`Table ${index} is large: ${isLargeTable} (${rect.width}x${rect.height}, ${(table as HTMLTableElement).rows.length} rows)`);
+      logger.debug(`Table ${index} is very wide: ${isVeryWideTable} (causes horizontal scroll)`);
+      
       if ((table as HTMLTableElement).rows.length > 0 && htmlTable.offsetParent !== null) {
         logger.debug(`Adding HTML table ${index} directly`);
+        
+        // For large tables, add special data attributes for better positioning
+        if (isLargeTable) {
+          htmlTable.setAttribute('data-tabxport-large-table', 'true');
+          htmlTable.setAttribute('data-tabxport-table-size', `${rect.width}x${rect.height}`);
+          
+          // Mark very wide tables that cause horizontal scrolling
+          if (isVeryWideTable) {
+            htmlTable.setAttribute('data-tabxport-very-wide', 'true');
+            logger.debug(`Table ${index} marked as very wide`);
+          }
+          
+          // Check if table is scrollable
+          const isScrollable = htmlTable.scrollHeight > htmlTable.clientHeight || 
+                              htmlTable.scrollWidth > htmlTable.clientWidth ||
+                              getComputedStyle(htmlTable).overflow !== 'visible' ||
+                              getComputedStyle(htmlTable).overflowX !== 'visible' ||
+                              getComputedStyle(htmlTable).overflowY !== 'visible';
+          
+          if (isScrollable) {
+            htmlTable.setAttribute('data-tabxport-scrollable', 'true');
+            logger.debug(`Table ${index} is scrollable`);
+          }
+        }
+        
         elements.push(htmlTable);
         processedElements.add(htmlTable);
       }
     });
     
-    // Find message containers
+    // Find message containers with improved large table detection
     const messageContainers = document.querySelectorAll(
       '.message, .chat-message, .response, .assistant-message, [class*="message"], [class*="response"]'
     );
@@ -68,6 +100,23 @@ export const deepseekDetector: PlatformDetector = {
             
             if (validLines.length >= 2) {
               logger.debug(`Adding markdown table ${blockIndex} from message ${containerIndex}`);
+              
+              // Check if this is a large markdown table
+              const rect = htmlBlock.getBoundingClientRect();
+              const isLargeTable = rect.height > 300 || rect.width > 600 || tableLines.length > 10;
+              const isVeryWideTable = rect.width > window.innerWidth * 0.8 || rect.right > window.innerWidth - 60;
+              
+              if (isLargeTable) {
+                htmlBlock.setAttribute('data-tabxport-large-table', 'true');
+                htmlBlock.setAttribute('data-tabxport-table-type', 'markdown');
+                logger.debug(`Large markdown table detected in block ${blockIndex}`);
+                
+                if (isVeryWideTable) {
+                  htmlBlock.setAttribute('data-tabxport-very-wide', 'true');
+                  logger.debug(`Very wide markdown table detected in block ${blockIndex}`);
+                }
+              }
+              
               elements.push(htmlBlock);
               processedElements.add(htmlBlock);
             }
@@ -75,7 +124,7 @@ export const deepseekDetector: PlatformDetector = {
         }
       });
       
-      // Find div tables in responses
+      // Find div tables in responses with large table detection
       const contentDivs = messageElement.querySelectorAll('div, .content, .message-content, [class*="content"]');
       contentDivs.forEach((div, divIndex) => {
         const htmlDiv = div as HTMLElement;
@@ -102,13 +151,30 @@ export const deepseekDetector: PlatformDetector = {
           
           if (hasValidStructure && !processedElements.has(htmlDiv)) {
             logger.debug(`Adding div table ${divIndex} from message ${containerIndex}`);
+            
+            // Check if this is a large div table
+            const rect = htmlDiv.getBoundingClientRect();
+            const isLargeTable = rect.height > 300 || rect.width > 600 || children.length > 6;
+            const isVeryWideTable = rect.width > window.innerWidth * 0.8 || rect.right > window.innerWidth - 60;
+            
+            if (isLargeTable) {
+              htmlDiv.setAttribute('data-tabxport-large-table', 'true');
+              htmlDiv.setAttribute('data-tabxport-table-type', 'div');
+              logger.debug(`Large div table detected: ${divIndex}`);
+              
+              if (isVeryWideTable) {
+                htmlDiv.setAttribute('data-tabxport-very-wide', 'true');
+                logger.debug(`Very wide div table detected: ${divIndex}`);
+              }
+            }
+            
             elements.push(htmlDiv);
             processedElements.add(htmlDiv);
           }
         }
       });
       
-      // Find text-based tables
+      // Find text-based tables with large table detection
       const textElements = messageElement.querySelectorAll('p, div, span');
       textElements.forEach((element, elementIndex) => {
         const htmlElement = element as HTMLElement;
@@ -139,6 +205,23 @@ export const deepseekDetector: PlatformDetector = {
             
             if (validLines.length >= 2) {
               logger.debug(`Adding text table element ${elementIndex} from message ${containerIndex}`);
+              
+              // Check if this is a large text table
+              const rect = htmlElement.getBoundingClientRect();
+              const isLargeTable = rect.height > 300 || rect.width > 600 || tableLines.length > 10;
+              const isVeryWideTable = rect.width > window.innerWidth * 0.8 || rect.right > window.innerWidth - 60;
+              
+              if (isLargeTable) {
+                htmlElement.setAttribute('data-tabxport-large-table', 'true');
+                htmlElement.setAttribute('data-tabxport-table-type', 'text');
+                logger.debug(`Large text table detected: ${elementIndex}`);
+                
+                if (isVeryWideTable) {
+                  htmlElement.setAttribute('data-tabxport-very-wide', 'true');
+                  logger.debug(`Very wide text table detected: ${elementIndex}`);
+                }
+              }
+              
               elements.push(htmlElement);
               processedElements.add(htmlElement);
             }

@@ -54,11 +54,33 @@ export interface CheckSubscriptionPayload {
   userId: string;
 }
 
-// Сообщения между content script и background
-export interface ChromeMessage {
-  type: 'EXPORT_TABLE' | 'GET_SETTINGS' | 'UPDATE_SETTINGS' | 'CHECK_SUBSCRIPTION' | 'REFRESH_TABLES';
-  payload?: any;
+// Типы сообщений Chrome Extension
+export enum ChromeMessageType {
+  EXPORT_TABLE = 'EXPORT_TABLE',
+  GET_SETTINGS = 'GET_SETTINGS', 
+  UPDATE_SETTINGS = 'UPDATE_SETTINGS',
+  CHECK_SUBSCRIPTION = 'CHECK_SUBSCRIPTION',
+  REFRESH_TABLES = 'REFRESH_TABLES'
 }
+
+// Сообщения между content script и background с дискриминированными типами
+export type ChromeMessage = 
+  | {
+      type: ChromeMessageType.EXPORT_TABLE;
+      payload: ExportTablePayload;
+    }
+  | {
+      type: ChromeMessageType.UPDATE_SETTINGS;
+      payload: UpdateSettingsPayload;
+    }
+  | {
+      type: ChromeMessageType.CHECK_SUBSCRIPTION;
+      payload: CheckSubscriptionPayload;
+    }
+  | {
+      type: ChromeMessageType.GET_SETTINGS | ChromeMessageType.REFRESH_TABLES;
+      payload?: undefined;
+    };
 
 export interface TableDetectionResult {
   element: HTMLElement;

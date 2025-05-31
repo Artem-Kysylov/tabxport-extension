@@ -1,8 +1,14 @@
 import React from 'react';
 import SubscriptionStatus from '../../SubscriptionStatus';
 
-export const SubscriptionTab: React.FC = () => {
+interface SubscriptionTabProps {
+  onUpgradeClick: () => void;
+}
+
+export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({ onUpgradeClick }) => {
   const handleUpgradeClick = () => {
+    // Вызываем переданный коллбек
+    onUpgradeClick();
     // Открываем страницу подписки
     chrome.tabs.create({ url: 'https://tabxport.com/pricing' });
   };

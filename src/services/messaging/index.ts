@@ -1,4 +1,5 @@
-import type { ChromeMessage, ChromeMessageType } from '../../types';
+import type { ChromeMessage } from '../../types';
+import { ChromeMessageType } from '../../types';
 import { ExportService } from '../export';
 import { SettingsService } from '../settings';
 import { SubscriptionService } from '../subscription';
@@ -25,7 +26,7 @@ export class MessagingService {
     
     try {
       switch (message.type) {
-        case 'EXPORT_TABLE': {
+        case ChromeMessageType.EXPORT_TABLE: {
           console.log('MessagingService: Processing EXPORT_TABLE message');
           console.log('MessagingService: Table data:', message.payload.tableData);
           console.log('MessagingService: Export options:', message.payload.options);
@@ -40,7 +41,7 @@ export class MessagingService {
           break;
         }
 
-        case 'GET_SETTINGS': {
+        case ChromeMessageType.GET_SETTINGS: {
           console.log('MessagingService: Processing GET_SETTINGS message');
           const settings = await this.settingsService.getSettings();
           console.log('MessagingService: Settings retrieved:', settings);
@@ -48,7 +49,7 @@ export class MessagingService {
           break;
         }
 
-        case 'UPDATE_SETTINGS': {
+        case ChromeMessageType.UPDATE_SETTINGS: {
           console.log('MessagingService: Processing UPDATE_SETTINGS message');
           await this.settingsService.updateSettings(message.payload.settings);
           console.log('MessagingService: Settings updated');
@@ -56,7 +57,7 @@ export class MessagingService {
           break;
         }
 
-        case 'CHECK_SUBSCRIPTION': {
+        case ChromeMessageType.CHECK_SUBSCRIPTION: {
           console.log('MessagingService: Processing CHECK_SUBSCRIPTION message');
           const subscription = await this.subscriptionService.checkSubscription(
             message.payload.userId
@@ -66,14 +67,13 @@ export class MessagingService {
           break;
         }
 
-        case 'REFRESH_TABLES': {
+        case ChromeMessageType.REFRESH_TABLES: {
           console.log('MessagingService: Processing REFRESH_TABLES message');
           sendResponse({ success: true });
           break;
         }
 
         default: {
-          const _exhaustiveCheck: never = message;
           console.error('MessagingService: Unknown message type');
           sendResponse({ success: false, error: 'Unknown message type' });
         }

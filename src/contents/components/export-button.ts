@@ -1,4 +1,4 @@
-import { TableData, ChromeMessage } from '../../types';
+import { TableData, ChromeMessage, ChromeMessageType } from '../../types';
 import { getUserSettings } from '../../lib/storage';
 
 interface ButtonPosition {
@@ -46,6 +46,11 @@ export const calculateButtonPosition = (element: HTMLElement): ButtonPosition =>
   console.log('TabXport: Element rect:', rect);
   console.log('TabXport: Platform detection:', platform);
   
+  // Специальная логика для DeepSeek с большими таблицами
+  if (platform.isDeepSeek) {
+    return calculateDeepSeekButtonPosition(element, rect);
+  }
+  
   const container = findPositionedContainer(element);
   console.log('TabXport: Using container:', container.tagName, container.className);
   
@@ -54,7 +59,7 @@ export const calculateButtonPosition = (element: HTMLElement): ButtonPosition =>
   const relativeY = rect.top - containerRect.top;
   
   const spaceOnRight = window.innerWidth - rect.right;
-  const buttonWidth = 75;
+  const buttonWidth = 45;
   
   // Унифицированная логика позиционирования с платформо-специфичными настройками
   const config = {
@@ -78,6 +83,136 @@ export const calculateButtonPosition = (element: HTMLElement): ButtonPosition =>
   
   console.log('TabXport: Space on right:', spaceOnRight, 'px');
   console.log('TabXport: Relative position within container:', position);
+  return position;
+};
+
+// Специальная функция позиционирования для DeepSeek
+const calculateDeepSeekButtonPosition = (element: HTMLElement, rect: DOMRect): ButtonPosition => {
+  console.log('TabXport: Using DeepSeek-specific positioning for large tables');
+  
+  // Проверяем размер таблицы и специальные атрибуты
+  const isLargeTable = rect.height > 300 || rect.width > 600 || 
+                       element.hasAttribute('data-tabxport-large-table');
+  const isScrollable = element.hasAttribute('data-tabxport-scrollable');
+  const tableType = element.getAttribute('data-tabxport-table-type') || 'unknown';
+  
+  // Проверяем, слишком ли широкая таблица (вызывает горизонтальный скролл)
+  const viewportWidth = window.innerWidth;
+  const isVeryWideTable = rect.width > viewportWidth * 0.8 || rect.right > viewportWidth - 60 ||
+                         element.hasAttribute('data-tabxport-very-wide');
+  
+  console.log('TabXport: Large table detected:', isLargeTable);
+  console.log('TabXport: Scrollable table:', isScrollable);
+  console.log('TabXport: Very wide table:', isVeryWideTable);
+  console.log('TabXport: Table type:', tableType);
+  console.log('TabXport: Table width:', rect.width, 'Viewport width:', viewportWidth);
+  
+  // Ищем лучший контейнер для позиционирования
+  let container = findPositionedContainer(element);
+  
+  // Для больших таблиц ищем message container
+  if (isLargeTable) {
+    const messageContainer = element.closest('.message, .chat-message, .response, .assistant-message, [class*="message"], [class*="response"]');
+    if (messageContainer) {
+      container = messageContainer as HTMLElement;
+      console.log('TabXport: Using message container for large table:', container.className);
+    }
+  }
+  
+  // Проверяем видимую область таблицы
+  const viewportHeight = window.innerHeight;
+  const tableVisibleInViewport = rect.top < viewportHeight && rect.bottom > 0 && 
+                                rect.left < viewportWidth && rect.right > 0;
+  
+  console.log('TabXport: Table visible in viewport:', tableVisibleInViewport);
+  
+  const containerRect = container.getBoundingClientRect();
+  const buttonWidth = 45;
+  const viewportMargin = 10; // Отступ от края viewport
+  
+  // Вычисляем Y позицию относительно таблицы/контейнера
+  let relativeY = rect.top - containerRect.top;
+  
+  // Для прокручиваемых таблиц корректируем позицию
+  if (isScrollable && !tableVisibleInViewport) {
+    // Размещаем кнопку в видимой части viewport
+    const visibleTop = Math.max(rect.top, 0);
+    const visibleBottom = Math.min(rect.bottom, viewportHeight);
+    const visibleMiddle = (visibleTop + visibleBottom) / 2;
+    
+    relativeY = visibleMiddle - containerRect.top;
+    console.log('TabXport: Adjusted position for scrollable table:', relativeY);
+  }
+  
+  // Специальная конфигурация для DeepSeek
+  const config = {
+    verticalOffset: isLargeTable ? (isScrollable ? 10 : 5) : 0,
+  };
+  
+  let position: ButtonPosition;
+  
+  // Для очень широких таблиц используем viewport-based позиционирование по X
+  if (isVeryWideTable) {
+    // Фиксируем кнопку к правому краю viewport
+    const viewportBasedX = viewportWidth - buttonWidth - viewportMargin;
+    const containerBasedX = viewportBasedX - containerRect.left;
+    
+    position = {
+      x: containerBasedX,
+      y: relativeY + config.verticalOffset,
+      container
+    };
+    
+    console.log('TabXport: Very wide table - using viewport-based X positioning');
+    console.log('TabXport: Viewport-based X:', viewportBasedX, 'Container-based X:', containerBasedX);
+  } else {
+    // Обычное позиционирование относительно таблицы
+    const relativeX = rect.right - containerRect.left;
+    const spaceOnRight = viewportWidth - rect.right;
+    
+    const spacing = isLargeTable ? (isScrollable ? 15 : 12) : 6;
+    const insideSpacing = isLargeTable ? (isScrollable ? 15 : 10) : 8;
+    const insideVerticalOffset = isLargeTable ? (isScrollable ? 12 : 8) : 5;
+    
+    if (spaceOnRight >= buttonWidth + 20) {
+      // Размещаем справа от таблицы
+      position = {
+        x: relativeX + spacing,
+        y: relativeY + config.verticalOffset,
+        container
+      };
+      console.log('TabXport: Normal table - placing button to the right');
+    } else {
+      // Размещаем слева от таблицы
+      position = {
+        x: relativeX - buttonWidth - insideSpacing,
+        y: relativeY + insideVerticalOffset,
+        container
+      };
+      console.log('TabXport: Normal table - placing button to the left');
+    }
+  }
+  
+  // Проверяем, что кнопка не выходит за пределы viewport по Y
+  if (position.y + buttonWidth > viewportHeight - 10) {
+    position.y = viewportHeight - buttonWidth - 10;
+    console.log('TabXport: Adjusted Y position to fit viewport');
+  }
+  
+  // Убеждаемся, что Y не отрицательная
+  if (position.y < 0) {
+    position.y = 10;
+    console.log('TabXport: Adjusted Y position to be positive');
+  }
+  
+  // Дополнительная корректировка для очень больших таблиц
+  if (isLargeTable && rect.height > 500) {
+    // Размещаем кнопку ближе к верху большой таблицы
+    position.y = Math.max(relativeY + 20, position.y);
+    console.log('TabXport: Adjusted position for very large table');
+  }
+  
+  console.log('TabXport: DeepSeek final position:', position);
   return position;
 };
 
@@ -129,10 +264,9 @@ const handleExport = async (tableData: TableData, button: HTMLButtonElement): Pr
     
     const originalText = button.innerHTML;
     button.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; margin-right: 6px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
         <path d="M21 12a9 9 0 11-6.219-8.56" />
       </svg>
-      Exporting...
     `;
     button.disabled = true;
     
@@ -141,7 +275,7 @@ const handleExport = async (tableData: TableData, button: HTMLButtonElement): Pr
     console.log('User settings:', settings);
     
     const message: ChromeMessage = {
-      type: 'EXPORT_TABLE',
+      type: ChromeMessageType.EXPORT_TABLE,
       payload: {
         tableData,
         options: {
@@ -167,12 +301,11 @@ const handleExport = async (tableData: TableData, button: HTMLButtonElement): Pr
     showNotification('Export failed. Please try again.', 'error');
   } finally {
     button.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
         <polyline points="7,10 12,15 17,10" />
         <line x1="12" y1="15" x2="12" y2="3" />
       </svg>
-      Export
     `;
     button.disabled = false;
   }
@@ -183,47 +316,70 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
   const button = document.createElement('button');
   
   button.innerHTML = `
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
       <polyline points="7,10 12,15 17,10" />
       <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
-    Export
   `;
   
-  button.style.cssText = `
+  // Определяем, если это DeepSeek
+  const isDeepSeek = window.location.href.includes('chat.deepseek.com') || window.location.href.includes('deepseek.com');
+  
+  // Базовые стили
+  let cssText = `
     position: absolute !important;
     top: ${position.y}px !important;
     left: ${position.x}px !important;
     z-index: 999999 !important;
-    background-color: #10b981 !important;
+    background-color: #1B9358 !important;
     color: white !important;
     border: none !important;
-    border-radius: 4px !important;
-    padding: 6px 10px !important;
-    font-size: 11px !important;
-    font-weight: 500 !important;
+    border-radius: 100% !important;
+    padding: 0 !important;
+    font-size: 0 !important;
     cursor: pointer !important;
     box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06) !important;
     display: flex !important;
     align-items: center !important;
+    justify-content: center !important;
     transition: all 0.2s ease !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-    min-width: 70px !important;
-    height: 28px !important;
+    width: 45px !important;
+    height: 45px !important;
+    min-width: 45px !important;
+    min-height: 45px !important;
     opacity: 1 !important;
     visibility: visible !important;
     pointer-events: auto !important;
   `;
   
+  // Дополнительные стили для DeepSeek больших таблиц
+  if (isDeepSeek) {
+    cssText += `
+      box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.12) !important;
+      backdrop-filter: blur(8px) !important;
+      border: 2px solid rgba(255, 255, 255, 0.2) !important;
+      transform: translateZ(0) !important;
+    `;
+    console.log('TabXport: Applied DeepSeek-specific button styles');
+  }
+  
+  button.style.cssText = cssText;
   button.title = `Export ${tableData.source} table to Excel/CSV`;
   
   button.addEventListener('mouseenter', () => {
     button.style.backgroundColor = '#059669';
+    if (isDeepSeek) {
+      button.style.transform = 'scale(1.05) translateZ(0)';
+    }
   });
   
   button.addEventListener('mouseleave', () => {
-    button.style.backgroundColor = '#10b981';
+    button.style.backgroundColor = '#1B9358';
+    if (isDeepSeek) {
+      button.style.transform = 'scale(1) translateZ(0)';
+    }
   });
   
   button.addEventListener('click', (e) => {

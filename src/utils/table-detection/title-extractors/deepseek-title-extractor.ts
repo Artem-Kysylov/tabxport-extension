@@ -1,15 +1,20 @@
 import { logger } from '../common/logging';
-import { domUtils } from '../common/dom-utils';
 import { TitleExtractor } from '../types';
 
 /**
  * Title extractor for DeepSeek platform
+ * Based on the original working extractDeepSeekTitle function
  */
 export const deepseekTitleExtractor: TitleExtractor = {
   extractTitle: (): string => {
     logger.debug('Starting DeepSeek title extraction');
+    logger.debug('Current URL:', window.location.href);
+    logger.debug('Page title:', document.title);
     
-    // Variant 1: Active chat in sidebar
+    // ВАЖНО: НЕ используем заголовок страницы как первый вариант для DeepSeek,
+    // так как он может быть одинаковым для всех чатов
+    
+    // Вариант 1: Ищем в боковой панели (активный чат)
     const sidebarSelectors = [
       '.sidebar-chat-item.active',
       '.chat-list .selected',
@@ -28,7 +33,7 @@ export const deepseekTitleExtractor: TitleExtractor = {
       '[class*="chat"][class*="active"]'
     ];
     
-    logger.debug('Testing sidebar selectors...');
+    logger.debug('Testing sidebar selectors first...');
     for (const selector of sidebarSelectors) {
       const elements = document.querySelectorAll(selector);
       logger.debug(`Sidebar selector "${selector}" found ${elements.length} elements`);
@@ -56,7 +61,7 @@ export const deepseekTitleExtractor: TitleExtractor = {
       }
     }
     
-    // Variant 2: Chat header in main interface
+    // Вариант 2: Ищем в заголовке чата в основном интерфейсе
     const chatHeaderSelectors = [
       '.chat-header h1',
       '.chat-header h2',
@@ -107,7 +112,7 @@ export const deepseekTitleExtractor: TitleExtractor = {
       }
     }
     
-    // Variant 3: First user message
+    // Вариант 3: Ищем первое сообщение пользователя
     const userMessageSelectors = [
       '.user-message:first-child',
       '.human-message:first-child',
@@ -139,7 +144,7 @@ export const deepseekTitleExtractor: TitleExtractor = {
       }
     }
     
-    // Variant 4: Navigation elements (more aggressive search)
+    // Вариант 4: Ищем в навигационных элементах (более агрессивный поиск)
     const navElements = document.querySelectorAll('a, button, div, span');
     logger.debug(`Testing ${navElements.length} navigation elements...`);
     
@@ -147,6 +152,7 @@ export const deepseekTitleExtractor: TitleExtractor = {
       const text = element.textContent?.trim();
       if (!text || text.length < 5 || text.length > 80) continue;
       
+      // Проверяем, является ли это активным элементом
       const isActive = element.classList.contains('active') ||
                       element.classList.contains('selected') ||
                       element.classList.contains('current') ||
@@ -177,7 +183,7 @@ export const deepseekTitleExtractor: TitleExtractor = {
       }
     }
     
-    // Variant 5: Local/Session Storage
+    // Вариант 5: Ищем в localStorage или sessionStorage
     logger.debug('Testing storage...');
     try {
       const storageKeys = ['currentChatTitle', 'chatTitle', 'conversationTitle', 'sessionTitle', 'title'];
@@ -201,11 +207,12 @@ export const deepseekTitleExtractor: TitleExtractor = {
       logger.error('Could not access storage for title extraction:', error);
     }
     
-    // Variant 6: URL path
+    // Вариант 6: Ищем в URL (если есть читаемый путь)
     logger.debug('Testing URL extraction...');
     const urlPath = window.location.pathname;
     logger.debug('URL path:', urlPath);
     
+    // Пытаемся извлечь название из пути URL
     const pathMatch = urlPath.match(/\/chat\/([^\/]+)/);
     if (pathMatch && pathMatch[1]) {
       const urlTitle = decodeURIComponent(pathMatch[1])
@@ -218,13 +225,13 @@ export const deepseekTitleExtractor: TitleExtractor = {
       if (urlTitle.length > 3 && urlTitle.length < 80 && 
           !urlTitle.includes('undefined') && 
           !urlTitle.includes('null') &&
-          !/^[a-f0-9-]{20,}$/i.test(urlTitle)) {
+          !/^[a-f0-9-]{20,}$/i.test(urlTitle)) { // Не UUID/ID
         logger.debug('DeepSeek title from URL path:', urlTitle);
         return urlTitle;
       }
     }
     
-    // Variant 7: Meta tags
+    // Вариант 7: Ищем в метаданных страницы
     const metaSelectors = [
       'meta[name="title"]',
       'meta[property="og:title"]',
@@ -246,11 +253,16 @@ export const deepseekTitleExtractor: TitleExtractor = {
                              !lowerContent.includes('assistant');
           
           if (isValidTitle) {
-            let cleanContent = content
-              .replace(' - DeepSeek', '')
-              .replace(' - Chat', '')
-              .trim();
+            // Очищаем от суффиксов
+            let cleanContent = content;
+            if (cleanContent.includes(' - DeepSeek')) {
+              cleanContent = cleanContent.replace(' - DeepSeek', '');
+            }
+            if (cleanContent.includes(' - Chat')) {
+              cleanContent = cleanContent.replace(' - Chat', '');
+            }
             
+            cleanContent = cleanContent.trim();
             if (cleanContent.length > 3) {
               logger.debug('DeepSeek title from meta:', cleanContent);
               return cleanContent;
@@ -260,7 +272,7 @@ export const deepseekTitleExtractor: TitleExtractor = {
       }
     }
     
-    // Variant 8: All headings (last attempt)
+    // Вариант 8: Последняя попытка - ищем любой осмысленный текст в заголовках
     logger.debug('Final fallback - searching all headings...');
     const allHeadings = document.querySelectorAll('h1, h2, h3, h4, h5, h6, [role="heading"]');
     
@@ -289,10 +301,11 @@ export const deepseekTitleExtractor: TitleExtractor = {
       }
     }
     
-    // Variant 9: Page title (absolute last resort)
+    // Вариант 9: ТОЛЬКО СЕЙЧАС пробуем заголовок страницы (как последний вариант)
     logger.debug('Final attempt - checking page title as last resort...');
     const pageTitle = document.title;
     if (pageTitle && pageTitle.length > 3) {
+      // Проверяем, не содержит ли заголовок только название платформы
       const cleanPageTitle = pageTitle.toLowerCase();
       const isGenericTitle = cleanPageTitle === 'deepseek' || 
                             cleanPageTitle === 'deepseek chat' ||
@@ -300,11 +313,16 @@ export const deepseekTitleExtractor: TitleExtractor = {
                             cleanPageTitle.includes('deepseek - ') && cleanPageTitle.replace('deepseek - ', '').trim().length < 3;
       
       if (!isGenericTitle) {
-        let cleanTitle = pageTitle
-          .replace(/^deepseek - /i, '')
-          .replace(/ - deepseek$/i, '')
-          .trim();
+        // Очищаем заголовок от префиксов платформы
+        let cleanTitle = pageTitle;
+        if (cleanTitle.toLowerCase().startsWith('deepseek - ')) {
+          cleanTitle = cleanTitle.substring(11);
+        }
+        if (cleanTitle.toLowerCase().endsWith(' - deepseek')) {
+          cleanTitle = cleanTitle.substring(0, cleanTitle.length - 11);
+        }
         
+        cleanTitle = cleanTitle.trim();
         if (cleanTitle.length > 3) {
           logger.debug('DeepSeek title from page title (last resort):', cleanTitle);
           return cleanTitle;

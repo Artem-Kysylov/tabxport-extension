@@ -1,5 +1,6 @@
 import { TableData, ChromeMessage, ChromeMessageType } from '../../types';
 import { getUserSettings } from '../../lib/storage';
+import { createTooltip } from './tooltip';
 
 interface ButtonPosition {
   x: number;
@@ -241,7 +242,7 @@ export const showNotification = (message: string, type: 'success' | 'error'): vo
     font-weight: 500;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
-    background-color: ${type === 'success' ? '#10b981' : '#ef4444'};
+    background-color: ${type === 'success' ? '#1B9358' : '#ef4444'};
   `;
   
   notification.textContent = message;
@@ -326,6 +327,12 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
   // Определяем, если это DeepSeek
   const isDeepSeek = window.location.href.includes('chat.deepseek.com') || window.location.href.includes('deepseek.com');
   
+  // Создаем тултип
+  const tooltip = createTooltip({
+    text: 'Export this Table',
+    targetElement: button
+  });
+
   // Базовые стили
   let cssText = `
     position: absolute !important;
@@ -343,7 +350,7 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.3s ease !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     width: 45px !important;
     height: 45px !important;
@@ -359,7 +366,6 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     cssText += `
       box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.12) !important;
       backdrop-filter: blur(8px) !important;
-      border: 2px solid rgba(255, 255, 255, 0.2) !important;
       transform: translateZ(0) !important;
     `;
     console.log('TabXport: Applied DeepSeek-specific button styles');
@@ -369,17 +375,43 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
   button.title = `Export ${tableData.source} table to Excel/CSV`;
   
   button.addEventListener('mouseenter', () => {
-    button.style.backgroundColor = '#059669';
     if (isDeepSeek) {
+      button.style.backgroundColor = 'transparent';
+      button.style.border = '1px solid #1B9358';
       button.style.transform = 'scale(1.05) translateZ(0)';
+      const svg = button.querySelector('svg');
+      if (svg) {
+        svg.style.stroke = '#1B9358';
+      }
+    } else {
+      button.style.backgroundColor = 'transparent';
+      button.style.border = '1px solid #1B9358';
+      const svg = button.querySelector('svg');
+      if (svg) {
+        svg.style.stroke = '#1B9358';
+      }
     }
+    tooltip.show();
   });
   
   button.addEventListener('mouseleave', () => {
-    button.style.backgroundColor = '#1B9358';
     if (isDeepSeek) {
+      button.style.backgroundColor = '#1B9358';
+      button.style.border = 'none';
       button.style.transform = 'scale(1) translateZ(0)';
+      const svg = button.querySelector('svg');
+      if (svg) {
+        svg.style.stroke = 'white';
+      }
+    } else {
+      button.style.backgroundColor = '#1B9358';
+      button.style.border = 'none';
+      const svg = button.querySelector('svg');
+      if (svg) {
+        svg.style.stroke = 'white';
+      }
     }
+    tooltip.hide();
   });
   
   button.addEventListener('click', (e) => {
@@ -387,6 +419,14 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     e.stopPropagation();
     handleExport(tableData, button);
   });
+  
+  // Очищаем тултип при удалении кнопки
+  const cleanup = () => {
+    tooltip.destroy();
+  };
+  
+  // Добавляем обработчик для очистки при удалении кнопки
+  button.addEventListener('remove', cleanup);
   
   console.log('TabXport: Button created with styles:', button.style.cssText);
   

@@ -30,7 +30,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgradeClick 
     return (
       <div className="flex justify-center items-center h-32">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-      </div>
+        </div>
     );
   }
 
@@ -59,21 +59,21 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgradeClick 
           <span className={`text-sm font-semibold ${isProPlan ? 'text-emerald-600' : 'text-gray-600'}`}>
             {isProPlan ? 'Pro' : 'Free'}
           </span>
-        </div>
+      </div>
 
         {!isProPlan && (
           <div className="mb-4">
             <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
               <span>Exports Left</span>
               <span>{exportsLeft} / {subscription.exportsLimit}</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
                 className="bg-emerald-600 h-2 rounded-full"
                 style={{
                   width: `${(subscription.exportsUsed / subscription.exportsLimit) * 100}%`
                 }}
-              ></div>
+            ></div>
             </div>
           </div>
         )}
@@ -85,8 +85,8 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgradeClick 
           >
             Upgrade to Pro
           </button>
-        )}
-      </div>
+          )}
+        </div>
 
       <div className="space-y-3">
         <div className="flex items-center text-sm">
@@ -113,11 +113,11 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({ onUpgradeClick 
             <div className="flex items-center text-sm text-gray-400">
               <span className="mr-2">○</span>
               <span>Unlimited exports</span>
-            </div>
+        </div>
             <div className="flex items-center text-sm text-gray-400">
               <span className="mr-2">○</span>
               <span>Google Drive integration</span>
-            </div>
+        </div>
           </>
         )}
       </div>

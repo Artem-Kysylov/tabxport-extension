@@ -34,57 +34,30 @@ const findPositionedContainer = (element: HTMLElement): HTMLElement => {
 // Функция для вычисления позиции кнопки
 export const calculateButtonPosition = (element: HTMLElement): ButtonPosition => {
   const rect = element.getBoundingClientRect();
-  
-  // Определяем платформу для адаптивного позиционирования
-  const url = window.location.href;
-  const platform: Platform = {
-    isGemini: url.includes('gemini.google.com') || url.includes('bard.google.com'),
-    isChatGPT: url.includes('chat.openai.com') || url.includes('chatgpt.com'),
-    isClaude: url.includes('claude.ai'),
-    isDeepSeek: url.includes('chat.deepseek.com') || url.includes('deepseek.com')
-  };
-  
-  console.log('TabXport: Element rect:', rect);
-  console.log('TabXport: Platform detection:', platform);
-  
-  // Специальная логика для DeepSeek с большими таблицами
-  if (platform.isDeepSeek) {
-    return calculateDeepSeekButtonPosition(element, rect);
-  }
+  const isClaude = window.location.href.includes('claude.ai');
   
   const container = findPositionedContainer(element);
-  console.log('TabXport: Using container:', container.tagName, container.className);
-  
   const containerRect = container.getBoundingClientRect();
-  const relativeX = rect.right - containerRect.left;
-  const relativeY = rect.top - containerRect.top;
-  
-  const spaceOnRight = window.innerWidth - rect.right;
   const buttonWidth = 45;
   
-  // Унифицированная логика позиционирования с платформо-специфичными настройками
-  const config = {
-    spacing: platform.isGemini ? 2 : platform.isChatGPT || platform.isClaude ? 8 : 4,
-    verticalOffset: platform.isGemini ? -5 : platform.isChatGPT || platform.isClaude ? -2 : -2,
-    insideSpacing: platform.isGemini ? 8 : 5,
-    insideVerticalOffset: platform.isGemini ? 3 : 5
-  };
-
-  const position = spaceOnRight >= buttonWidth + 10 
-    ? {
-        x: relativeX + config.spacing,
-        y: relativeY + config.verticalOffset,
-        container
-      }
-    : {
-        x: relativeX - buttonWidth - config.insideSpacing,
-        y: relativeY + config.insideVerticalOffset,
-        container
-      };
+  // Находим первую строку таблицы
+  const firstRow = element.querySelector('tr:first-child');
+  const firstRowRect = firstRow ? firstRow.getBoundingClientRect() : rect;
   
-  console.log('TabXport: Space on right:', spaceOnRight, 'px');
-  console.log('TabXport: Relative position within container:', position);
-  return position;
+  // Всегда позиционируем кнопку слева от таблицы с единым отступом
+  let x = rect.left - containerRect.left - buttonWidth - 20;
+  let y = firstRowRect.top - containerRect.top;
+
+  // Специальные корректировки для Claude - только вертикальный отступ
+  if (isClaude) {
+    y = firstRowRect.top - containerRect.top + 5; // Небольшой отступ сверху
+  }
+
+  return {
+    x,
+    y,
+    container
+  };
 };
 
 // Специальная функция позиционирования для DeepSeek
@@ -313,7 +286,7 @@ const handleExport = async (tableData: TableData, button: HTMLButtonElement): Pr
 };
 
 // Функция для создания кнопки экспорта
-export const createExportButton = (tableData: TableData, position: ButtonPosition): HTMLButtonElement => {
+export const createExportButton = (tableData: TableData, position: ButtonPosition): HTMLElement => {
   const button = document.createElement('button');
   
   button.innerHTML = `
@@ -324,7 +297,8 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     </svg>
   `;
   
-  // Определяем, если это DeepSeek
+  // Определяем, если это ChatGPT или DeepSeek
+  const isChatGPT = window.location.href.includes('chat.openai.com');
   const isDeepSeek = window.location.href.includes('chat.deepseek.com') || window.location.href.includes('deepseek.com');
   
   // Создаем тултип
@@ -338,7 +312,7 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     position: absolute !important;
     top: ${position.y}px !important;
     left: ${position.x}px !important;
-    z-index: 999999 !important;
+    z-index: 2147483647 !important;
     background-color: #1B9358 !important;
     color: white !important;
     border: none !important;
@@ -346,11 +320,11 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     padding: 0 !important;
     font-size: 0 !important;
     cursor: pointer !important;
-    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.3s ease !important;
+    transition: background-color 0.2s ease, border 0.2s ease !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     width: 45px !important;
     height: 45px !important;
@@ -358,30 +332,53 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     min-height: 45px !important;
     opacity: 1 !important;
     visibility: visible !important;
-    pointer-events: auto !important;
+    pointer-events: all !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-font-smoothing: antialiased !important;
   `;
   
-  // Дополнительные стили для DeepSeek больших таблиц
-  if (isDeepSeek) {
+  // Дополнительные стили для ChatGPT и DeepSeek больших таблиц
+  if (isChatGPT || isDeepSeek) {
     cssText += `
-      box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.12) !important;
-      backdrop-filter: blur(8px) !important;
-      transform: translateZ(0) !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
     `;
-    console.log('TabXport: Applied DeepSeek-specific button styles');
   }
   
   button.style.cssText = cssText;
+  
+  // Добавляем дополнительный контейнер для улучшения обработки событий
+  const buttonWrapper = document.createElement('div');
+  buttonWrapper.style.cssText = `
+    position: absolute !important;
+    top: ${position.y}px !important;
+    left: ${position.x}px !important;
+    width: 45px !important;
+    height: 45px !important;
+    z-index: 2147483647 !important;
+    pointer-events: all !important;
+    touch-action: manipulation !important;
+  `;
+  
+  buttonWrapper.appendChild(button);
+  button.style.position = 'relative';
+  button.style.top = '0';
+  button.style.left = '0';
+  
   button.title = `Export ${tableData.source} table to Excel/CSV`;
   
-  button.addEventListener('mouseenter', () => {
+  // Обработчики событий
+  buttonWrapper.addEventListener('mouseenter', () => {
     if (isDeepSeek) {
       button.style.backgroundColor = 'transparent';
-      button.style.border = '1px solid #1B9358';
-      button.style.transform = 'scale(1.05) translateZ(0)';
+      button.style.border = '2px solid #1B9358';
+      button.style.transform = 'none';
       const svg = button.querySelector('svg');
       if (svg) {
         svg.style.stroke = '#1B9358';
+        svg.style.transform = 'none';
       }
     } else {
       button.style.backgroundColor = 'transparent';
@@ -394,14 +391,15 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     tooltip.show();
   });
   
-  button.addEventListener('mouseleave', () => {
+  buttonWrapper.addEventListener('mouseleave', () => {
     if (isDeepSeek) {
       button.style.backgroundColor = '#1B9358';
       button.style.border = 'none';
-      button.style.transform = 'scale(1) translateZ(0)';
+      button.style.transform = 'none';
       const svg = button.querySelector('svg');
       if (svg) {
-        svg.style.stroke = 'white';
+        svg.style.stroke = '#FFFFFF';
+        svg.style.transform = 'none';
       }
     } else {
       button.style.backgroundColor = '#1B9358';
@@ -417,7 +415,7 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
   button.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    handleExport(tableData, button);
+    handleExport(tableData, button as HTMLButtonElement);
   });
   
   // Очищаем тултип при удалении кнопки
@@ -425,12 +423,11 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     tooltip.destroy();
   };
   
-  // Добавляем обработчик для очистки при удалении кнопки
-  button.addEventListener('remove', cleanup);
+  buttonWrapper.addEventListener('remove', cleanup);
   
-  console.log('TabXport: Button created with styles:', button.style.cssText);
+  console.log('TabXport: Button created with enhanced styles and event handling');
   
-  return button;
+  return buttonWrapper;
 };
 
 // Добавляем CSS для анимации спиннера

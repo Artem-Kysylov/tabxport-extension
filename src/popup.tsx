@@ -55,15 +55,15 @@ const Popup: React.FC = () => {
         onTabChange={setActiveTab}
       />
 
-      {activeTab === 'settings' && (
+        {activeTab === 'settings' && (
         <SettingsTab onSettingsChange={handleSettingsChange} />
-      )}
+        )}
 
-      {activeTab === 'subscription' && (
+        {activeTab === 'subscription' && (
         <SubscriptionTab onUpgradeClick={handleUpgradeClick} />
-      )}
+        )}
 
-      {activeTab === 'actions' && (
+        {activeTab === 'actions' && (
         <ActionsTab />
       )}
 

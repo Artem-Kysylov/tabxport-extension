@@ -72,7 +72,7 @@ export type ChromeMessage =
   | {
       type: ChromeMessageType.UPDATE_SETTINGS;
       payload: UpdateSettingsPayload;
-    }
+}
   | {
       type: ChromeMessageType.CHECK_SUBSCRIPTION;
       payload: CheckSubscriptionPayload;

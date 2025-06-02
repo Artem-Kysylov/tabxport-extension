@@ -37,10 +37,10 @@ export const QuickActions: React.FC = () => {
         <span className="text-xs text-emerald-600">Ctrl+Shift+R</span>
       </button>
 
-      <button
+          <button
         onClick={handleOpenDocs}
         className="w-full flex items-center px-4 py-2 bg-gray-50 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
-      >
+          >
         <span className="mr-2">📚</span>
         Documentation
       </button>
@@ -51,7 +51,7 @@ export const QuickActions: React.FC = () => {
       >
         <span className="mr-2">🐛</span>
         Report an Issue
-      </button>
+          </button>
 
       <div className="mt-4 p-3 bg-blue-50 rounded-md">
         <h3 className="text-sm font-medium text-blue-800 mb-2">Pro Tip</h3>
@@ -61,4 +61,4 @@ export const QuickActions: React.FC = () => {
       </div>
     </div>
   );
-}; 
+};

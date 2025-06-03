@@ -13,6 +13,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
+    "cheerio": "^1.0.0",
+    "clean-text-utils": "^1.1.17",
+    "node-html-parser": "^7.0.1",
+    "normalize-text": "^2.6.0",
+    "parse-markdown-table": "^0.0.6",
     "plasmo": "0.90.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",

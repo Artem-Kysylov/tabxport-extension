@@ -34,30 +34,60 @@ const findPositionedContainer = (element: HTMLElement): HTMLElement => {
 // Функция для вычисления позиции кнопки
 export const calculateButtonPosition = (element: HTMLElement): ButtonPosition => {
   const rect = element.getBoundingClientRect();
-  const isClaude = window.location.href.includes('claude.ai');
+  
+  // Определяем платформу для адаптивного позиционирования
+  const url = window.location.href;
+  const platform: Platform = {
+    isGemini: url.includes('gemini.google.com') || url.includes('bard.google.com'),
+    isChatGPT: url.includes('chat.openai.com') || url.includes('chatgpt.com'),
+    isClaude: url.includes('claude.ai'),
+    isDeepSeek: url.includes('chat.deepseek.com') || url.includes('deepseek.com')
+  };
+  
+  console.log('TabXport: Element rect:', rect);
+  console.log('TabXport: Platform detection:', platform);
+  
+  // Специальная логика для DeepSeek с большими таблицами
+  if (platform.isDeepSeek) {
+    return calculateDeepSeekButtonPosition(element, rect);
+  }
   
   const container = findPositionedContainer(element);
+  console.log('TabXport: Using container:', container.tagName, container.className);
+  
   const containerRect = container.getBoundingClientRect();
+  const relativeX = rect.left - containerRect.left; // Изменено: теперь используем left вместо right
+  const relativeY = rect.top - containerRect.top;
+  
+  const spaceOnLeft = rect.left; // Новое: пространство слева от таблицы
   const buttonWidth = 45;
   
-  // Находим первую строку таблицы
-  const firstRow = element.querySelector('tr:first-child');
-  const firstRowRect = firstRow ? firstRow.getBoundingClientRect() : rect;
-  
-  // Всегда позиционируем кнопку слева от таблицы с единым отступом
-  let x = rect.left - containerRect.left - buttonWidth - 20;
-  let y = firstRowRect.top - containerRect.top;
-
-  // Специальные корректировки для Claude - только вертикальный отступ
-  if (isClaude) {
-    y = firstRowRect.top - containerRect.top + 5; // Небольшой отступ сверху
-  }
-
-  return {
-    x,
-    y,
-    container
+  // Унифицированная логика позиционирования с платформо-специфичными настройками
+  const config = {
+    spacing: platform.isGemini ? 2 : platform.isChatGPT || platform.isClaude ? 8 : 4,
+    verticalOffset: platform.isGemini ? -5 : platform.isChatGPT || platform.isClaude ? -2 : -2,
+    rightSpacing: platform.isGemini ? 8 : 5, // Переименовано из insideSpacing
+    rightVerticalOffset: platform.isGemini ? 3 : 5 // Переименовано из insideVerticalOffset
   };
+
+  // ИЗМЕНЕНО: теперь по умолчанию размещаем кнопку СЛЕВА от таблицы
+  const position = spaceOnLeft >= buttonWidth + 10 
+    ? {
+        // Размещаем слева от таблицы (по умолчанию)
+        x: relativeX - buttonWidth - config.spacing,
+        y: relativeY + config.verticalOffset,
+        container
+      }
+    : {
+        // Размещаем справа от таблицы (только если нет места слева)
+        x: (rect.right - containerRect.left) + config.rightSpacing,
+        y: relativeY + config.rightVerticalOffset,
+        container
+      };
+  
+  console.log('TabXport: Space on left:', spaceOnLeft, 'px');
+  console.log('TabXport: Relative position within container:', position);
+  return position;
 };
 
 // Специальная функция позиционирования для DeepSeek
@@ -141,29 +171,32 @@ const calculateDeepSeekButtonPosition = (element: HTMLElement, rect: DOMRect): B
     console.log('TabXport: Viewport-based X:', viewportBasedX, 'Container-based X:', containerBasedX);
   } else {
     // Обычное позиционирование относительно таблицы
-    const relativeX = rect.right - containerRect.left;
-    const spaceOnRight = viewportWidth - rect.right;
+    const relativeXLeft = rect.left - containerRect.left;  // Позиция левого края таблицы
+    const relativeXRight = rect.right - containerRect.left; // Позиция правого края таблицы
+    const spaceOnLeft = rect.left; // Пространство слева от таблицы
+    const spaceOnRight = viewportWidth - rect.right; // Пространство справа от таблицы
     
     const spacing = isLargeTable ? (isScrollable ? 15 : 12) : 6;
-    const insideSpacing = isLargeTable ? (isScrollable ? 15 : 10) : 8;
-    const insideVerticalOffset = isLargeTable ? (isScrollable ? 12 : 8) : 5;
+    const leftSpacing = isLargeTable ? (isScrollable ? 15 : 10) : 8;
+    const leftVerticalOffset = isLargeTable ? (isScrollable ? 12 : 8) : 5;
     
-    if (spaceOnRight >= buttonWidth + 20) {
-      // Размещаем справа от таблицы
+    // ИЗМЕНЕНО: теперь предпочитаем левое позиционирование для DeepSeek тоже
+    if (spaceOnLeft >= buttonWidth + 20) {
+      // Размещаем слева от таблицы (предпочтительно)
       position = {
-        x: relativeX + spacing,
+        x: relativeXLeft - buttonWidth - leftSpacing,
+        y: relativeY + leftVerticalOffset,
+        container
+      };
+      console.log('TabXport: Normal table - placing button to the left (preferred)');
+    } else {
+      // Размещаем справа от таблицы (только если нет места слева)
+      position = {
+        x: relativeXRight + spacing,
         y: relativeY + config.verticalOffset,
         container
       };
-      console.log('TabXport: Normal table - placing button to the right');
-    } else {
-      // Размещаем слева от таблицы
-      position = {
-        x: relativeX - buttonWidth - insideSpacing,
-        y: relativeY + insideVerticalOffset,
-        container
-      };
-      console.log('TabXport: Normal table - placing button to the left');
+      console.log('TabXport: Normal table - placing button to the right (fallback)');
     }
   }
   

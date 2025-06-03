@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabXport - Тест системы форматирования</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+        .test-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            border: 2px solid #ddd;
+        }
+        .test-table th, .test-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .test-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #2980b9;
+        }
+        .results {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            min-height: 100px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .text-table {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre;
+            border: 1px solid #ddd;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠 TabXport - Тестирование системы форматирования</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Внимание:</strong> Этот файл предназначен для тестирования системы автоформатирования. 
+            Откройте DevTools (F12) и смотрите результаты в консоли.
+        </div>
+
+        <h2>1. HTML таблица с объединенными ячейками</h2>
+        <table id="merged-table" class="test-table">
+            <thead>
+                <tr>
+                    <th>**Product**</th>
+                    <th>`Q1 Sales`</th>
+                    <th>|Q2 Sales|</th>
+                    <th>~~Total~~</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="2">Laptop</td>
+                    <td>$100,000</td>
+                    <td>$120,000</td>
+                    <td>$220,000</td>
+                </tr>
+                <tr>
+                    <td>$150,000</td>
+                    <td>$180,000</td>
+                    <td>$330,000</td>
+                </tr>
+                <tr>
+                    <td colspan="2">**Phone Total**</td>
+                    <td>`$200,000`</td>
+                    <td>|$200,000|</td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="test-button" onclick="testTable('merged-table', 'chatgpt')">
+            Тест с ChatGPT настройками
+        </button>
+        <button class="test-button" onclick="testTable('merged-table', 'gemini')">
+            Тест с Gemini настройками
+        </button>
+
+        <h2>2. Markdown таблица в тексте</h2>
+        <div id="markdown-table" class="text-table">| **Name** | `Age` | |City| | ~~Status~~ |
+|----------|-------|-------|------------|
+| John Doe | 25    | |New York| | ~~Active~~ |
+| **Jane Smith** | `30` | |Los Angeles| | **Active** |
+| Bob Johnson | `35` |       | ~~Inactive~~ |</div>
+        <button class="test-button" onclick="testMarkdownText('markdown-table', 'chatgpt')">
+            Парсинг Markdown (ChatGPT)
+        </button>
+
+        <h2>3. Claude-стиль текстовая таблица</h2>
+        <div id="claude-table" class="text-table">Name           Score    Grade    Comment
+Alice Johnson   95       A        Excellent work
+Bob Smith       87       B        Good progress  
+Charlie Brown   92       A-       Very good
+Diana Prince    88       B+       Well done</div>
+        <button class="test-button" onclick="testMarkdownText('claude-table', 'claude')">
+            Парсинг Claude-стиль
+        </button>
+
+        <h2>4. Таблица с проблемами кодировки</h2>
+        <table id="encoding-table" class="test-table">
+            <thead>
+                <tr>
+                    <th>**Naïve**</th>
+                    <th>`Café`</th>
+                    <th>|Résumé|</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>André Müller</td>
+                    <td>`François Björk`</td>
+                    <td>|José Åse|</td>
+                </tr>
+                <tr>
+                    <td>**Zürich**</td>
+                    <td>Москва</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="test-button" onclick="testTable('encoding-table', 'deepseek')">
+            Тест с DeepSeek (Unicode)
+        </button>
+
+        <h2>5. Проблемная таблица (разные количества ячеек)</h2>
+        <table id="broken-table" class="test-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>John</td>
+                    <td>Active</td>
+                    <td>Extra cell</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Jane</td>
+                    <!-- Пропущена ячейка Status -->
+                </tr>
+                <tr>
+                    <td>3</td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="test-button" onclick="testTable('broken-table', 'other')">
+            Исправление структуры
+        </button>
+
+        <h2>📊 Результаты тестов</h2>
+        <div id="results" class="results">Нажмите на любую кнопку выше для тестирования...</div>
+
+        <div class="success">
+            <strong>💡 Совет:</strong> Откройте DevTools (F12) → Console для подробных логов форматирования.
+        </div>
+    </div>
+
+    <script>
+        // Эмуляция нашей системы форматирования для тестирования
+        
+        // Простые тестовые данные
+        const testData = {
+            simple: {
+                headers: ['Name', 'Age', 'City'],
+                rows: [
+                    ['John', '25', 'NYC'],
+                    ['Jane', '30', 'LA']
+                ]
+            },
+            
+            withMarkdown: {
+                headers: ['**Name**', '`Age`', '|City|'],
+                rows: [
+                    ['John Doe', '25', '|New York|'],
+                    ['**Jane Smith**', '`30`', '|Los Angeles|'],
+                    ['Bob Johnson', '35'] // Пропущена ячейка
+                ]
+            }
+        };
+
+        // Эмулируем основные функции форматирования
+        function simulateFormatting(headers, rows, platform) {
+            const start = Date.now();
+            
+            // Эмулируем очистку заголовков
+            const cleanHeaders = headers.map(h => 
+                h.replace(/\*\*/g, '')
+                 .replace(/`/g, '')
+                 .replace(/\|/g, '')
+                 .trim()
+            );
+            
+            // Эмулируем нормализацию строк
+            const maxCols = Math.max(cleanHeaders.length, ...rows.map(r => r.length));
+            const normalizedRows = rows.map(row => {
+                const newRow = [...row];
+                while (newRow.length < maxCols) {
+                    newRow.push('');
+                }
+                return newRow.map(cell => 
+                    cell.replace(/\*\*/g, '')
+                        .replace(/`/g, '')
+                        .replace(/\|/g, '')
+                        .replace(/~~/g, '')
+                        .trim()
+                );
+            });
+            
+            const time = Date.now() - start;
+            
+            return {
+                headers: cleanHeaders,
+                rows: normalizedRows,
+                originalHeaders: headers,
+                originalRows: rows,
+                platform,
+                processingTime: time,
+                operations: [
+                    { type: 'markdown-processed', description: 'Удалены Markdown символы' },
+                    { type: 'structure-fixed', description: 'Нормализованы колонки' }
+                ]
+            };
+        }
+
+        function extractTableData(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return null;
+            
+            if (element.tagName === 'TABLE') {
+                const headers = Array.from(element.querySelectorAll('thead th, tr:first-child th'))
+                    .map(th => th.textContent.trim());
+                
+                const rows = Array.from(element.querySelectorAll('tbody tr, tr:not(:first-child)'))
+                    .map(tr => Array.from(tr.querySelectorAll('td'))
+                        .map(td => td.textContent.trim()));
+                
+                return { headers, rows, element };
+            } else {
+                // Для текстовых элементов
+                const text = element.textContent;
+                return parseTextTable(text);
+            }
+        }
+
+        function parseTextTable(text) {
+            const lines = text.trim().split('\n').filter(line => line.trim());
+            
+            if (lines.length < 2) return { headers: [], rows: [] };
+            
+            // Проверяем Markdown таблицу
+            if (lines[0].includes('|')) {
+                const headers = lines[0].split('|')
+                    .map(h => h.trim())
+                    .filter(h => h);
+                
+                const rows = lines.slice(2) // Пропускаем разделитель
+                    .map(line => line.split('|')
+                        .map(cell => cell.trim())
+                        .filter(cell => cell !== ''));
+                
+                return { headers, rows };
+            } else {
+                // Claude-стиль (пробелы)
+                const headers = lines[0].split(/\s{2,}/).filter(h => h.trim());
+                const rows = lines.slice(1)
+                    .map(line => line.split(/\s{2,}/).filter(cell => cell.trim()));
+                
+                return { headers, rows };
+            }
+        }
+
+        function testTable(elementId, platform) {
+            console.log(`🧪 Тестирование таблицы ${elementId} с платформой ${platform}`);
+            
+            const data = extractTableData(elementId);
+            if (!data) {
+                showResults('❌ Ошибка: не удалось извлечь данные таблицы');
+                return;
+            }
+            
+            console.log('📥 Исходные данные:', data);
+            
+            const result = simulateFormatting(data.headers, data.rows, platform);
+            
+            console.log('📤 Результат форматирования:', result);
+            
+            const output = `
+✅ Таблица ${elementId} обработана за ${result.processingTime}мс
+
+🔧 Платформа: ${platform}
+
+📊 Исходные заголовки (${result.originalHeaders.length}):
+${result.originalHeaders.map((h, i) => `  ${i+1}. "${h}"`).join('\n')}
+
+✨ Очищенные заголовки (${result.headers.length}):
+${result.headers.map((h, i) => `  ${i+1}. "${h}"`).join('\n')}
+
+📈 Строк данных: ${result.originalRows.length} → ${result.rows.length}
+
+🔄 Примененные операции:
+${result.operations.map(op => `  • ${op.description}`).join('\n')}
+
+📝 Пример очищенной строки:
+  Исходная: [${result.originalRows[0]?.map(c => `"${c}"`).join(', ') || 'нет данных'}]
+  Очищенная: [${result.rows[0]?.map(c => `"${c}"`).join(', ') || 'нет данных'}]
+            `;
+            
+            showResults(output);
+        }
+
+        function testMarkdownText(elementId, platform) {
+            console.log(`📝 Тестирование текстовой таблицы ${elementId}`);
+            testTable(elementId, platform);
+        }
+
+        function showResults(text) {
+            document.getElementById('results').textContent = text;
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            showResults('🚀 Система тестирования готова!\n\nВыберите любую таблицу выше для тестирования форматирования.');
+            
+            console.log('🎯 TabXport Testing Environment загружен!');
+            console.log('📋 Доступные тестовые таблицы:', {
+                'merged-table': 'HTML с объединенными ячейками',
+                'markdown-table': 'Markdown таблица',
+                'claude-table': 'Claude-стиль пробелы',
+                'encoding-table': 'Unicode символы',
+                'broken-table': 'Поломанная структура'
+            });
+        });
+
+        // Дополнительные тесты для консоли
+        window.runBatchTests = function() {
+            console.log('🔄 Запуск пакетного тестирования...');
+            
+            ['merged-table', 'encoding-table', 'broken-table'].forEach(tableId => {
+                ['chatgpt', 'claude', 'gemini', 'deepseek'].forEach(platform => {
+                    setTimeout(() => {
+                        console.log(`\n--- Тест ${tableId} + ${platform} ---`);
+                        testTable(tableId, platform);
+                    }, Math.random() * 1000);
+                });
+            });
+        };
+
+        window.testFormattingData = testData;
+    </script>
+</body>
+</html> 

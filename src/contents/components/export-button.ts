@@ -64,7 +64,7 @@ export const calculateButtonPosition = (element: HTMLElement): ButtonPosition =>
   
   // Унифицированная логика позиционирования с платформо-специфичными настройками
   const config = {
-    spacing: platform.isGemini ? 2 : platform.isChatGPT || platform.isClaude ? 8 : 4,
+    spacing: platform.isGemini ? 12 : platform.isChatGPT || platform.isClaude ? 8 : 4,
     verticalOffset: platform.isGemini ? -5 : platform.isChatGPT || platform.isClaude ? -2 : -2,
     rightSpacing: platform.isGemini ? 8 : 5, // Переименовано из insideSpacing
     rightVerticalOffset: platform.isGemini ? 3 : 5 // Переименовано из insideVerticalOffset

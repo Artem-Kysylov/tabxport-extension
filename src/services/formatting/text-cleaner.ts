@@ -1,6 +1,57 @@
-import { normalizeText, normalizeWhiteSpaces, normalizeDiacritics } from 'normalize-text';
-import * as cleanTextUtils from 'clean-text-utils';
 import type { FormattingOptions, FormattingOperation } from './types';
+
+/**
+ * Browser-совместимые функции для очистки текста
+ */
+const normalizeWhiteSpaces = (text: string): string => {
+  return text.replace(/\s+/g, ' ').trim();
+};
+
+const normalizeDiacritics = (text: string): string => {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
+const stripNonASCII = (text: string): string => {
+  return text.replace(/[^\x00-\x7F]/g, '');
+};
+
+const stripEmoji = (text: string): string => {
+  return text.replace(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+};
+
+const replaceSmartChars = (text: string): string => {
+  return text
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    .replace(/[–—]/g, '-')
+    .replace(/…/g, '...');
+};
+
+const stripBOM = (text: string): string => {
+  return text.replace(/^\uFEFF/, '');
+};
+
+const replaceExoticChars = (text: string): string => {
+  // Заменяем экзотические символы на похожие ASCII
+  return text
+    .replace(/[àáâãäå]/g, 'a')
+    .replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôõö]/g, 'o')
+    .replace(/[ùúûü]/g, 'u')
+    .replace(/[ýÿ]/g, 'y')
+    .replace(/[ñ]/g, 'n')
+    .replace(/[ç]/g, 'c')
+    .replace(/[ß]/g, 'ss')
+    .replace(/[ÀÁÂÃÄÅ]/g, 'A')
+    .replace(/[ÈÉÊË]/g, 'E')
+    .replace(/[ÌÍÎÏ]/g, 'I')
+    .replace(/[ÒÓÔÕÖ]/g, 'O')
+    .replace(/[ÙÚÛÜ]/g, 'U')
+    .replace(/[ÝŸ]/g, 'Y')
+    .replace(/[Ñ]/g, 'N')
+    .replace(/[Ç]/g, 'C');
+};
 
 /**
  * Продвинутая очистка текста в ячейках таблиц
@@ -35,7 +86,7 @@ export const cleanCellText = (
 
   // 2. Удаление HTML тегов
   if (options.removeHtmlTags) {
-    const withoutTags = cleanTextUtils.strip.nonASCII(result);
+    const withoutTags = stripNonASCII(result);
     if (withoutTags !== result) {
       operations.push({
         type: 'cell-cleaned',
@@ -131,7 +182,7 @@ const applyAggressiveCleaning = (
   let result = text;
 
   // Удаляем эмодзи
-  const withoutEmoji = cleanTextUtils.strip.emoji(result);
+  const withoutEmoji = stripEmoji(result);
   if (withoutEmoji !== result) {
     operations.push({
       type: 'cell-cleaned',
@@ -144,7 +195,7 @@ const applyAggressiveCleaning = (
   }
 
   // Удаляем все не-ASCII символы
-  const withoutNonASCII = cleanTextUtils.strip.nonASCII(result);
+  const withoutNonASCII = stripNonASCII(result);
   if (withoutNonASCII !== result) {
     operations.push({
       type: 'cell-cleaned',
@@ -157,7 +208,7 @@ const applyAggressiveCleaning = (
   }
 
   // Заменяем экзотические символы
-  const normalized = cleanTextUtils.replace.exoticChars(result);
+  const normalized = replaceExoticChars(result);
   if (normalized !== result) {
     operations.push({
       type: 'cell-cleaned',
@@ -183,7 +234,7 @@ const applyStandardCleaning = (
   let result = text;
 
   // Заменяем умные кавычки
-  const withSmartChars = cleanTextUtils.replace.smartChars(result);
+  const withSmartChars = replaceSmartChars(result);
   if (withSmartChars !== result) {
     operations.push({
       type: 'cell-cleaned',
@@ -196,7 +247,7 @@ const applyStandardCleaning = (
   }
 
   // Удаляем UTF8 BOM
-  const withoutBOM = cleanTextUtils.strip.bom(result);
+  const withoutBOM = stripBOM(result);
   if (withoutBOM !== result) {
     operations.push({
       type: 'cell-cleaned',
@@ -225,7 +276,7 @@ const applyMinimalCleaning = (
   let result = text;
 
   // Только удаляем лишние пробелы
-  const withoutExtraSpace = cleanTextUtils.strip.extraSpace(result);
+  const withoutExtraSpace = result.replace(/\s+/g, ' ').trim();
   if (withoutExtraSpace !== result) {
     operations.push({
       type: 'cell-cleaned',

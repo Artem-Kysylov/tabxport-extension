@@ -1,4 +1,5 @@
 import type { TableData } from '../types';
+import { TableFormatterService, FormattingUtils } from '../services/formatting';
 
 // Определение источника по URL
 export const detectSource = (url: string): 'chatgpt' | 'claude' | 'gemini' | 'deepseek' | 'other' => {
@@ -1139,7 +1140,7 @@ export const findTablesInTextContent = (container: HTMLElement): { headers: stri
 };
 
 // Основная функция для извлечения данных таблицы
-export const extractTableData = (element: HTMLElement): TableData | null => {
+export const extractTableData = async (element: HTMLElement): Promise<TableData | null> => {
   if (!element || !element.tagName) {
     console.error('TabXport: Invalid element provided to extractTableData');
     return null;
@@ -1233,6 +1234,46 @@ export const extractTableData = (element: HTMLElement): TableData | null => {
   console.log('TabXport: Current URL for title extraction:', window.location.href);
   const chatTitle = extractChatTitle(source);
   console.log('TabXport: Chat title extraction completed, result:', chatTitle);
+
+  // 🛠 АВТОФОРМАТИРОВАНИЕ: Применяем систему автоформатирования
+  console.log('TabXport: Starting auto-formatting...');
+  console.log('TabXport: Original data - Headers:', headers.length, 'Rows:', rows.length);
+  
+  try {
+    // Проверяем, нужно ли форматирование
+    const needsFormatting = FormattingUtils.needsFormatting(headers, rows);
+    console.log('TabXport: Needs formatting:', needsFormatting);
+    
+    if (needsFormatting) {
+      const improvementsCount = FormattingUtils.countImprovements(headers, rows);
+      console.log('TabXport: Potential improvements:', improvementsCount);
+      
+      // Применяем быстрое форматирование
+      const formattedResult = await FormattingUtils.quickFormat(headers, rows, source);
+      
+      if (formattedResult && formattedResult.headers && formattedResult.rows) {
+        headers = formattedResult.headers;
+        rows = formattedResult.rows;
+        
+        console.log('TabXport: Auto-formatting applied successfully!');
+        console.log('TabXport: Formatted data - Headers:', headers.length, 'Rows:', rows.length);
+        console.log('TabXport: Processing time:', formattedResult.processingTime + 'ms');
+        console.log('TabXport: Operations applied:', formattedResult.formattingApplied.length);
+        
+        // Логируем основные операции
+        formattedResult.formattingApplied.forEach(op => {
+          console.log(`TabXport: - ${op.type}: ${op.description}`);
+        });
+      } else {
+        console.log('TabXport: Auto-formatting returned empty result, using original data');
+      }
+    } else {
+      console.log('TabXport: Table data is clean, no formatting needed');
+    }
+  } catch (error) {
+    console.error('TabXport: Auto-formatting failed, using original data:', error);
+    // Продолжаем с оригинальными данными при ошибке форматирования
+  }
 
   const result: TableData = {
     id,
@@ -1386,8 +1427,8 @@ export const findAllTables = (): HTMLElement[] => {
 };
 
 // Проверка, является ли элемент валидной таблицей
-export const isValidTable = (element: HTMLElement): boolean => {
-  const tableData = extractTableData(element);
+export const isValidTable = async (element: HTMLElement): Promise<boolean> => {
+  const tableData = await extractTableData(element);
   return tableData !== null && (tableData.headers.length > 0 || tableData.rows.length > 0);
 };
 

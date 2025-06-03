@@ -64,14 +64,15 @@ export const calculateButtonPosition = (element: HTMLElement): ButtonPosition =>
   
   // Унифицированная логика позиционирования с платформо-специфичными настройками
   const config = {
-    spacing: platform.isGemini ? 12 : platform.isChatGPT || platform.isClaude ? 8 : 4,
+    spacing: platform.isGemini ? 12 : platform.isChatGPT || platform.isClaude ? 15 : 4,
     verticalOffset: platform.isGemini ? -5 : platform.isChatGPT || platform.isClaude ? -2 : -2,
     rightSpacing: platform.isGemini ? 8 : 5, // Переименовано из insideSpacing
     rightVerticalOffset: platform.isGemini ? 3 : 5 // Переименовано из insideVerticalOffset
   };
 
   // ИЗМЕНЕНО: теперь по умолчанию размещаем кнопку СЛЕВА от таблицы
-  const position = spaceOnLeft >= buttonWidth + 10 
+  const minSpacing = platform.isChatGPT ? 18 : 10;
+  const position = spaceOnLeft >= buttonWidth + minSpacing 
     ? {
         // Размещаем слева от таблицы (по умолчанию)
         x: relativeX - buttonWidth - config.spacing,
@@ -85,8 +86,6 @@ export const calculateButtonPosition = (element: HTMLElement): ButtonPosition =>
         container
       };
   
-  console.log('TabXport: Space on left:', spaceOnLeft, 'px');
-  console.log('TabXport: Relative position within container:', position);
   return position;
 };
 

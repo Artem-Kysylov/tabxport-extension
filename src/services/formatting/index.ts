@@ -1,3 +1,11 @@
+// Основной экспорт всех модулей форматирования
+export { FormattingTypes } from './types';
+export { TextCleaner } from './text-cleaner';
+export { StructureFixer } from './structure-fixer';
+export { MarkdownProcessor } from './markdown-processor';
+export { FormattingUtils } from './formatting-utils';
+export { TableFormatterService, DEFAULT_FORMATTING_OPTIONS } from './TableFormatterService';
+
 // Основные типы и интерфейсы
 export type {
   FormattingOptions,
@@ -9,12 +17,6 @@ export type {
   FormattingOperation,
   TableStructureInfo
 } from './types';
-
-// Основной сервис
-export { 
-  TableFormatterService, 
-  DEFAULT_FORMATTING_OPTIONS 
-} from './TableFormatterService';
 
 // Модули обработки
 export {
@@ -31,38 +33,4 @@ export {
 export {
   parseMarkdownTableAdvanced,
   processMultilineCells
-} from './markdown-processor';
-
-// Утилиты для быстрого использования
-export const FormattingUtils = {
-  /**
-   * Быстрый анализ таблицы
-   */
-  analyzeTable: TableFormatterService.analyzeTable,
-  
-  /**
-   * Быстрое форматирование
-   */
-  quickFormat: TableFormatterService.quickFormat,
-  
-  /**
-   * Получение рекомендуемых настроек
-   */
-  getRecommendedOptions: TableFormatterService.getRecommendedOptions,
-  
-  /**
-   * Проверка, нужно ли форматирование
-   */
-  needsFormatting: (headers: string[], rows: string[][]): boolean => {
-    const analysis = TableFormatterService.analyzeTable(headers, rows);
-    return analysis.issues.length > 0;
-  },
-  
-  /**
-   * Подсчет потенциальных улучшений
-   */
-  countImprovements: (headers: string[], rows: string[][]): number => {
-    const analysis = TableFormatterService.analyzeTable(headers, rows);
-    return analysis.issues.length;
-  }
-}; 
+} from './markdown-processor'; 

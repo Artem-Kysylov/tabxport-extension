@@ -1,8 +1,7 @@
-import { createMarkdownArrayTable, createMarkdownObjectTable } from 'parse-markdown-table';
 import type { FormattingOptions, FormattingOperation } from './types';
 
 /**
- * Улучшенный парсинг Markdown таблиц
+ * Улучшенный парсинг Markdown таблиц (browser-совместимый)
  */
 export const parseMarkdownTableAdvanced = (
   text: string,
@@ -14,35 +13,7 @@ export const parseMarkdownTableAdvanced = (
 } => {
   const operations: FormattingOperation[] = [];
   
-  try {
-    // Сначала пытаемся использовать специализированную библиотеку
-    const parsedTable = createMarkdownArrayTable(text);
-    
-    if (parsedTable && parsedTable.headers && parsedTable.headers.length > 0) {
-      const headers = parsedTable.headers;
-      const rows: string[][] = [];
-      
-      // Конвертируем AsyncIterable в обычный массив
-      parsedTable.rows.then(async rowsIterable => {
-        for await (const row of rowsIterable) {
-          rows.push(row);
-        }
-      });
-
-      operations.push({
-        type: 'markdown-processed',
-        description: 'Таблица успешно обработана с помощью parse-markdown-table',
-        before: text.substring(0, 50) + '...',
-        after: `${headers.length} колонок, ${rows.length} строк`
-      });
-
-      return { headers, rows, operations };
-    }
-  } catch (error) {
-    console.warn('TabXport: parse-markdown-table failed, using fallback parser:', error);
-  }
-
-  // Fallback: используем собственный парсер
+  // Используем собственный browser-совместимый парсер
   return parseMarkdownTableFallback(text, options, operations);
 };
 

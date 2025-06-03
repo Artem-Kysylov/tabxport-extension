@@ -113,7 +113,7 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
 };
 
 // Функция для сканирования и обработки таблиц
-export const scanAndProcessTables = (): void => {
+export const scanAndProcessTables = async (): Promise<void> => {
   try {
     console.log('TabXport: Scanning for tables...');
     const tables = findAllTables();
@@ -131,15 +131,19 @@ export const scanAndProcessTables = (): void => {
       console.log('TabXport: Table count stable, skipping aggressive cleanup');
       
       // Только добавляем кнопки к новым таблицам
-      tables.forEach((table, index) => {
+      for (const [index, table] of tables.entries()) {
         if (!addedButtons.has(table)) {
-          const isValid = isValidTable(table);
-          if (isValid) {
-            console.log(`TabXport: Adding export button to new table ${index}`);
-            addExportButton(table);
+          try {
+            const isValid = await isValidTable(table);
+            if (isValid) {
+              console.log(`TabXport: Adding export button to new table ${index}`);
+              await addExportButton(table);
+            }
+          } catch (error) {
+            console.error(`TabXport: Error processing table ${index}:`, error);
           }
         }
-      });
+      }
       
       return;
     }
@@ -193,16 +197,16 @@ export const scanAndProcessTables = (): void => {
     
     // Добавляем кнопки к валидным таблицам с небольшой задержкой для стабилизации
     setTimeout(() => {
-      tables.forEach((table, index) => {
+      tables.forEach(async (table, index) => {
         try {
           console.log(`TabXport: Checking table ${index}:`, table.tagName, table.className);
           
-          const isValid = isValidTable(table);
+          const isValid = await isValidTable(table);
           console.log(`TabXport: Table ${index} is valid:`, isValid);
           
           if (isValid) {
             console.log(`TabXport: Adding export button to table ${index}`);
-            addExportButton(table);
+            await addExportButton(table);
           } else {
             console.log(`TabXport: Table ${index} is not valid, skipping`);
           }
@@ -250,7 +254,9 @@ export const setupMutationObserver = (): void => {
 
       scanTimeout = setTimeout(() => {
         console.log('TabXport: MutationObserver triggered table scan');
-        scanAndProcessTables();
+        scanAndProcessTables().catch(error => {
+          console.error('TabXport: Error in MutationObserver scan:', error);
+        });
         lastScanTime = Date.now();
         scanTimeout = null;
       }, 1500); // Увеличиваем задержку для стабилизации DOM
@@ -288,7 +294,7 @@ export const setupMutationObserver = (): void => {
 };
 
 // Функция для добавления кнопки экспорта к таблице
-const addExportButton = (tableElement: HTMLElement): void => {
+const addExportButton = async (tableElement: HTMLElement): Promise<void> => {
   try {
     // Проверяем, не добавлена ли уже кнопка для этой таблицы
     if (addedButtons.has(tableElement)) {
@@ -308,9 +314,9 @@ const addExportButton = (tableElement: HTMLElement): void => {
       return;
     }
 
-    // Извлекаем данные таблицы
-    console.log('TabXport: Extracting table data...');
-    const tableData = extractTableData(tableElement);
+    // Извлекаем данные таблицы с автоформатированием
+    console.log('TabXport: Extracting table data with auto-formatting...');
+    const tableData = await extractTableData(tableElement);
     if (!tableData || !tableData.headers.length && !tableData.rows.length) {
       console.log('TabXport: Invalid table data, skipping button addition');
       return;

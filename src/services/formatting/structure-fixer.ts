@@ -1,4 +1,3 @@
-import * as cheerio from 'cheerio';
 import type { FormattingOptions, FormattingOperation, CellData, TableStructureInfo } from './types';
 
 /**
@@ -39,12 +38,12 @@ export const analyzeTableStructure = (
 };
 
 /**
- * Проверка наличия объединенных ячеек в HTML таблице
+ * Проверка наличия объединенных ячеек в HTML таблице (browser-совместимо)
  */
 const checkForMergedCells = (element: HTMLElement): boolean => {
-  const $ = cheerio.load(element.outerHTML);
-  const cellsWithSpan = $('td[colspan], td[rowspan], th[colspan], th[rowspan]');
-  return cellsWithSpan.length > 0;
+  const cellsWithColspan = element.querySelectorAll('td[colspan], th[colspan]');
+  const cellsWithRowspan = element.querySelectorAll('td[rowspan], th[rowspan]');
+  return cellsWithColspan.length > 0 || cellsWithRowspan.length > 0;
 };
 
 /**
@@ -116,15 +115,16 @@ const processMergedCells = (
   operations: FormattingOperation[];
 } => {
   const operations: FormattingOperation[] = [];
-  const $ = cheerio.load(element.outerHTML);
+  const cellsWithColspan = element.querySelectorAll('td[colspan], th[colspan]');
+  const cellsWithRowspan = element.querySelectorAll('td[rowspan], th[rowspan]');
   
   // Создаем матрицу ячеек с учетом span-ов
   const cellMatrix: CellData[][] = [];
   let maxColumns = 0;
 
   // Обрабатываем заголовки
-  const theadRows = $('thead tr, tr:first-child').first();
-  if (theadRows.length > 0) {
+  const theadRows = element.querySelector('thead tr') || element.querySelector('tr:first-child');
+  if (theadRows) {
     const headerRow = processCellRow(theadRows, 0, true);
     cellMatrix.push(headerRow.cells);
     maxColumns = Math.max(maxColumns, headerRow.actualColumns);
@@ -135,16 +135,30 @@ const processMergedCells = (
   }
 
   // Обрабатываем строки данных
-  const tbodyRows = $('tbody tr, tr').not('thead tr');
-  tbodyRows.each((index, row) => {
-    const rowData = processCellRow($(row), cellMatrix.length, false);
-    cellMatrix.push(rowData.cells);
-    maxColumns = Math.max(maxColumns, rowData.actualColumns);
-    
-    if (rowData.operations.length > 0) {
-      operations.push(...rowData.operations);
+  const tbodyRows = element.querySelectorAll('tbody tr');
+  if (tbodyRows.length === 0) {
+    // Если нет tbody, ищем все tr кроме первой
+    const allRows = element.querySelectorAll('tr');
+    for (let i = 1; i < allRows.length; i++) {
+      const rowData = processCellRow(allRows[i], cellMatrix.length, false);
+      cellMatrix.push(rowData.cells);
+      maxColumns = Math.max(maxColumns, rowData.actualColumns);
+      
+      if (rowData.operations.length > 0) {
+        operations.push(...rowData.operations);
+      }
     }
-  });
+  } else {
+    tbodyRows.forEach((row, index) => {
+      const rowData = processCellRow(row, cellMatrix.length, false);
+      cellMatrix.push(rowData.cells);
+      maxColumns = Math.max(maxColumns, rowData.actualColumns);
+      
+      if (rowData.operations.length > 0) {
+        operations.push(...rowData.operations);
+      }
+    });
+  }
 
   // Преобразуем матрицу обратно в headers/rows
   const newHeaders: string[] = [];
@@ -179,7 +193,7 @@ const processMergedCells = (
  * Обработка строки с учетом colspan/rowspan
  */
 const processCellRow = (
-  $row: cheerio.Cheerio,
+  row: Element,
   rowIndex: number,
   isHeader: boolean
 ): {
@@ -191,11 +205,11 @@ const processCellRow = (
   const operations: FormattingOperation[] = [];
   let columnIndex = 0;
 
-  $row.children('td, th').each((cellIndex, cell) => {
-    const $cell = cheerio.load(cell);
-    const content = $cell.text().trim();
-    const colspan = parseInt($cell.attr('colspan') || '1', 10);
-    const rowspan = parseInt($cell.attr('rowspan') || '1', 10);
+  const cellsWithColspan = row.querySelectorAll('td, th');
+  cellsWithColspan.forEach((cell, cellIndex) => {
+    const content = cell.textContent?.trim() || '';
+    const colspan = parseInt(cell.getAttribute('colspan') || '1', 10);
+    const rowspan = parseInt(cell.getAttribute('rowspan') || '1', 10);
 
     // Создаем основную ячейку
     const cellData: CellData = {

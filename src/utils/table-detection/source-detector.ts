@@ -20,6 +20,13 @@ export const detectSource = (url: string): AISource => {
 };
 
 /**
+ * Source detector object for consistent API
+ */
+export const sourceDetector = {
+  detectSource
+};
+
+/**
  * Generates a unique ID for a table element
  */
 export const generateTableId = (element: HTMLElement): string => {

@@ -60,4 +60,73 @@ export interface TitleExtractor {
    * @returns The extracted title or a default value
    */
   extractTitle: () => string;
+}
+
+/**
+ * Extended interface for batch table detection results
+ */
+export interface BatchTableDetectionResult {
+  tables: TableDetectionResult[];
+  count: number;
+  timestamp: number;
+  source: AISource;
+  chatTitle: string;
+}
+
+/**
+ * Configuration for batch export operations
+ */
+export interface BatchExportConfig {
+  selectedTableIds: string[];
+  format: 'xlsx' | 'csv' | 'docx' | 'pdf';
+  packaging: 'single' | 'archive';
+  includeHeaders: boolean;
+  baseFilename?: string;
+}
+
+/**
+ * Result of a batch export operation
+ */
+export interface BatchExportResult {
+  success: boolean;
+  filename?: string;
+  downloadUrl?: string;
+  errors?: string[];
+  processedCount: number;
+  totalCount: number;
+}
+
+/**
+ * Interface for managing multiple tables in batch operations
+ */
+export interface BatchTableManager {
+  /**
+   * Adds detected tables to the collection
+   */
+  addTables: (tables: TableDetectionResult[]) => void;
+  
+  /**
+   * Gets all currently managed tables
+   */
+  getAllTables: () => TableDetectionResult[];
+  
+  /**
+   * Gets tables by their IDs
+   */
+  getTablesById: (ids: string[]) => TableDetectionResult[];
+  
+  /**
+   * Removes tables that are no longer valid or visible
+   */
+  cleanup: () => void;
+  
+  /**
+   * Gets the current count of managed tables
+   */
+  getCount: () => number;
+  
+  /**
+   * Clears all managed tables
+   */
+  clear: () => void;
 } 

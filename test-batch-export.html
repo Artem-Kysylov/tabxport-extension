@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabXport - Batch Export Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+            background-color: #f8fafc;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #1B9358;
+            padding-bottom: 15px;
+        }
+        h2 {
+            color: #374151;
+            margin-top: 40px;
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background: linear-gradient(135deg, #1B9358 0%, #16a085 100%);
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f9fafb;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 4px solid #1B9358;
+            margin: 20px 0;
+        }
+        .note {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            color: #1e40af;
+        }
+        .section {
+            margin: 40px 0;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 TabXport Batch Export Test</h1>
+        
+        <div class="note">
+            <strong>Test Instructions:</strong>
+            <ol>
+                <li>Install the TabXport extension in developer mode</li>
+                <li>Open this page with the extension enabled</li>
+                <li>You should see individual export buttons next to each table</li>
+                <li><strong>With 3+ tables, you should see a "Export All Tables" floating button</strong></li>
+                <li>Click the batch export button to test Phase 1 functionality</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>📊 Table 1: Programming Languages Comparison</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Language</th>
+                        <th>Release Year</th>
+                        <th>Paradigm</th>
+                        <th>Typing</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>JavaScript</td>
+                        <td>1995</td>
+                        <td>Multi-paradigm</td>
+                        <td>Dynamic</td>
+                        <td>Moderate</td>
+                    </tr>
+                    <tr>
+                        <td>TypeScript</td>
+                        <td>2012</td>
+                        <td>Object-oriented</td>
+                        <td>Static</td>
+                        <td>Moderate</td>
+                    </tr>
+                    <tr>
+                        <td>Python</td>
+                        <td>1991</td>
+                        <td>Multi-paradigm</td>
+                        <td>Dynamic</td>
+                        <td>Moderate</td>
+                    </tr>
+                    <tr>
+                        <td>Rust</td>
+                        <td>2010</td>
+                        <td>Systems</td>
+                        <td>Static</td>
+                        <td>High</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>💾 Table 2: Database Technologies</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Database</th>
+                        <th>Type</th>
+                        <th>ACID Compliance</th>
+                        <th>Primary Use Case</th>
+                        <th>Scalability</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PostgreSQL</td>
+                        <td>Relational</td>
+                        <td>Full</td>
+                        <td>Complex queries</td>
+                        <td>Vertical</td>
+                    </tr>
+                    <tr>
+                        <td>MongoDB</td>
+                        <td>Document</td>
+                        <td>Partial</td>
+                        <td>Flexible schemas</td>
+                        <td>Horizontal</td>
+                    </tr>
+                    <tr>
+                        <td>Redis</td>
+                        <td>Key-Value</td>
+                        <td>Partial</td>
+                        <td>Caching</td>
+                        <td>Horizontal</td>
+                    </tr>
+                    <tr>
+                        <td>Cassandra</td>
+                        <td>Column-family</td>
+                        <td>Eventual</td>
+                        <td>Time-series</td>
+                        <td>Horizontal</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🌐 Table 3: Web Frameworks Performance</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Framework</th>
+                        <th>Language</th>
+                        <th>RPS (Requests/sec)</th>
+                        <th>Memory Usage</th>
+                        <th>Category</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Express.js</td>
+                        <td>JavaScript</td>
+                        <td>15,000</td>
+                        <td>25 MB</td>
+                        <td>Node.js</td>
+                    </tr>
+                    <tr>
+                        <td>FastAPI</td>
+                        <td>Python</td>
+                        <td>12,000</td>
+                        <td>35 MB</td>
+                        <td>ASGI</td>
+                    </tr>
+                    <tr>
+                        <td>Gin</td>
+                        <td>Go</td>
+                        <td>45,000</td>
+                        <td>8 MB</td>
+                        <td>Minimalist</td>
+                    </tr>
+                    <tr>
+                        <td>Actix Web</td>
+                        <td>Rust</td>
+                        <td>85,000</td>
+                        <td>4 MB</td>
+                        <td>Actor-based</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>📝 Table 4: Markdown Format (in code block)</h2>
+            <pre><code>| Service | Monthly Cost | Storage | Bandwidth | Support |
+|---------|--------------|---------|-----------|---------|
+| AWS S3  | $23/month   | 1TB     | 100GB     | Email   |
+| Google Cloud | $20/month | 1TB   | 200GB     | 24/7    |
+| Azure Storage | $25/month | 1TB   | 150GB     | Phone   |
+| DigitalOcean | $15/month | 1TB    | 1TB       | Community |</code></pre>
+        </div>
+
+        <div class="section">
+            <h2>⚡ Expected Behavior</h2>
+            <p><strong>Phase 1 Implementation:</strong></p>
+            <ul>
+                <li>✅ Individual export buttons should appear next to each table</li>
+                <li>✅ Batch detection should find all 4 tables on this page</li>
+                <li>✅ Floating "Export All Tables (4)" button should appear in bottom-right</li>
+                <li>✅ Clicking batch button shows "coming soon" placeholder message</li>
+                <li>✅ Console should show batch detection debug logs</li>
+            </ul>
+            
+            <p><strong>Next Phases (Coming Soon):</strong></p>
+            <ul>
+                <li>🔄 Phase 2: Modal with table selection and export options</li>
+                <li>🔄 Phase 3: Multi-sheet Excel, ZIP archives, advanced naming</li>
+                <li>🔄 Phase 4: Performance optimizations and error handling</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        console.log('📊 TabXport Batch Export Test Page Loaded');
+        console.log('🔍 Tables on page:', document.querySelectorAll('table').length);
+        console.log('📝 Code blocks on page:', document.querySelectorAll('pre').length);
+        
+        // Simulate dynamic content (common in AI platforms)
+        setTimeout(() => {
+            console.log('⏰ 3 seconds elapsed - TabXport should have detected all tables by now');
+        }, 3000);
+    </script>
+</body>
+</html> 

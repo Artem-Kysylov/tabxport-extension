@@ -1,5 +1,7 @@
 import { findAllTables, extractTableData, isValidTable } from '../../utils/table-detector';
 import { addedButtons, calculateButtonPosition, createExportButton } from './export-button';
+import { batchTableDetector } from '../../utils/table-detection/batch-detector';
+import { batchExportButtonManager } from './batch-export-button';
 
 // Функция для получения целевых контейнеров для наблюдения
 const getTargetContainers = (): HTMLElement[] => {
@@ -116,8 +118,18 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
 export const scanAndProcessTables = async (): Promise<void> => {
   try {
     console.log('TabXport: Scanning for tables...');
-    const tables = findAllTables();
+    
+    // Запускаем batch detection параллельно с обычным поиском
+    const [tables, batchResult] = await Promise.all([
+      Promise.resolve(findAllTables()),
+      batchTableDetector.detectAllTables()
+    ]);
+    
     console.log(`TabXport: Found ${tables.length} potential tables:`, tables);
+    console.log(`TabXport: Batch detection found ${batchResult.count} tables`);
+    
+    // Обновляем batch export кнопку
+    batchExportButtonManager.updateButton(batchResult);
     
     // Создаем Set для отслеживания уникальных элементов таблиц
     const tableElementsSet = new Set(tables);
@@ -216,6 +228,7 @@ export const scanAndProcessTables = async (): Promise<void> => {
       });
       
       console.log(`TabXport: Scan complete, total active buttons: ${addedButtons.size}`);
+      console.log(`TabXport: Batch detection state:`, batchTableDetector.getBatchState());
     }, 100);
     
   } catch (error) {

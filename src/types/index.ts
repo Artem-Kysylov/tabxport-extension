@@ -11,14 +11,14 @@ export interface TableData {
 }
 
 export interface ExportOptions {
-  format: 'xlsx' | 'csv';
+  format: 'xlsx' | 'csv' | 'docx' | 'pdf';
   filename?: string;
   includeHeaders: boolean;
   destination: 'download' | 'google-drive';
 }
 
 export interface UserSettings {
-  defaultFormat: 'xlsx' | 'csv';
+  defaultFormat: 'xlsx' | 'csv' | 'docx' | 'pdf';
   defaultDestination: 'download' | 'google-drive';
   autoExport: boolean;
   theme: 'light' | 'dark' | 'auto';

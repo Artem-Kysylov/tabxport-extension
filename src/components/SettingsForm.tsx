@@ -63,10 +63,10 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
         <label className="block text-sm font-medium text-gray-700">
           Default Export Format
         </label>
-        <div className="flex space-x-2">
+        <div className="grid grid-cols-4 gap-2">
           <button
             onClick={() => handleSettingChange('defaultFormat', 'xlsx')}
-            className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
+            className={`px-3 py-2 text-sm rounded-md border transition-colors ${
               settings.defaultFormat === 'xlsx'
                 ? 'bg-emerald-500 text-white border-emerald-500'
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -77,7 +77,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
           </button>
           <button
             onClick={() => handleSettingChange('defaultFormat', 'csv')}
-            className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors ${
+            className={`px-3 py-2 text-sm rounded-md border transition-colors ${
               settings.defaultFormat === 'csv'
                 ? 'bg-emerald-500 text-white border-emerald-500'
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -85,6 +85,28 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
             disabled={isSaving}
           >
             📄 CSV
+          </button>
+          <button
+            onClick={() => handleSettingChange('defaultFormat', 'docx')}
+            className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+              settings.defaultFormat === 'docx'
+                ? 'bg-emerald-500 text-white border-emerald-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+            disabled={isSaving}
+          >
+            📝 Word (.docx)
+          </button>
+          <button
+            onClick={() => handleSettingChange('defaultFormat', 'pdf')}
+            className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+              settings.defaultFormat === 'pdf'
+                ? 'bg-emerald-500 text-white border-emerald-500'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+            disabled={isSaving}
+          >
+            📄 PDF
           </button>
         </div>
       </div>

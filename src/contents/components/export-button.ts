@@ -62,9 +62,13 @@ export const calculateButtonPosition = (element: HTMLElement): ButtonPosition =>
   const spaceOnLeft = rect.left; // Новое: пространство слева от таблицы
   const buttonWidth = 45;
   
+  // Проверяем тип таблицы для ChatGPT
+  const tableType = element.getAttribute('data-tabxport-table-type');
+  const isChatGPTMarkdown = false; // Временно отключено из-за конфликтов с React
+  
   // Унифицированная логика позиционирования с платформо-специфичными настройками
   const config = {
-    spacing: platform.isGemini ? 12 : platform.isChatGPT || platform.isClaude ? 15 : 4,
+    spacing: platform.isGemini ? 12 : platform.isChatGPT || platform.isClaude ? 15 : 4, // Вернули обычный отступ
     verticalOffset: platform.isGemini ? -5 : platform.isChatGPT || platform.isClaude ? -2 : -2,
     rightSpacing: platform.isGemini ? 8 : 5, // Переименовано из insideSpacing
     rightVerticalOffset: platform.isGemini ? 3 : 5 // Переименовано из insideVerticalOffset

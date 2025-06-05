@@ -1,10 +1,12 @@
 import * as XLSX from 'xlsx';
 import type { TableData, ExportOptions, ExportResult } from '../types';
+import { exportToDOCX } from './exporters/docx-exporter';
+import { exportToPDF } from './exporters/pdf-exporter';
 
 // Генерация имени файла
 export const generateFilename = (
   tableData: TableData,
-  format: 'xlsx' | 'csv',
+  format: 'xlsx' | 'csv' | 'docx' | 'pdf',
   customName?: string
 ): string => {
   if (customName) {
@@ -122,6 +124,10 @@ export const exportTable = async (
       return exportToXLSX(tableData, options);
     case 'csv':
       return exportToCSV(tableData, options);
+    case 'docx':
+      return exportToDOCX(tableData, options);
+    case 'pdf':
+      return exportToPDF(tableData, options);
     default:
       return {
         success: false,

@@ -1155,141 +1155,147 @@ export const extractTableData = async (element: HTMLElement): Promise<TableData 
   let rows: string[][] = [];
 
   try {
-  console.log('TabXport: extractTableData called for element:', element.tagName, element.className);
-  console.log('TabXport: Element text content preview:', element.textContent?.substring(0, 200));
+    console.log('TabXport: extractTableData called for element:', element.tagName, element.className);
+    console.log('TabXport: Element text content preview:', element.textContent?.substring(0, 200));
 
-  // HTML таблица
-  if (element.tagName.toLowerCase() === 'table') {
-    console.log('TabXport: Processing HTML table');
+    // HTML таблица
+    if (element.tagName.toLowerCase() === 'table') {
+      console.log('TabXport: Processing HTML table');
       try {
-    const tableData = parseHTMLTable(element as HTMLTableElement);
-    headers = tableData.headers;
-    rows = tableData.rows;
-    console.log('TabXport: HTML table headers:', headers);
-    console.log('TabXport: HTML table rows:', rows);
-    console.log('TabXport: HTML table rows count:', rows.length);
-    
-    // Дополнительная проверка для HTML таблиц
-    if (headers.length === 0 && rows.length > 0) {
-      console.log('TabXport: No headers found, using first row as headers');
-      headers = rows[0] || [];
-      rows = rows.slice(1);
+        const tableData = parseHTMLTable(element as HTMLTableElement);
+        headers = tableData.headers;
+        rows = tableData.rows;
+        console.log('TabXport: HTML table headers:', headers);
+        console.log('TabXport: HTML table rows count:', rows.length);
+        console.log('TabXport: HTML table first row:', rows[0]);
+        
+        // Дополнительная проверка для HTML таблиц
+        if (headers.length === 0 && rows.length > 0) {
+          console.log('TabXport: No headers found, using first row as headers');
+          headers = rows[0] || [];
+          rows = rows.slice(1);
         }
       } catch (error) {
         console.error('TabXport: Error processing HTML table:', error);
         return null;
-    }
-  }
-  // Pre или code блоки с markdown
-  else if (element.tagName.toLowerCase() === 'pre' || element.tagName.toLowerCase() === 'code') {
-    console.log('TabXport: Processing pre/code block');
-    const markdownData = findMarkdownTablesInElement(element);
-    if (markdownData) {
-      headers = markdownData.headers;
-      rows = markdownData.rows;
-      console.log('TabXport: Markdown table headers:', headers);
-      console.log('TabXport: Markdown table rows:', rows);
-    }
-  }
-  // Div контейнеры (ChatGPT, Claude)
-  else if (element.tagName.toLowerCase() === 'div') {
-    console.log('TabXport: Processing div container');
-    // Сначала пробуем div-таблицу
-    const divTableData = parseDivTable(element);
-    console.log('TabXport: Div table data:', divTableData);
-    
-    if (divTableData.headers.length > 0 || divTableData.rows.length > 0) {
-      headers = divTableData.headers;
-      rows = divTableData.rows;
-      console.log('TabXport: Using div table data - headers:', headers);
-      console.log('TabXport: Using div table data - rows:', rows);
-    } else {
-      // Затем ищем в текстовом содержимом
-      console.log('TabXport: Trying text content analysis');
-      const textTableData = findTablesInTextContent(element);
-      if (textTableData) {
-        headers = textTableData.headers;
-        rows = textTableData.rows;
-        console.log('TabXport: Using text table data - headers:', headers);
-        console.log('TabXport: Using text table data - rows:', rows);
       }
     }
-  }
-
-  // Валидация данных
-  if (headers.length === 0 && rows.length === 0) {
-    console.log('TabXport: No valid table data found');
-    return null;
-  }
-
-  // Убеждаемся, что у нас есть минимальные данные для экспорта
-  if (headers.length === 0 && rows.length > 0) {
-    console.log('TabXport: Creating default headers');
-    const maxColumns = Math.max(...rows.map(row => row.length));
-    headers = Array.from({ length: maxColumns }, (_, i) => `Column ${i + 1}`);
-  }
-
-  // Извлекаем название чата для имени файла
-  console.log('TabXport: About to extract chat title for source:', source);
-  console.log('TabXport: Current URL for title extraction:', window.location.href);
-  const chatTitle = extractChatTitle(source);
-  console.log('TabXport: Chat title extraction completed, result:', chatTitle);
-
-  // 🛠 АВТОФОРМАТИРОВАНИЕ: Применяем систему автоформатирования
-  console.log('TabXport: Starting auto-formatting...');
-  console.log('TabXport: Original data - Headers:', headers.length, 'Rows:', rows.length);
-  
-  try {
-    // Проверяем, нужно ли форматирование
-    const needsFormatting = FormattingUtils.needsFormatting(headers, rows);
-    console.log('TabXport: Needs formatting:', needsFormatting);
-    
-    if (needsFormatting) {
-      const improvementsCount = FormattingUtils.countImprovements(headers, rows);
-      console.log('TabXport: Potential improvements:', improvementsCount);
+    // Pre или code блоки с markdown
+    else if (element.tagName.toLowerCase() === 'pre' || element.tagName.toLowerCase() === 'code') {
+      console.log('TabXport: Processing pre/code block');
+      const markdownData = findMarkdownTablesInElement(element);
+      if (markdownData) {
+        headers = markdownData.headers;
+        rows = markdownData.rows;
+        console.log('TabXport: Markdown table headers:', headers);
+        console.log('TabXport: Markdown table rows count:', rows.length);
+      }
+    }
+    // Div контейнеры (ChatGPT, Claude)
+    else if (element.tagName.toLowerCase() === 'div') {
+      console.log('TabXport: Processing div container');
+      // Сначала пробуем div-таблицу
+      const divTableData = parseDivTable(element);
+      console.log('TabXport: Div table data:', divTableData);
       
-      // Применяем быстрое форматирование
-      const formattedResult = await FormattingUtils.quickFormat(headers, rows, source);
-      
-      if (formattedResult && formattedResult.headers && formattedResult.rows) {
-        headers = formattedResult.headers;
-        rows = formattedResult.rows;
-        
-        console.log('TabXport: Auto-formatting applied successfully!');
-        console.log('TabXport: Formatted data - Headers:', headers.length, 'Rows:', rows.length);
-        console.log('TabXport: Processing time:', formattedResult.processingTime + 'ms');
-        console.log('TabXport: Operations applied:', formattedResult.formattingApplied.length);
-        
-        // Логируем основные операции
-        formattedResult.formattingApplied.forEach(op => {
-          console.log(`TabXport: - ${op.type}: ${op.description}`);
-        });
+      if (divTableData.headers.length > 0 || divTableData.rows.length > 0) {
+        headers = divTableData.headers;
+        rows = divTableData.rows;
+        console.log('TabXport: Using div table data - headers count:', headers.length);
+        console.log('TabXport: Using div table data - rows count:', rows.length);
       } else {
-        console.log('TabXport: Auto-formatting returned empty result, using original data');
+        // Затем ищем в текстовом содержимом
+        console.log('TabXport: Trying text content analysis');
+        const textTableData = findTablesInTextContent(element);
+        if (textTableData) {
+          headers = textTableData.headers;
+          rows = textTableData.rows;
+          console.log('TabXport: Using text table data - headers count:', headers.length);
+          console.log('TabXport: Using text table data - rows count:', rows.length);
+        }
       }
-    } else {
-      console.log('TabXport: Table data is clean, no formatting needed');
     }
-  } catch (error) {
-    console.error('TabXport: Auto-formatting failed, using original data:', error);
-    // Продолжаем с оригинальными данными при ошибке форматирования
-  }
 
-  const result: TableData = {
-    id,
-    headers,
-    rows,
-    source,
-    timestamp,
-    url,
-    chatTitle,
-  };
+    // Валидация данных
+    if (headers.length === 0 && rows.length === 0) {
+      console.log('TabXport: No valid table data found (both headers and rows empty)');
+      return null;
+    }
 
-  console.log('TabXport: Final extracted table data:', result);
-  console.log('TabXport: Export data summary - Headers:', headers.length, 'Rows:', rows.length, 'Chat title:', chatTitle);
-  return result;
+    // Убеждаемся, что у нас есть минимальные данные для экспорта
+    if (headers.length === 0 && rows.length > 0) {
+      console.log('TabXport: Creating default headers for', rows.length, 'rows');
+      const maxColumns = Math.max(...rows.map(row => row.length));
+      headers = Array.from({ length: maxColumns }, (_, i) => `Column ${i + 1}`);
+    }
+
+    // Извлекаем название чата для имени файла
+    console.log('TabXport: About to extract chat title for source:', source);
+    const chatTitle = extractChatTitle(source);
+    console.log('TabXport: Chat title extraction completed, result:', chatTitle);
+
+    // 🛠 АВТОФОРМАТИРОВАНИЕ: Применяем систему автоформатирования
+    console.log('TabXport: Starting auto-formatting...');
+    console.log('TabXport: Original data - Headers:', headers.length, 'Rows:', rows.length);
+    
+    try {
+      // Проверяем, нужно ли форматирование
+      const needsFormatting = FormattingUtils.needsFormatting(headers, rows);
+      console.log('TabXport: Needs formatting:', needsFormatting);
+      
+      if (needsFormatting) {
+        const improvementsCount = FormattingUtils.countImprovements(headers, rows);
+        console.log('TabXport: Potential improvements:', improvementsCount);
+        
+        // Применяем быстрое форматирование
+        const formattedResult = await FormattingUtils.quickFormat(headers, rows, source);
+        
+        if (formattedResult && formattedResult.headers && formattedResult.rows) {
+          headers = formattedResult.headers;
+          rows = formattedResult.rows;
+          
+          console.log('TabXport: Auto-formatting applied successfully!');
+          console.log('TabXport: Formatted data - Headers:', headers.length, 'Rows:', rows.length);
+          console.log('TabXport: Processing time:', formattedResult.processingTime + 'ms');
+          console.log('TabXport: Operations applied:', formattedResult.formattingApplied.length);
+          
+          // Логируем основные операции
+          formattedResult.formattingApplied.forEach(op => {
+            console.log(`TabXport: - ${op.type}: ${op.description}`);
+          });
+        } else {
+          console.log('TabXport: Auto-formatting returned empty result, using original data');
+        }
+      } else {
+        console.log('TabXport: Table data is clean, no formatting needed');
+      }
+    } catch (formatError) {
+      console.error('TabXport: Auto-formatting failed, using original data:', formatError);
+      // Продолжаем с оригинальными данными при ошибке форматирования
+    }
+
+    // Финальная валидация перед созданием TableData
+    if (headers.length === 0 && rows.length === 0) {
+      console.error('TabXport: Final validation failed - no headers or rows after processing');
+      return null;
+    }
+
+    const result: TableData = {
+      id,
+      headers,
+      rows,
+      source,
+      timestamp,
+      url,
+      chatTitle,
+    };
+
+    console.log('TabXport: Final extracted table data:', result);
+    console.log('TabXport: Export data summary - Headers:', headers.length, 'Rows:', rows.length, 'Chat title:', chatTitle);
+    return result;
   } catch (error) {
     console.error('TabXport: Error in extractTableData:', error);
+    console.error('TabXport: Error stack:', error.stack);
     return null;
   }
 };
@@ -1428,8 +1434,45 @@ export const findAllTables = (): HTMLElement[] => {
 
 // Проверка, является ли элемент валидной таблицей
 export const isValidTable = async (element: HTMLElement): Promise<boolean> => {
-  const tableData = await extractTableData(element);
-  return tableData !== null && (tableData.headers.length > 0 || tableData.rows.length > 0);
+  console.log('TabXport: isValidTable called for element:', element.tagName, element.className);
+  console.log('TabXport: Element text preview:', element.textContent?.substring(0, 100));
+  
+  try {
+    console.log('TabXport: Starting table data extraction...');
+    const tableData = await extractTableData(element);
+    
+    if (tableData === null) {
+      console.log('TabXport: Table data extraction returned null - INVALID');
+      return false;
+    }
+    
+    console.log('TabXport: Table data extracted successfully');
+    console.log('TabXport: Headers count:', tableData.headers.length);
+    console.log('TabXport: Rows count:', tableData.rows.length);
+    console.log('TabXport: Headers preview:', tableData.headers.slice(0, 3));
+    console.log('TabXport: First row preview:', tableData.rows[0]?.slice(0, 3));
+    
+    const isValid = (tableData.headers.length > 0 || tableData.rows.length > 0);
+    console.log('TabXport: Table validation result:', {
+      headers: tableData.headers.length,
+      rows: tableData.rows.length,
+      isValid
+    });
+    
+    if (!isValid) {
+      console.log('TabXport: Table has no headers or rows - INVALID');
+    } else {
+      console.log('TabXport: Table validation PASSED ✅');
+    }
+    
+    return isValid;
+  } catch (error) {
+    console.error('TabXport: Error in isValidTable:', error);
+    console.error('TabXport: Error name:', error.name);
+    console.error('TabXport: Error message:', error.message);
+    console.error('TabXport: Error stack:', error.stack);
+    return false;
+  }
 };
 
 // Специальный детектор для ChatGPT

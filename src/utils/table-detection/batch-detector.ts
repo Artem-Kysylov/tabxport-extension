@@ -119,6 +119,7 @@ export const detectAllTables = async (): Promise<BatchTableDetectionResult> => {
   const source = sourceDetector.detectSource(currentUrl);
   
   logger.debug('Starting batch table detection for source:', source);
+  logger.debug('Current URL:', currentUrl);
 
   // Find the appropriate platform detector
   const detector = platformDetectors.find(d => d.canDetect(currentUrl));
@@ -134,6 +135,12 @@ export const detectAllTables = async (): Promise<BatchTableDetectionResult> => {
     // Get all table elements from the platform detector
     const elements = detector.findTables();
     logger.debug(`Platform detector found ${elements.length} potential table elements`);
+    
+    // Add debugging info about found elements
+    elements.forEach((element, index) => {
+      logger.debug(`Element ${index}: ${element.tagName} with classes: "${element.className}"`);
+      logger.debug(`Element ${index} content preview: "${(element.textContent || '').substring(0, 100)}..."`);
+    });
 
     // Parse and validate each element
     const tableResults: TableDetectionResult[] = [];
@@ -145,7 +152,7 @@ export const detectAllTables = async (): Promise<BatchTableDetectionResult> => {
         if (tableData) {
           const result = createTableDetectionResult(element, tableData);
           tableResults.push(result);
-          logger.debug(`Successfully parsed table ${index + 1}/${elements.length}`);
+          logger.debug(`Successfully parsed table ${index + 1}/${elements.length}: ${tableData.headers.length} headers, ${tableData.rows.length} rows`);
         } else {
           logger.debug(`Failed to parse table element ${index + 1}/${elements.length}`);
         }
@@ -163,7 +170,8 @@ export const detectAllTables = async (): Promise<BatchTableDetectionResult> => {
     // Update batch manager
     addBatchTables(tableResults);
     
-    logger.debug(`Batch detection complete: found ${batchResult.count} valid tables`);
+    logger.debug(`Batch detection complete: found ${batchResult.count} valid tables for source ${source}`);
+    logger.debug(`Table results:`, tableResults.map(r => ({ id: r.data.id, headers: r.data.headers.length, rows: r.data.rows.length })));
     
     return batchResult;
 

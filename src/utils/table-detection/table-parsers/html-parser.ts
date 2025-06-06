@@ -74,6 +74,10 @@ export const htmlTableParser: TableParser = {
     // Validate and sanitize the extracted data
     if (!validationUtils.isValidTableData(headers, rows)) {
       logger.warn('Invalid table data extracted from HTML table');
+      logger.debug('Validation failed - Headers:', headers.length, 'First header:', headers[0]);
+      logger.debug('Validation failed - Rows:', rows.length, 'First row length:', rows[0]?.length);
+      logger.debug('Headers:', headers);
+      logger.debug('First few rows:', rows.slice(0, 3));
       return null;
     }
 

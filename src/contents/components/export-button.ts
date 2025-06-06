@@ -158,48 +158,47 @@ const calculateDeepSeekButtonPosition = (element: HTMLElement, rect: DOMRect): B
   
   let position: ButtonPosition;
   
-  // Для очень широких таблиц используем viewport-based позиционирование по X
-  if (isVeryWideTable) {
-    // Фиксируем кнопку к правому краю viewport
-    const viewportBasedX = viewportWidth - buttonWidth - viewportMargin;
+  // ИЗМЕНЕНО: Всегда предпочитаем левое позиционирование для DeepSeek
+  // независимо от размера таблицы и наличия batch кнопки
+  const relativeXLeft = rect.left - containerRect.left;  // Позиция левого края таблицы
+  const relativeXRight = rect.right - containerRect.left; // Позиция правого края таблицы
+  const spaceOnLeft = rect.left; // Пространство слева от таблицы
+  
+  const spacing = isLargeTable ? (isScrollable ? 15 : 12) : 6;
+  const leftSpacing = isLargeTable ? (isScrollable ? 15 : 10) : 8;
+  const leftVerticalOffset = isLargeTable ? (isScrollable ? 12 : 8) : 5;
+  
+  // Для очень широких таблиц, которые не помещаются в viewport
+  if (isVeryWideTable && spaceOnLeft < buttonWidth + 20) {
+    // Используем viewport-based позиционирование по X (фиксируем кнопку слева)
+    const viewportBasedX = viewportMargin;
     const containerBasedX = viewportBasedX - containerRect.left;
     
     position = {
-      x: containerBasedX,
+      x: Math.max(containerBasedX, relativeXLeft - buttonWidth - leftSpacing),
       y: relativeY + config.verticalOffset,
       container
     };
     
-    console.log('TabXport: Very wide table - using viewport-based X positioning');
-    console.log('TabXport: Viewport-based X:', viewportBasedX, 'Container-based X:', containerBasedX);
+    console.log('TabXport: Very wide table - using left viewport positioning');
   } else {
-    // Обычное позиционирование относительно таблицы
-    const relativeXLeft = rect.left - containerRect.left;  // Позиция левого края таблицы
-    const relativeXRight = rect.right - containerRect.left; // Позиция правого края таблицы
-    const spaceOnLeft = rect.left; // Пространство слева от таблицы
-    const spaceOnRight = viewportWidth - rect.right; // Пространство справа от таблицы
-    
-    const spacing = isLargeTable ? (isScrollable ? 15 : 12) : 6;
-    const leftSpacing = isLargeTable ? (isScrollable ? 15 : 10) : 8;
-    const leftVerticalOffset = isLargeTable ? (isScrollable ? 12 : 8) : 5;
-    
-    // ИЗМЕНЕНО: теперь предпочитаем левое позиционирование для DeepSeek тоже
-    if (spaceOnLeft >= buttonWidth + 20) {
+    // ПРИОРИТЕТ ЛЕВОМУ ПОЗИЦИОНИРОВАНИЮ: всегда пытаемся разместить слева
+    if (spaceOnLeft >= buttonWidth + 10) { // Уменьшил требования к месту слева
       // Размещаем слева от таблицы (предпочтительно)
       position = {
         x: relativeXLeft - buttonWidth - leftSpacing,
         y: relativeY + leftVerticalOffset,
         container
       };
-      console.log('TabXport: Normal table - placing button to the left (preferred)');
+      console.log('TabXport: DeepSeek table - placing button to the left (preferred)');
     } else {
-      // Размещаем справа от таблицы (только если нет места слева)
+      // Только если совсем нет места слева - размещаем внутри таблицы слева
       position = {
-        x: relativeXRight + spacing,
-        y: relativeY + config.verticalOffset,
+        x: relativeXLeft + 10, // Небольшой отступ от левого края таблицы
+        y: relativeY + leftVerticalOffset,
         container
       };
-      console.log('TabXport: Normal table - placing button to the right (fallback)');
+      console.log('TabXport: DeepSeek table - placing button inside table (left edge)');
     }
   }
   

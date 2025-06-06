@@ -252,13 +252,18 @@ const createButton = (count: number): void => {
  * Shows or updates the batch export button
  */
 const showButton = (count: number): void => {
+  console.log(`TabXport Batch: showButton called with count: ${count}`);
+  console.log(`TabXport Batch: Current button state - visible: ${buttonState.visible}, button exists: ${!!buttonState.button}`);
+  
   if (buttonState.button && buttonState.visible) {
     // Update existing button
+    console.log(`TabXport Batch: Updating existing button text`);
     updateButtonText(count);
     return;
   }
 
   // Create new button
+  console.log(`TabXport Batch: Creating new button`);
   createButton(count);
 };
 
@@ -266,9 +271,15 @@ const showButton = (count: number): void => {
  * Hides the batch export button
  */
 const hideButton = (): void => {
+  console.log(`TabXport Batch: hideButton called`);
+  console.log(`TabXport Batch: Current button state - visible: ${buttonState.visible}, button exists: ${!!buttonState.button}`);
+  
   if (buttonState.button && buttonState.visible) {
     logger.debug('Hiding batch export button');
+    console.log(`TabXport Batch: Removing button from DOM`);
     removeButton();
+  } else {
+    console.log(`TabXport Batch: No button to hide`);
   }
 };
 
@@ -279,10 +290,14 @@ export const updateBatchButton = (batchResult: BatchTableDetectionResult): void 
   const shouldShow = batchResult.count >= MIN_TABLES_FOR_BATCH;
   
   logger.debug(`Batch button update: ${batchResult.count} tables, should show: ${shouldShow}`);
+  console.log(`TabXport Batch: Detected ${batchResult.count} tables on ${batchResult.source}, min required: ${MIN_TABLES_FOR_BATCH}, should show: ${shouldShow}`);
+  console.log(`TabXport Batch: Button currently visible: ${buttonState.visible}, current count: ${buttonState.count}`);
 
   if (shouldShow) {
+    console.log(`TabXport Batch: Showing button for ${batchResult.count} tables`);
     showButton(batchResult.count);
   } else {
+    console.log(`TabXport Batch: Hiding button (insufficient tables: ${batchResult.count} < ${MIN_TABLES_FOR_BATCH})`);
     hideButton();
   }
 };

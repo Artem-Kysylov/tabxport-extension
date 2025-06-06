@@ -44,9 +44,42 @@ const isDOMReady = (): boolean => {
     return !!elements;
   }
   if (url.includes('gemini.google.com') || url.includes('bard.google.com')) {
-    const elements = document.querySelector('mat-card, .message-container, [data-response-id], .conversation-turn');
-    console.log('TabXport: Gemini DOM elements found:', !!elements);
-    return !!elements;
+    // Расширенные селекторы для Gemini
+    const geminiSelectors = [
+      'mat-card',
+      '.message-container', 
+      '[data-response-id]',
+      '.conversation-turn',
+      'table',
+      'pre',
+      'code',
+      '[data-sourcepos]',
+      '.response-container',
+      '.model-response',
+      'main',
+      'body'
+    ];
+    
+    for (const selector of geminiSelectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        console.log(`TabXport: Gemini DOM ready - found element with selector: ${selector}`);
+        return true;
+      }
+    }
+    
+    // Если ничего не найдено, проверяем базовую структуру
+    const hasBody = document.body && document.body.children.length > 0;
+    const hasElements = document.querySelectorAll('*').length > 100;
+    console.log('TabXport: Gemini basic page structure - body:', hasBody, 'elements:', hasElements);
+    
+    if (hasBody && hasElements) {
+      console.log('TabXport: Gemini DOM considered ready based on basic structure');
+      return true;
+    }
+    
+    console.log('TabXport: Gemini DOM not ready yet');
+    return false;
   }
   if (url.includes('chat.deepseek.com') || url.includes('deepseek.com')) {
     // Проверяем более широкий набор селекторов для DeepSeek
@@ -100,8 +133,8 @@ const isDOMReady = (): boolean => {
 
 // Функция для ожидания готовности DOM
 const waitForDOM = async (): Promise<void> => {
-  const maxAttempts = 10; // Уменьшаем количество попыток
-  const interval = 500; // Уменьшаем интервал до 500ms
+  const maxAttempts = 6; // Уменьшаем до 6 попыток
+  const interval = 300; // Уменьшаем интервал до 300ms  
   let attempts = 0;
   
   console.log('TabXport: Starting DOM readiness check...');
@@ -140,6 +173,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Инициализация content script
 export const init = async (): Promise<void> => {
   console.log('TabXport: Content script loaded');
+  console.log('TabXport: Current URL:', window.location.href);
   
   // Проверяем, что мы на поддерживаемой платформе
   if (!isSupportedPlatform()) {
@@ -151,20 +185,26 @@ export const init = async (): Promise<void> => {
   
   // Ждем готовности DOM перед инициализацией
   await waitForDOM();
+  console.log('TabXport: DOM wait completed');
   
   // Добавляем CSS для анимации
   addSpinnerCSS();
+  console.log('TabXport: CSS added');
   
   // Первоначальное сканирование
   console.log('TabXport: Running initial scan');
-  scanAndProcessTables();
+  await scanAndProcessTables();
+  console.log('TabXport: Initial scan completed');
   
   // Настройка наблюдателя за изменениями DOM
+  console.log('TabXport: Setting up mutation observer');
   setupMutationObserver();
+  console.log('TabXport: Mutation observer setup completed');
   
   // Настройка периодического сканирования только для AI платформ
   const source = window.location.href;
   if (source.includes('chat.openai.com') || 
+      source.includes('chatgpt.com') ||
       source.includes('claude.ai') || 
       source.includes('gemini.google.com') ||
       source.includes('chat.deepseek.com')) {
@@ -190,6 +230,8 @@ export const init = async (): Promise<void> => {
       console.log(`TabXport: Running periodic scan (interval: ${scanInterval}ms)`);
       scanAndProcessTables();
     }, scanInterval);
+  } else {
+    console.log('TabXport: No periodic scanning setup - platform not AI');
   }
   
   console.log('TabXport: Content script initialization complete');

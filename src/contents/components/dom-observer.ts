@@ -54,7 +54,13 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
   // Игнорируем изменения в наших кнопках и UI элементах
   if (mutation.target instanceof HTMLElement) {
     const targetEl = mutation.target;
-    if (targetEl.tagName === 'BUTTON' || 
+    
+    // ИСПРАВЛЕНО: Игнорируем изменения в наших кнопках экспорта
+    if (targetEl.tagName === 'BUTTON' ||
+        targetEl.getAttribute('title')?.includes('Export') ||
+        targetEl.textContent?.includes('Export') ||
+        targetEl.classList.contains('tabxport-export-button') ||
+        targetEl.style.backgroundColor?.includes('#10b981') ||
         targetEl.classList.contains('text-input-field') ||
         targetEl.classList.contains('input') ||
         targetEl.classList.contains('toolbar') ||
@@ -65,7 +71,9 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
         targetEl.classList.contains('tooltip') ||
         targetEl.id?.includes('input') ||
         targetEl.id?.includes('toolbar') ||
-        targetEl.id?.includes('menu')) {
+        targetEl.id?.includes('menu') ||
+        targetEl.id?.includes('tabxport')) {
+      // УБРАНО: избыточное логирование для каждой UI мутации
       return false;
     }
   }
@@ -73,16 +81,27 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
   // Проверяем добавленные узлы
   for (const node of Array.from(mutation.addedNodes)) {
     if (node instanceof HTMLElement) {
+      // ИСПРАВЛЕНО: Игнорируем наши кнопки экспорта в добавленных узлах
+      if (node.tagName === 'BUTTON' &&
+          (node.getAttribute('title')?.includes('Export') ||
+           node.textContent?.includes('Export') ||
+           node.classList.contains('tabxport-export-button') ||
+           node.style.backgroundColor?.includes('#10b981'))) {
+        // УБРАНО: логирование игнорирования кнопок
+        return false;
+      }
+      
       // Проверяем на наличие таблиц или потенциальных контейнеров таблиц
       if (node.tagName === 'TABLE' || 
           node.tagName === 'PRE' || 
           node.tagName === 'CODE') {
+        console.log('TabXport: 🔍 Detected new table-like element:', node.tagName);
         return true;
       }
 
       // Для div элементов проверяем более тщательно
       if (node.tagName === 'DIV') {
-        // Игнорируем UI элементы
+        // Игнорируем UI элементы и наши элементы
         if (node.classList.contains('text-input-field') ||
             node.classList.contains('input') ||
             node.classList.contains('toolbar') ||
@@ -93,7 +112,8 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
             node.classList.contains('tooltip') ||
             node.id?.includes('input') ||
             node.id?.includes('toolbar') ||
-            node.id?.includes('menu')) {
+            node.id?.includes('menu') ||
+            node.id?.includes('tabxport')) {
           return false;
         }
 
@@ -105,6 +125,7 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
            node.textContent?.split('|').length >= 3);
         
         if (hasTableLikeContent) {
+          console.log('TabXport: 🔍 Detected new div with table content');
           return true;
         }
       }
@@ -117,6 +138,7 @@ const shouldProcessMutation = (mutation: MutationRecord): boolean => {
 // Функция для сканирования и обработки таблиц
 export const scanAndProcessTables = async (): Promise<void> => {
   try {
+    console.log('*** TabXport NEW VERSION: Scanning for tables with BATCH DETECTION ***');
     console.log('TabXport: Scanning for tables...');
     
     // Запускаем batch detection параллельно с обычным поиском
@@ -138,98 +160,113 @@ export const scanAndProcessTables = async (): Promise<void> => {
     // Проверяем, нужно ли полное пересканирование
     const currentButtonCount = addedButtons.size;
     const tableCount = tableElementsSet.size;
+    const validBatchTablesCount = batchResult.count;
     
-    if (Math.abs(currentButtonCount - tableCount) <= 1 && currentButtonCount > 0) {
-      console.log('TabXport: Table count stable, skipping aggressive cleanup');
+    console.log(`TabXport: Current buttons: ${currentButtonCount}, Found tables: ${tableCount}, Valid batch tables: ${validBatchTablesCount}`);
+    
+    // ИСПРАВЛЕНО: Добавим флаг для отслеживания первой загрузки
+    const isFirstLoad = currentButtonCount === 0;
+    const isSignificantChange = Math.abs(currentButtonCount - tableCount) > 2; // ИЗМЕНЕНО: более мягкий порог
+    const hasValidationMismatch = Math.abs(currentButtonCount - validBatchTablesCount) > 1; // ИЗМЕНЕНО: более мягкий порог
+    
+    // ИСПРАВЛЕНО: Более консервативный подход к полной валидации
+    if (isFirstLoad) {
+      console.log('TabXport: First load - performing full validation');
+    } else if (isSignificantChange) {
+      console.log('TabXport: Significant change detected - performing full validation');
+    } else if (hasValidationMismatch && validBatchTablesCount > currentButtonCount) {
+      console.log('TabXport: Missing buttons detected - adding new ones only');
+    } else {
+      console.log('TabXport: Table count stable, checking for new tables only');
       
-      // Только добавляем кнопки к новым таблицам
+      // Только добавляем кнопки к новым таблицам БЕЗ УДАЛЕНИЯ СУЩЕСТВУЮЩИХ
+      let newTablesProcessed = 0;
       for (const [index, table] of tables.entries()) {
         if (!addedButtons.has(table)) {
           try {
+            console.log(`TabXport: Processing new table ${index + 1}/${tables.length}`);
             const isValid = await isValidTable(table);
             if (isValid) {
               console.log(`TabXport: Adding export button to new table ${index}`);
               await addExportButton(table);
+              newTablesProcessed++;
             }
           } catch (error) {
-            console.error(`TabXport: Error processing table ${index}:`, error);
+            console.error(`TabXport: Error processing new table ${index}:`, error);
           }
         }
       }
       
+      console.log(`TabXport: Processed ${newTablesProcessed} new tables`);
       return;
     }
     
-    console.log('TabXport: Significant table count change detected, performing full cleanup');
+    // ПОЛНАЯ ВАЛИДАЦИЯ - выполняется ТОЛЬКО при первой загрузке или значительных изменениях
+    console.log('TabXport: Starting full table validation');
     
-    // Только при значительных изменениях делаем полную очистку
-    console.log('TabXport: Removing all duplicate export buttons...');
-    const exportButtonsToRemove: HTMLElement[] = [];
-    
-    // Ищем кнопки по title атрибуту
-    const buttonsByTitle = document.querySelectorAll('button[title*="Export"]');
-    buttonsByTitle.forEach(button => {
-      exportButtonsToRemove.push(button as HTMLElement);
-    });
-    
-    // Ищем кнопки по текстовому содержимому
-    const allButtons = document.querySelectorAll('button');
-    allButtons.forEach(button => {
-      const buttonElement = button as HTMLElement;
-      if (buttonElement.textContent?.includes('Export') || 
-          buttonElement.innerHTML?.includes('Export')) {
-        exportButtonsToRemove.push(buttonElement);
+    // ИСПРАВЛЕНО: НЕ УДАЛЯЕМ существующие кнопки, только проверяем валидность
+    // Очищаем только НЕДЕЙСТВИТЕЛЬНЫЕ кнопки
+    const invalidButtons: HTMLElement[] = [];
+    for (const [tableElement, button] of addedButtons.entries()) {
+      if (!document.contains(button) || !document.contains(tableElement)) {
+        invalidButtons.push(button);
+        addedButtons.delete(tableElement);
       }
-    });
+    }
     
-    // Также ищем кнопки по стилям
-    const styledButtons = document.querySelectorAll('button[style*="position: absolute"][style*="background-color: #10b981"]');
-    styledButtons.forEach(button => {
-      exportButtonsToRemove.push(button as HTMLElement);
-    });
-    
-    console.log(`TabXport: Found ${exportButtonsToRemove.length} export buttons to clean up`);
-    
-    // Удаляем все найденные кнопки экспорта
-    exportButtonsToRemove.forEach(button => {
-      try {
-        if (button.parentNode) {
-          button.parentNode.removeChild(button);
-        }
-      } catch (error) {
-        console.error('TabXport: Error removing duplicate button:', error);
-      }
-    });
-    
-    // Очищаем Map от всех кнопок
-    console.log('TabXport: Clearing buttons map...');
-    addedButtons.clear();
-    
-    console.log('TabXport: All export buttons cleaned up');
-    
-    // Добавляем кнопки к валидным таблицам с небольшой задержкой для стабилизации
-    setTimeout(() => {
-      tables.forEach(async (table, index) => {
+    if (invalidButtons.length > 0) {
+      console.log(`TabXport: Removing ${invalidButtons.length} invalid buttons`);
+      invalidButtons.forEach(button => {
         try {
-          console.log(`TabXport: Checking table ${index}:`, table.tagName, table.className);
-          
-          const isValid = await isValidTable(table);
-          console.log(`TabXport: Table ${index} is valid:`, isValid);
-          
-          if (isValid) {
-            console.log(`TabXport: Adding export button to table ${index}`);
-            await addExportButton(table);
-          } else {
-            console.log(`TabXport: Table ${index} is not valid, skipping`);
+          if (button.parentNode) {
+            button.parentNode.removeChild(button);
           }
-        } catch (tableError) {
-          console.error(`TabXport: Error processing table ${index}:`, tableError);
+        } catch (error) {
+          console.error('TabXport: Error removing invalid button:', error);
         }
       });
+    }
+    
+    // Добавляем кнопки ТОЛЬКО к новым валидным таблицам
+    console.log(`TabXport: Starting table validation for ${tables.length} tables`);
+    
+    for (let index = 0; index < tables.length; index++) {
+      const table = tables[index];
       
-      console.log(`TabXport: Scan complete, total active buttons: ${addedButtons.size}`);
+      // ИСПРАВЛЕНО: Пропускаем если кнопка уже есть и валидна
+      if (addedButtons.has(table)) {
+        const existingButton = addedButtons.get(table);
+        if (existingButton && document.contains(existingButton)) {
+          console.log(`TabXport: Table ${index} already has valid button, skipping`);
+          continue;
+        }
+      }
+      
+      try {
+        console.log(`TabXport: ===== Checking NEW table ${index + 1}/${tables.length} =====`);
+        console.log(`TabXport: Table ${index} element:`, table.tagName, table.className || 'no-class');
+        console.log(`TabXport: Table ${index} text preview:`, table.textContent?.substring(0, 150));
+        
+        const isValid = await isValidTable(table);
+        console.log(`TabXport: Table ${index} validation result: ${isValid ? 'VALID' : 'INVALID'}`);
+        
+        if (isValid) {
+          console.log(`TabXport: ✅ Adding export button to table ${index}`);
+          await addExportButton(table);
+        } else {
+          console.log(`TabXport: ❌ Table ${index} is not valid, skipping`);
+        }
+      } catch (tableError) {
+        console.error(`TabXport: Error processing table ${index}:`, tableError);
+        // Продолжаем обработку следующих таблиц даже при ошибке
+      }
+    }
+    
+    console.log(`TabXport: Validation complete. Active buttons: ${addedButtons.size}`);
+    setTimeout(() => {
+      console.log(`TabXport: Final scan results - Active buttons: ${addedButtons.size}`);
       console.log(`TabXport: Batch detection state:`, getBatchState());
-    }, 100);
+    }, 1000); // УМЕНЬШЕНО: с 2000 до 1000
     
   } catch (error) {
     console.error('TabXport: Critical error in scanAndProcessTables:', error);
@@ -253,27 +290,35 @@ export const setupMutationObserver = (): void => {
   observer = new MutationObserver((mutations) => {
     // Предотвращаем слишком частое сканирование
     const now = Date.now();
-    if (now - lastScanTime < 2000) { // Увеличиваем минимальный интервал до 2 секунд
+    if (now - lastScanTime < 5000) { // УВЕЛИЧЕНО: минимальный интервал до 5 секунд
+      // УБРАНО: избыточное логирование throttling
       return;
     }
 
     // Проверяем, есть ли релевантные изменения
-    const hasRelevantChanges = mutations.some(shouldProcessMutation);
-
-    if (hasRelevantChanges) {
-      if (scanTimeout) {
-        clearTimeout(scanTimeout);
-      }
-
-      scanTimeout = setTimeout(() => {
-        console.log('TabXport: MutationObserver triggered table scan');
-        scanAndProcessTables().catch(error => {
-          console.error('TabXport: Error in MutationObserver scan:', error);
-        });
-        lastScanTime = Date.now();
-        scanTimeout = null;
-      }, 1500); // Увеличиваем задержку для стабилизации DOM
+    const relevantMutations = mutations.filter(shouldProcessMutation);
+    
+    // УПРОЩЕНО: Логируем только если есть релевантные мутации
+    if (relevantMutations.length === 0) {
+      // УБРАНО: логирование каждого пустого результата
+      return;
     }
+
+    console.log(`TabXport: 🔄 Found ${relevantMutations.length} relevant changes (${mutations.length} total mutations)`);
+
+    if (scanTimeout) {
+      console.log('TabXport: ⏱️ Resetting scan timer');
+      clearTimeout(scanTimeout);
+    }
+
+    scanTimeout = setTimeout(() => {
+      console.log('TabXport: 🚀 Starting table scan after mutation detection');
+      scanAndProcessTables().catch(error => {
+        console.error('TabXport: Error in MutationObserver scan:', error);
+      });
+      lastScanTime = Date.now();
+      scanTimeout = null;
+    }, 3000); // УВЕЛИЧЕНО: задержка до 3 секунд для стабилизации DOM
   });
 
   // Наблюдаем только за основными контейнерами

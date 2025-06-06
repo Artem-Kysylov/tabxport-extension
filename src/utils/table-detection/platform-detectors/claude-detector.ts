@@ -12,35 +12,75 @@ export const claudeDetector: PlatformDetector = {
 
   findTables: (): HTMLElement[] => {
     logger.debug('Searching for tables in Claude interface');
+    console.log('TabXport Claude: Starting table search');
     
     const elements: HTMLElement[] = [];
     const processedElements = new Set<HTMLElement>();
     const processedTableContent = new Set<string>();
     
-    // Find all Claude messages
-    const allMessages = document.querySelectorAll('.prose, .message-content, [class*="message-content"]');
-    logger.debug(`Found ${allMessages.length} Claude messages`);
+    // Updated Claude selectors based on current DOM structure
+    const messageSelectors = [
+      '[data-testid="conversation-turn"]',
+      '[class*="message"]',
+      '[class*="assistant"]',
+      '.prose',
+      '[class*="content"]',
+      'div[class*="claude-message"]',
+      'div[class*="font-claude"]',
+      '.message-content',
+      '[class*="message-content"]'
+    ];
+    
+    const allMessages = new Set<HTMLElement>();
+    
+    // Collect all potential message containers
+    messageSelectors.forEach(selector => {
+      const found = document.querySelectorAll(selector);
+      console.log(`TabXport Claude: Found ${found.length} elements with selector: ${selector}`);
+      found.forEach(element => {
+        if (element instanceof HTMLElement) {
+          allMessages.add(element);
+        }
+      });
+    });
+    
+    logger.debug(`Found ${allMessages.size} unique Claude messages`);
+    console.log(`TabXport Claude: Found ${allMessages.size} unique Claude messages`);
+
+    // If no specific message containers found, scan the entire page
+    if (allMessages.size === 0) {
+      console.log('TabXport Claude: No message containers found, scanning entire page');
+      const mainContent = document.querySelector('main, [role="main"], .chat-container, .conversation');
+      if (mainContent) {
+        allMessages.add(mainContent as HTMLElement);
+      } else {
+        allMessages.add(document.body);
+      }
+    }
 
     allMessages.forEach((message, messageIndex) => {
-      const messageElement = message as HTMLElement;
       logger.debug(`Processing Claude message ${messageIndex}`);
+      console.log(`TabXport Claude: Processing message ${messageIndex}`);
       
       // Find HTML tables in the message
-      const htmlTables = messageElement.querySelectorAll('table');
+      const htmlTables = message.querySelectorAll('table');
       logger.debug(`Found ${htmlTables.length} HTML tables in message ${messageIndex}`);
+      console.log(`TabXport Claude: Found ${htmlTables.length} HTML tables in message ${messageIndex}`);
       
       htmlTables.forEach(table => {
         const htmlTable = table as HTMLElement;
         if (table.rows.length > 0 && !processedElements.has(htmlTable)) {
           logger.debug(`Adding HTML table from message ${messageIndex}`);
+          console.log(`TabXport Claude: Adding HTML table from message ${messageIndex} (${table.rows.length} rows)`);
           elements.push(htmlTable);
           processedElements.add(htmlTable);
         }
       });
       
       // Find markdown tables in code blocks
-      const codeBlocks = messageElement.querySelectorAll('pre, code');
+      const codeBlocks = message.querySelectorAll('pre, code, [class*="language-"], [class*="whitespace-pre"]');
       logger.debug(`Found ${codeBlocks.length} code blocks in message ${messageIndex}`);
+      console.log(`TabXport Claude: Found ${codeBlocks.length} code blocks in message ${messageIndex}`);
       
       codeBlocks.forEach((block, blockIndex) => {
         const htmlBlock = block as HTMLElement;
@@ -58,6 +98,7 @@ export const claudeDetector: PlatformDetector = {
           
           if (tableLines.length >= 2) {
             logger.debug(`Adding markdown table from code block ${blockIndex} in message ${messageIndex}`);
+            console.log(`TabXport Claude: Adding markdown table from code block ${blockIndex} in message ${messageIndex} (${tableLines.length} lines)`);
             elements.push(htmlBlock);
             processedElements.add(htmlBlock);
             processedTableContent.add(contentHash);
@@ -66,14 +107,17 @@ export const claudeDetector: PlatformDetector = {
       });
       
       // Find text-based tables in message content
-      const textContent = messageElement.textContent || '';
+      const textContent = message.textContent || '';
       logger.debug(`Claude message ${messageIndex} text length: ${textContent.length}`);
+      console.log(`TabXport Claude: Message ${messageIndex} text length: ${textContent.length}`);
       
       if (textContent.includes('|') && textContent.split('\n').length > 2) {
         logger.debug(`Message ${messageIndex} contains potential table markers`);
+        console.log(`TabXport Claude: Message ${messageIndex} contains potential table markers`);
         
-        const textElements = messageElement.querySelectorAll('div, p, span');
+        const textElements = message.querySelectorAll('div, p, span');
         logger.debug(`Checking ${textElements.length} text containers in message ${messageIndex}`);
+        console.log(`TabXport Claude: Checking ${textElements.length} text containers in message ${messageIndex}`);
         
         textElements.forEach((element, elementIndex) => {
           const htmlElement = element as HTMLElement;
@@ -111,6 +155,7 @@ export const claudeDetector: PlatformDetector = {
             
             if (validLines.length >= 2) {
               logger.debug(`Adding text table element ${elementIndex} from message ${messageIndex}`);
+              console.log(`TabXport Claude: Adding text table element ${elementIndex} from message ${messageIndex} (${validLines.length} lines)`);
               elements.push(htmlElement);
               processedElements.add(htmlElement);
               processedTableContent.add(contentHash);
@@ -120,6 +165,7 @@ export const claudeDetector: PlatformDetector = {
       }
     });
 
+    console.log(`TabXport Claude: Final result - found ${elements.length} table elements`);
     return elements;
   },
 

@@ -76,11 +76,17 @@ function parsePipeTable(lines: string[]): { headers: string[]; rows: string[][] 
   const headers: string[] = [];
   const rows: string[][] = [];
 
-  // Parse header cells
-  const headerCells = lines[0]
+  // Parse header cells - handle markdown table format with optional leading/trailing pipes
+  let headerLine = lines[0].trim();
+  
+  // Remove leading and trailing pipes if present (markdown format)
+  if (headerLine.startsWith('|') && headerLine.endsWith('|')) {
+    headerLine = headerLine.slice(1, -1);
+  }
+  
+  const headerCells = headerLine
     .split('|')
-    .map(cell => cell.trim())
-    .filter(cell => cell.length > 0);
+    .map(cell => cell.trim());
 
   if (headerCells.length < 2) {
     logger.warn('Not enough header cells in pipe table');
@@ -99,23 +105,28 @@ function parsePipeTable(lines: string[]): { headers: string[]; rows: string[][] 
 
   // Parse data rows
   for (let i = startIndex; i < lines.length; i++) {
-    const cells = lines[i]
-      .split('|')
-      .map(cell => cell.trim())
-      .filter(cell => cell.length > 0);
-
-    if (cells.length > 0) {
-      // Normalize row length to match headers
-      const normalizedRow = [...cells];
-      while (normalizedRow.length < headers.length) {
-        normalizedRow.push('');
-      }
-      if (normalizedRow.length > headers.length) {
-        normalizedRow.splice(headers.length);
-      }
-      rows.push(normalizedRow);
-      logger.debug(`Parsed row ${i + 1} with ${normalizedRow.length} cells`);
+    let dataLine = lines[i].trim();
+    
+    // Remove leading and trailing pipes if present (markdown format)
+    if (dataLine.startsWith('|') && dataLine.endsWith('|')) {
+      dataLine = dataLine.slice(1, -1);
     }
+    
+    const cells = dataLine
+      .split('|')
+      .map(cell => cell.trim());
+
+    // Ensure row has the same number of cells as headers
+    const normalizedRow = [...cells];
+    while (normalizedRow.length < headers.length) {
+      normalizedRow.push('');
+    }
+    if (normalizedRow.length > headers.length) {
+      normalizedRow.splice(headers.length);
+    }
+    
+    rows.push(normalizedRow);
+    logger.debug(`Parsed row ${i + 1} with ${normalizedRow.length} cells`);
   }
 
   // Validate and sanitize

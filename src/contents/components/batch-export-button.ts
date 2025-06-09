@@ -155,7 +155,7 @@ const applyButtonStyles = (button: HTMLElement): void => {
     padding: '16px',
     boxShadow: '0 8px 32px rgba(27, 147, 88, 0.3)',
     cursor: 'pointer',
-    zIndex: '10000',
+    zIndex: '999980',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     fontSize: '14px',
     fontWeight: '500',

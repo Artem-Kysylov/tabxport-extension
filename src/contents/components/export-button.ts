@@ -241,7 +241,7 @@ export const showNotification = (message: string, type: 'success' | 'error'): vo
     position: fixed;
     top: 20px;
     right: 20px;
-    z-index: 10001;
+    z-index: 999995;
     padding: 12px 16px;
     border-radius: 6px;
     color: white;
@@ -347,7 +347,7 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     position: absolute !important;
     top: ${position.y}px !important;
     left: ${position.x}px !important;
-    z-index: 2147483647 !important;
+    z-index: 999990 !important;
     background-color: #1B9358 !important;
     color: white !important;
     border: none !important;
@@ -392,7 +392,7 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     left: ${position.x}px !important;
     width: 45px !important;
     height: 45px !important;
-    z-index: 2147483647 !important;
+    z-index: 999990 !important;
     pointer-events: all !important;
     touch-action: manipulation !important;
   `;

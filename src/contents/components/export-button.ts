@@ -2,6 +2,533 @@ import { TableData, ChromeMessage, ChromeMessageType } from '../../types';
 import { getUserSettings } from '../../lib/storage';
 import { createTooltip } from './tooltip';
 
+/**
+ * Export formats for single export
+ */
+const SINGLE_EXPORT_FORMATS = {
+  xlsx: {
+    name: 'Excel',
+    icon: '📊',
+    description: 'Excel spreadsheet',
+    extension: '.xlsx'
+  },
+  csv: {
+    name: 'CSV', 
+    icon: '📄',
+    description: 'Comma-separated values',
+    extension: '.csv'
+  },
+  docx: {
+    name: 'Word',
+    icon: '📝', 
+    description: 'Word document',
+    extension: '.docx'
+  },
+  pdf: {
+    name: 'PDF',
+    icon: '📋',
+    description: 'PDF document', 
+    extension: '.pdf'
+  }
+} as const;
+
+type SingleExportFormat = keyof typeof SINGLE_EXPORT_FORMATS;
+
+/**
+ * LocalStorage key for single export format preference
+ */
+const STORAGE_KEY_SINGLE_EXPORT_FORMAT = 'tabxport-single-export-format';
+
+/**
+ * Single export format preference utilities
+ */
+const SingleExportPreferences = {
+  save: (format: SingleExportFormat): void => {
+    try {
+      localStorage.setItem(STORAGE_KEY_SINGLE_EXPORT_FORMAT, format);
+      console.log(`💾 Saved single export format: ${format}`);
+    } catch (error) {
+      console.warn('Failed to save single export format preference:', error);
+    }
+  },
+  
+  load: (): SingleExportFormat | null => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SINGLE_EXPORT_FORMAT);
+      if (saved && Object.keys(SINGLE_EXPORT_FORMATS).includes(saved)) {
+        console.log(`📂 Loaded single export format: ${saved}`);
+        return saved as SingleExportFormat;
+      }
+    } catch (error) {
+      console.warn('Failed to load single export format preference:', error);
+    }
+    return null;
+  },
+  
+  clear: (): void => {
+    try {
+      localStorage.removeItem(STORAGE_KEY_SINGLE_EXPORT_FORMAT);
+      console.log('🗑️ Cleared single export format preference');
+    } catch (error) {
+      console.warn('Failed to clear single export format preference:', error);
+    }
+  },
+  
+  exists: (): boolean => {
+    return SingleExportPreferences.load() !== null;
+  }
+};
+
+/**
+ * Single export modal state
+ */
+interface SingleExportModalState {
+  isVisible: boolean;
+  tableData: TableData | null;
+  selectedFormat: SingleExportFormat;
+  rememberFormat: boolean;
+}
+
+// Global modal state
+let singleModalState: SingleExportModalState = {
+  isVisible: false,
+  tableData: null,
+  selectedFormat: 'xlsx',
+  rememberFormat: false
+};
+
+// Modal constants
+const SINGLE_MODAL_ID = 'tabxport-single-export-modal';
+const SINGLE_OVERLAY_ID = 'tabxport-single-export-overlay';
+
+/**
+ * Creates format selector for single export modal
+ */
+const createSingleFormatSelector = (): string => {
+  const options = Object.entries(SINGLE_EXPORT_FORMATS)
+    .map(([key, format]) => `
+      <option value="${key}" ${singleModalState.selectedFormat === key ? 'selected' : ''}>
+        ${format.icon} ${format.name}
+      </option>
+    `).join('');
+  
+  const hasPreference = SingleExportPreferences.exists();
+  
+  return `
+    <div class="single-format-selector">
+      <label class="single-format-label">Export Format:</label>
+      <div class="single-format-select-container">
+        <select id="single-format-select" class="single-format-select" title="Choose export format">
+          ${options}
+        </select>
+        <div class="single-format-preferences">
+          <label class="single-remember-format-label">
+            <input type="checkbox" id="single-remember-format-checkbox" class="single-remember-format-checkbox" ${singleModalState.rememberFormat ? 'checked' : ''}>
+            <span>🧠 Запомнить мой формат</span>
+          </label>
+          ${hasPreference ? `
+            <button type="button" id="single-clear-format-preference" class="single-clear-preference-btn" title="Очистить сохраненный формат">
+              🗑️
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+/**
+ * Creates single export modal content
+ */
+const createSingleModalContent = (): string => {
+  const format = SINGLE_EXPORT_FORMATS[singleModalState.selectedFormat];
+  
+  return `
+    <div class="single-modal-header">
+      <h3 class="single-modal-title">📊 Export Table</h3>
+      <button class="single-close-button" id="single-close-modal-btn">×</button>
+    </div>
+    
+    <div class="single-modal-body">
+      ${createSingleFormatSelector()}
+      
+      <div class="single-export-info">
+        <div class="single-format-description">
+          <strong>${format.icon} ${format.name}</strong>
+          <p>${format.description}</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="single-modal-footer">
+      <button class="single-cancel-button" id="single-cancel-btn">Cancel</button>
+      <button class="single-export-button" id="single-export-btn">
+        Export as ${format.name}
+      </button>
+    </div>
+  `;
+};
+
+/**
+ * Creates modal overlay for single export
+ */
+const createSingleModalOverlay = (): HTMLElement => {
+  const overlay = document.createElement('div');
+  overlay.id = SINGLE_OVERLAY_ID;
+  
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100vw',
+    height: '100vh',
+    background: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(2px)',
+    zIndex: '999999',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'system-ui, -apple-system, sans-serif'
+  });
+  
+  return overlay;
+};
+
+/**
+ * Adds CSS styles for single export modal
+ */
+const addSingleModalStyles = (): void => {
+  const styleId = 'tabxport-single-modal-styles';
+  
+  if (document.getElementById(styleId)) {
+    return;
+  }
+
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = `
+    #${SINGLE_MODAL_ID} {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90vw;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .single-modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .single-modal-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    .single-close-button {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    
+    .single-close-button:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    
+    .single-modal-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .single-format-selector {
+      margin-bottom: 16px;
+    }
+    
+    .single-format-label {
+      display: block;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    
+    .single-format-select-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .single-format-select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      background: white;
+      color: #1f2937;
+      cursor: pointer;
+    }
+    
+    .single-format-select:focus {
+      outline: none;
+      border-color: #1B9358;
+      box-shadow: 0 0 0 1px #1B9358;
+    }
+    
+    .single-format-preferences {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 4px;
+    }
+    
+    .single-remember-format-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #6b7280;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .single-remember-format-checkbox {
+      cursor: pointer;
+    }
+    
+    .single-clear-preference-btn {
+      background: none;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #6b7280;
+      transition: all 0.2s ease;
+    }
+    
+    .single-clear-preference-btn:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+      color: #374151;
+    }
+    
+    .single-export-info {
+      background: #f8f9fa;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    
+    .single-format-description strong {
+      color: #1f2937;
+      font-size: 14px;
+    }
+    
+    .single-format-description p {
+      margin: 4px 0 0 0;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    
+    .single-modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    
+    .single-cancel-button, .single-export-button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .single-cancel-button {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      color: #374151;
+    }
+    
+    .single-cancel-button:hover {
+      background: #e5e7eb;
+    }
+    
+    .single-export-button {
+      background: linear-gradient(135deg, #1B9358, #16a085);
+      border: 1px solid #1B9358;
+      color: white;
+    }
+    
+    .single-export-button:hover {
+      background: linear-gradient(135deg, #166d42, #138b74);
+    }
+  `;
+  
+  document.head.appendChild(style);
+};
+
+/**
+ * Updates single modal content
+ */
+const updateSingleModalContent = (): void => {
+  const modal = document.getElementById(SINGLE_MODAL_ID);
+  if (!modal) return;
+  
+  modal.innerHTML = createSingleModalContent();
+  attachSingleModalEventListeners();
+};
+
+/**
+ * Shows single export modal
+ */
+const showSingleExportModal = (tableData: TableData): void => {
+  singleModalState.tableData = tableData;
+  singleModalState.isVisible = true;
+  
+  // Load preferred format if available
+  const preferredFormat = SingleExportPreferences.load();
+  if (preferredFormat) {
+    singleModalState.selectedFormat = preferredFormat;
+    console.log(`🧠 Using remembered single export format: ${preferredFormat}`);
+  }
+  
+  addSingleModalStyles();
+  
+  const overlay = createSingleModalOverlay();
+  
+  const modal = document.createElement('div');
+  modal.id = SINGLE_MODAL_ID;
+  modal.innerHTML = createSingleModalContent();
+  
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      hideSingleExportModal();
+    }
+  });
+  
+  attachSingleModalEventListeners();
+};
+
+/**
+ * Hides single export modal
+ */
+const hideSingleExportModal = (): void => {
+  const overlay = document.getElementById(SINGLE_OVERLAY_ID);
+  if (overlay) {
+    overlay.remove();
+  }
+  
+  singleModalState.isVisible = false;
+  singleModalState.tableData = null;
+  singleModalState.selectedFormat = 'xlsx';
+  singleModalState.rememberFormat = false;
+};
+
+/**
+ * Attaches event listeners to single modal elements
+ */
+const attachSingleModalEventListeners = (): void => {
+  // Close button
+  const closeBtn = document.getElementById('single-close-modal-btn');
+  closeBtn?.addEventListener('click', hideSingleExportModal);
+  
+  // Cancel button
+  const cancelBtn = document.getElementById('single-cancel-btn');
+  cancelBtn?.addEventListener('click', hideSingleExportModal);
+  
+  // Export button
+  const exportBtn = document.getElementById('single-export-btn');
+  exportBtn?.addEventListener('click', handleSingleExport);
+  
+  // Format selector
+  const formatSelect = document.getElementById('single-format-select') as HTMLSelectElement;
+  formatSelect?.addEventListener('change', (e) => {
+    singleModalState.selectedFormat = (e.target as HTMLSelectElement).value as SingleExportFormat;
+    updateSingleModalContent();
+  });
+  
+  // Remember format checkbox
+  const rememberFormatCheckbox = document.getElementById('single-remember-format-checkbox') as HTMLInputElement;
+  rememberFormatCheckbox?.addEventListener('change', (e) => {
+    singleModalState.rememberFormat = (e.target as HTMLInputElement).checked;
+  });
+  
+  // Clear format preference button
+  const clearPreferenceBtn = document.getElementById('single-clear-format-preference');
+  clearPreferenceBtn?.addEventListener('click', () => {
+    SingleExportPreferences.clear();
+    updateSingleModalContent(); // Refresh to hide clear button
+  });
+};
+
+/**
+ * Handles single export from modal
+ */
+const handleSingleExport = async (): Promise<void> => {
+  if (!singleModalState.tableData) return;
+  
+  console.log('🚀 Starting single export...');
+  console.log(`📄 Format: ${singleModalState.selectedFormat}`);
+  
+  try {
+    const message: ChromeMessage = {
+      type: ChromeMessageType.EXPORT_TABLE,
+      payload: {
+        tableData: singleModalState.tableData,
+        options: {
+          format: singleModalState.selectedFormat,
+          includeHeaders: true,
+          destination: 'download', // Always download for single export
+        },
+      },
+    };
+
+    console.log('Sending single export message to background:', message);
+    const result = await sendToBackground(message);
+    console.log('Single export background response:', result);
+    
+    if (result?.success) {
+      // Save format preference if remember checkbox is checked
+      if (singleModalState.rememberFormat) {
+        SingleExportPreferences.save(singleModalState.selectedFormat);
+        console.log(`🧠 Saved single export format preference: ${singleModalState.selectedFormat}`);
+      }
+      
+      showNotification(`Table exported as ${singleModalState.selectedFormat.toUpperCase()} successfully!`, 'success');
+      hideSingleExportModal();
+    } else {
+      console.error('Single export failed:', result);
+      showNotification(result?.error || 'Export failed', 'error');
+    }
+  } catch (error) {
+    console.error('Single export error:', error);
+    showNotification('Export failed. Please try again.', 'error');
+  }
+};
+
 interface ButtonPosition {
   x: number;
   y: number;
@@ -266,58 +793,16 @@ export const showNotification = (message: string, type: 'success' | 'error'): vo
   }, 3000);
 };
 
-// Обработчик экспорта таблицы
-const handleExport = async (tableData: TableData, button: HTMLButtonElement): Promise<void> => {
-  try {
-    console.log('Starting export with tableData:', tableData);
-    
-    const originalText = button.innerHTML;
-    button.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
-        <path d="M21 12a9 9 0 11-6.219-8.56" />
-      </svg>
-    `;
-    button.disabled = true;
-    
-    console.log('Getting user settings...');
-    const settings = await getUserSettings();
-    console.log('User settings:', settings);
-    
-    const message: ChromeMessage = {
-      type: ChromeMessageType.EXPORT_TABLE,
-      payload: {
-        tableData,
-        options: {
-          format: settings.defaultFormat,
-          includeHeaders: true,
-          destination: settings.defaultDestination,
-        },
-      },
-    };
-
-    console.log('Sending message to background:', message);
-    const result = await sendToBackground(message);
-    console.log('Background response:', result);
-    
-    if (result?.success) {
-      showNotification('Table exported successfully!', 'success');
-    } else {
-      console.error('Export failed:', result);
-      showNotification(result?.error || 'Export failed', 'error');
+// Добавляем CSS для анимации спиннера
+export const addSpinnerCSS = (): void => {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
-  } catch (error) {
-    console.error('Export error:', error);
-    showNotification('Export failed. Please try again.', 'error');
-  } finally {
-    button.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-        <polyline points="7,10 12,15 17,10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
-      </svg>
-    `;
-    button.disabled = false;
-  }
+  `;
+  document.head.appendChild(style);
 };
 
 // Функция для создания кнопки экспорта
@@ -402,7 +887,7 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
   button.style.top = '0';
   button.style.left = '0';
   
-  button.title = `Export ${tableData.source} table to Excel/CSV`;
+  button.title = `Export ${tableData.source} table - click to choose format`;
   
   // Обработчики событий
   buttonWrapper.addEventListener('mouseenter', () => {
@@ -447,10 +932,11 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
     tooltip.hide();
   });
   
+  // ИЗМЕНЕНО: теперь кнопка открывает модальное окно вместо прямого экспорта
   button.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    handleExport(tableData, button as HTMLButtonElement);
+    showSingleExportModal(tableData);
   });
   
   // Очищаем тултип при удалении кнопки
@@ -460,19 +946,7 @@ export const createExportButton = (tableData: TableData, position: ButtonPositio
   
   buttonWrapper.addEventListener('remove', cleanup);
   
-  console.log('TabXport: Button created with enhanced styles and event handling');
+  console.log('TabXport: Button created with modal functionality');
   
   return buttonWrapper;
-};
-
-// Добавляем CSS для анимации спиннера
-export const addSpinnerCSS = (): void => {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-  `;
-  document.head.appendChild(style);
 }; 

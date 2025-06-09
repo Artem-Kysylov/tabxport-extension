@@ -134,7 +134,7 @@ const addPDFFooter = (doc: jsPDF, tableData: TableData): void => {
  */
 export const exportToPDF = async (
   tableData: TableData,
-  options: ExportOptions
+  options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
     console.log('Starting PDF export for:', tableData.source);
@@ -214,7 +214,7 @@ export const exportToPDF = async (
     const pdfArrayBuffer = doc.output('arraybuffer');
     
     // Создаем filename
-    const filename = generateFilename(tableData, 'pdf', options.filename);
+    const filename = generateFilename(tableData, 'pdf', options.filename, options.tableIndex);
     
     // Конвертируем в data URL
     const base64 = arrayBufferToBase64(pdfArrayBuffer);

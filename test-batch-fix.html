@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabXport Batch Export Filename Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        h1 {
+            color: #1B9358;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .table-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+        
+        .table-title {
+            color: #1f2937;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #e5e7eb;
+        }
+        
+        th {
+            background: #1B9358;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8fdf9;
+        }
+        
+        tr:hover {
+            background: #f0fdf4;
+        }
+        
+        .test-info {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .test-info h3 {
+            margin: 0 0 10px 0;
+            color: #92400e;
+        }
+        
+        .test-steps {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .test-steps li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 TabXport Batch Export Filename Fix Test</h1>
+    <p class="subtitle">Testing unique filenames in ZIP archives for batch export</p>
+    
+    <div class="test-info">
+        <h3>🧪 Test Instructions:</h3>
+        <ol class="test-steps">
+            <li>Click on "Export All Tables" button that should appear</li>
+            <li>Select all 4 tables for export</li>
+            <li>Choose any format (XLSX recommended) and enable "Download as ZIP archive"</li>
+            <li>Export and check the ZIP contents - all files should have unique names like:
+                <ul>
+                    <li><code>Test_Table_1_2025-06-09T10-XX-XX.xlsx</code></li>
+                    <li><code>Test_Table_2_2025-06-09T10-XX-XX.xlsx</code></li>
+                    <li><code>Test_Table_3_2025-06-09T10-XX-XX.xlsx</code></li>
+                    <li><code>Test_Table_4_2025-06-09T10-XX-XX.xlsx</code></li>
+                </ul>
+            </li>
+            <li>Verify that ZIP contains 4 unique files (not 2 overwritten files)</li>
+        </ol>
+    </div>
+    
+    <div class="table-section">
+        <h2 class="table-title">📊 Sales Data Q1 2024</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Revenue ($)</th>
+                    <th>Units Sold</th>
+                    <th>Avg Price</th>
+                    <th>Growth %</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>January</td>
+                    <td>$125,000</td>
+                    <td>2,500</td>
+                    <td>$50.00</td>
+                    <td>+12%</td>
+                </tr>
+                <tr>
+                    <td>February</td>
+                    <td>$138,500</td>
+                    <td>2,770</td>
+                    <td>$50.00</td>
+                    <td>+18%</td>
+                </tr>
+                <tr>
+                    <td>March</td>
+                    <td>$142,750</td>
+                    <td>2,855</td>
+                    <td>$50.00</td>
+                    <td>+22%</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="table-section">
+        <h2 class="table-title">👥 Team Performance Metrics</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Team Member</th>
+                    <th>Tasks Completed</th>
+                    <th>Success Rate</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Alice Johnson</td>
+                    <td>45</td>
+                    <td>96%</td>
+                    <td>⭐⭐⭐⭐⭐</td>
+                </tr>
+                <tr>
+                    <td>Bob Smith</td>
+                    <td>42</td>
+                    <td>94%</td>
+                    <td>⭐⭐⭐⭐⭐</td>
+                </tr>
+                <tr>
+                    <td>Carol Davis</td>
+                    <td>38</td>
+                    <td>92%</td>
+                    <td>⭐⭐⭐⭐</td>
+                </tr>
+                <tr>
+                    <td>David Wilson</td>
+                    <td>41</td>
+                    <td>89%</td>
+                    <td>⭐⭐⭐⭐</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="table-section">
+        <h2 class="table-title">🌍 Regional Distribution</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Region</th>
+                    <th>Countries</th>
+                    <th>Population (M)</th>
+                    <th>Market Share</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>North America</td>
+                    <td>3</td>
+                    <td>579.0</td>
+                    <td>35%</td>
+                </tr>
+                <tr>
+                    <td>Europe</td>
+                    <td>27</td>
+                    <td>447.7</td>
+                    <td>28%</td>
+                </tr>
+                <tr>
+                    <td>Asia Pacific</td>
+                    <td>15</td>
+                    <td>4,641.0</td>
+                    <td>25%</td>
+                </tr>
+                <tr>
+                    <td>Latin America</td>
+                    <td>12</td>
+                    <td>653.0</td>
+                    <td>12%</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="table-section">
+        <h2 class="table-title">🔧 Product Features Comparison</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Basic Plan</th>
+                    <th>Pro Plan</th>
+                    <th>Enterprise</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Storage Limit</td>
+                    <td>10 GB</td>
+                    <td>100 GB</td>
+                    <td>Unlimited</td>
+                </tr>
+                <tr>
+                    <td>Users</td>
+                    <td>5</td>
+                    <td>50</td>
+                    <td>Unlimited</td>
+                </tr>
+                <tr>
+                    <td>Support</td>
+                    <td>Email</td>
+                    <td>Priority</td>
+                    <td>24/7 Phone</td>
+                </tr>
+                <tr>
+                    <td>API Access</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td>Custom Integrations</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <footer style="text-align: center; margin-top: 40px; color: #666; font-size: 14px;">
+        <p>✅ Fixed: Each table in ZIP archive should now have a unique filename with number suffix</p>
+        <p>🔧 Previous issue: Files with same timestamp would overwrite each other in ZIP</p>
+    </footer>
+</body>
+</html> 

@@ -1,5 +1,6 @@
 import type { BatchTableDetectionResult } from '../../utils/table-detection/types';
 import { logger } from '../../utils/table-detection/common/logging';
+import { showBatchExportModal } from './batch-export-modal';
 
 /**
  * Interface for batch export button state
@@ -21,6 +22,7 @@ const createBatchButtonState = (): BatchButtonState => ({
 
 // Global state
 const buttonState = createBatchButtonState();
+let currentBatchResult: BatchTableDetectionResult | null = null;
 
 // Constants
 const BUTTON_ID = 'tabxport-batch-export-button';
@@ -37,19 +39,13 @@ const showNotification = (message: string, type: 'info' | 'success' | 'error'): 
 /**
  * Handles the batch export button click
  */
-const handleBatchExport = (count: number): void => {
-  logger.debug(`Batch export clicked for ${count} tables`);
+const handleBatchExport = (): void => {
+  logger.debug(`Batch export clicked for ${buttonState.count} tables`);
   
-  // TODO: In Phase 2, this will open the batch export modal
-  // For now, just show a placeholder alert
-  
-  const message = `Batch export functionality coming soon!\n\nFound ${count} tables ready for export.`;
-  
-  // Use a nicer notification if possible, otherwise fallback to alert
-  try {
-    showNotification(message, 'info');
-  } catch {
-    alert(message);
+  if (currentBatchResult && currentBatchResult.tables.length > 0) {
+    showBatchExportModal(currentBatchResult);
+  } else {
+    showNotification('No tables available for batch export', 'error');
   }
 };
 
@@ -235,7 +231,7 @@ const createButton = (count: number): void => {
   button.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    handleBatchExport(count);
+    handleBatchExport();
   });
 
   // Add to page
@@ -300,6 +296,8 @@ export const updateBatchButton = (batchResult: BatchTableDetectionResult): void 
     console.log(`TabXport Batch: Hiding button (insufficient tables: ${batchResult.count} < ${MIN_TABLES_FOR_BATCH})`);
     hideButton();
   }
+
+  currentBatchResult = batchResult;
 };
 
 /**

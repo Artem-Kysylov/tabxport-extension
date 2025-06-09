@@ -118,7 +118,7 @@ const createDocxTable = (tableData: TableData, includeHeaders: boolean): Table =
  */
 export const exportToDOCX = async (
   tableData: TableData,
-  options: ExportOptions
+  options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
     console.log('Starting DOCX export for:', tableData.source);
@@ -171,7 +171,7 @@ export const exportToDOCX = async (
     const buffer = await Packer.toBuffer(doc);
     
     // Создаем filename
-    const filename = generateFilename(tableData, 'docx' as any, options.filename);
+    const filename = generateFilename(tableData, 'docx' as any, options.filename, options.tableIndex);
     
     // Конвертируем в data URL
     const base64 = arrayBufferToBase64(buffer);

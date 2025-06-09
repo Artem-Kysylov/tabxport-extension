@@ -7,7 +7,8 @@ import { exportToPDF } from './exporters/pdf-exporter';
 export const generateFilename = (
   tableData: TableData,
   format: 'xlsx' | 'csv' | 'docx' | 'pdf',
-  customName?: string
+  customName?: string,
+  tableIndex?: number
 ): string => {
   if (customName) {
     return `${customName}.${format}`;
@@ -15,6 +16,9 @@ export const generateFilename = (
 
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
   const source = tableData.source.charAt(0).toUpperCase() + tableData.source.slice(1);
+  
+  // Добавляем индекс таблицы для batch export, чтобы избежать коллизий имен
+  const tableNumberSuffix = tableIndex !== undefined ? `_${tableIndex + 1}` : '';
   
   // Используем название чата если доступно, иначе используем стандартное имя
   if (tableData.chatTitle && tableData.chatTitle !== `${source}_Chat`) {
@@ -24,10 +28,10 @@ export const generateFilename = (
       .replace(/\s+/g, '_')
       .substring(0, 40); // Ограничиваем длину для имени файла
     
-    return `${cleanChatTitle}_Table_${timestamp}.${format}`;
+    return `${cleanChatTitle}_Table${tableNumberSuffix}_${timestamp}.${format}`;
   }
   
-  return `${source}_Table_${timestamp}.${format}`;
+  return `${source}_Table${tableNumberSuffix}_${timestamp}.${format}`;
 };
 
 // Конвертация TableData в worksheet
@@ -56,7 +60,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
 // Экспорт в XLSX формат
 export const exportToXLSX = async (
   tableData: TableData,
-  options: ExportOptions
+  options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
     const worksheet = tableDataToWorksheet(tableData, options.includeHeaders);
@@ -64,7 +68,7 @@ export const exportToXLSX = async (
     
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Table');
     
-    const filename = generateFilename(tableData, 'xlsx', options.filename);
+    const filename = generateFilename(tableData, 'xlsx', options.filename, options.tableIndex);
     const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
     
     // Создаем data URL для скачивания
@@ -88,13 +92,13 @@ export const exportToXLSX = async (
 // Экспорт в CSV формат
 export const exportToCSV = async (
   tableData: TableData,
-  options: ExportOptions
+  options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
     const worksheet = tableDataToWorksheet(tableData, options.includeHeaders);
     const csv = XLSX.utils.sheet_to_csv(worksheet);
     
-    const filename = generateFilename(tableData, 'csv', options.filename);
+    const filename = generateFilename(tableData, 'csv', options.filename, options.tableIndex);
     
     // Создаем data URL для CSV
     const base64 = btoa(unescape(encodeURIComponent(csv)));
@@ -117,7 +121,7 @@ export const exportToCSV = async (
 // Основная функция экспорта
 export const exportTable = async (
   tableData: TableData,
-  options: ExportOptions
+  options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   switch (options.format) {
     case 'xlsx':

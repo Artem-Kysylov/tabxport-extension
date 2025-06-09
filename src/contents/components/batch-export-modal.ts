@@ -1150,7 +1150,8 @@ const handleBatchExport = async (): Promise<void> => {
       const exportOptions = {
         format: modalState.config.format,
         includeHeaders: modalState.config.includeHeaders,
-        combinedFileName: modalState.config.combinedFileName
+        combinedFileName: modalState.config.combinedFileName || `Combined_Export_${Date.now()}`,
+        destination: 'download' as const
       };
       
       const result = await exportCombinedTables(
@@ -1164,7 +1165,7 @@ const handleBatchExport = async (): Promise<void> => {
         // Download the combined file
         const link = document.createElement('a');
         link.href = result.downloadUrl;
-        link.download = result.filename;
+        link.download = result.filename || 'combined_export.xlsx';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -1226,10 +1227,11 @@ const handleBatchExport = async (): Promise<void> => {
       console.log(`📝 Custom name for table ${tableNumber}: ${customName || 'none'}`);
       
       const exportOptions: ExportOptions & { tableIndex?: number } = {
-        format: modalState.config.format,
+        format: modalState.config.format as 'xlsx' | 'csv' | 'docx' | 'pdf',
         filename: customName,
         includeHeaders: modalState.config.includeHeaders,
-        tableIndex: i // Добавляем индекс таблицы для уникальных имен файлов
+        destination: 'download' as const,
+        tableIndex: i // Add table index for unique filenames
       };
       
       updateProgressWithMessage(exportedCount, selectedTables.length, `Exporting table ${tableNumber}/${selectedTables.length}...`);
@@ -1240,22 +1242,22 @@ const handleBatchExport = async (): Promise<void> => {
         console.log(`✅ Table ${tableNumber} exported successfully: ${result.filename}`);
         
         if (modalState.config.exportMode === 'zip') {
-          // Для ZIP архива собираем данные
+          // For ZIP archive collect data
           const arrayBuffer = dataUrlToArrayBuffer(result.downloadUrl);
           exportResults.push({
-            filename: result.filename,
+            filename: result.filename || `table_${tableNumber}.xlsx`,
             data: arrayBuffer
           });
-          console.log(`📦 Added to ZIP: ${result.filename} (${arrayBuffer.byteLength} bytes)`);
+          console.log(`📦 Added to ZIP: ${result.filename || `table_${tableNumber}`} (${arrayBuffer.byteLength} bytes)`);
         } else {
-          // Обычное скачивание
+          // Regular download
           const link = document.createElement('a');
           link.href = result.downloadUrl;
-          link.download = result.filename;
+          link.download = result.filename || `table_${tableNumber}.xlsx`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          console.log(`⬇️ Downloaded: ${result.filename}`);
+          console.log(`⬇️ Downloaded: ${result.filename || `table_${tableNumber}`}`);
         }
         
         exportedCount++;

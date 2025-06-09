@@ -141,6 +141,7 @@ interface BatchModalState {
   config: BatchExportConfig;
   isExporting: boolean;
   progress: { current: number; total: number; };
+  rememberFormat: boolean;
 }
 
 // Global state
@@ -157,7 +158,8 @@ let modalState: BatchModalState = {
     zipArchive: false // Legacy field for backward compatibility - not used in UI
   },
   isExporting: false,
-  progress: { current: 0, total: 0 }
+  progress: { current: 0, total: 0 },
+  rememberFormat: false // Initialize remember format state
 };
 
 // Constants
@@ -211,7 +213,7 @@ const createFormatSelector = (): string => {
         </select>
         <div class="format-preferences">
           <label class="remember-format-label">
-            <input type="checkbox" id="remember-format-checkbox" class="remember-format-checkbox">
+            <input type="checkbox" id="remember-format-checkbox" class="remember-format-checkbox" ${modalState.rememberFormat ? 'checked' : ''}>
             <span>🧠 Запомнить мой формат</span>
           </label>
           ${hasPreference ? `
@@ -1061,10 +1063,8 @@ const attachEventListeners = (): void => {
   const rememberFormatCheckbox = document.getElementById('remember-format-checkbox') as HTMLInputElement;
   rememberFormatCheckbox?.addEventListener('change', (e) => {
     const isChecked = (e.target as HTMLInputElement).checked;
-    if (isChecked) {
-      FormatPreferences.save(modalState.config.format);
-      updateModalContent(); // Refresh to show clear button
-    }
+    modalState.rememberFormat = isChecked;
+    console.log(`📝 Remember format checkbox ${isChecked ? 'checked' : 'unchecked'}`);
   });
   
   // Clear format preference button
@@ -1172,8 +1172,7 @@ const handleBatchExport = async (): Promise<void> => {
         updateProgressWithMessage(1, 1, `✅ Combined file downloaded: ${result.filename}`);
         
         // Save format preference if remember checkbox is checked
-        const rememberCheckbox = document.getElementById('remember-format-checkbox') as HTMLInputElement;
-        if (rememberCheckbox?.checked) {
+        if (modalState.rememberFormat) {
           FormatPreferences.save(modalState.config.format);
           console.log(`🧠 Saved format preference: ${modalState.config.format}`);
         }
@@ -1343,8 +1342,7 @@ const handleBatchExport = async (): Promise<void> => {
   }
   
   // Save format preference if remember checkbox is checked
-  const rememberCheckbox = document.getElementById('remember-format-checkbox') as HTMLInputElement;
-  if (rememberCheckbox?.checked && exportedCount > 0) {
+  if (modalState.rememberFormat && exportedCount > 0) {
     FormatPreferences.save(modalState.config.format);
     console.log(`🧠 Saved format preference: ${modalState.config.format}`);
   }
@@ -1413,6 +1411,7 @@ export const hideModal = (): void => {
   modalState.config.combinedFileName = undefined; // Clear combined filename
   modalState.isExporting = false;
   modalState.progress = { current: 0, total: 0 };
+  modalState.rememberFormat = false;
 };
 
 /**

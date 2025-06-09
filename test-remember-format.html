@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabXport - Remember Format Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #374151;
+            border-bottom: 2px solid #1B9358;
+            padding-bottom: 8px;
+            margin: 30px 0 20px 0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .test-info {
+            background: #e7f3ff;
+            border: 1px solid #0066cc;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .test-steps {
+            background: #f0f9ff;
+            border-left: 4px solid #1B9358;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .test-steps ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .test-steps li {
+            margin: 8px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: white;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .table-title {
+            font-weight: bold;
+            margin: 20px 0 10px 0;
+            color: #1f2937;
+        }
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 TabXport - Remember Format Test</h1>
+        
+        <div class="test-info">
+            <strong>🎯 Test Purpose:</strong> Verify that the "Remember Format" functionality works correctly and saves/loads user preferences.
+        </div>
+
+        <div class="test-steps">
+            <h3>📋 Testing Steps:</h3>
+            <ol>
+                <li><strong>First Export:</strong> Open batch export modal, select Excel format, check "🧠 Запомнить мой формат", export tables</li>
+                <li><strong>Refresh Test:</strong> Reload the page and open batch export modal again</li>
+                <li><strong>Verify:</strong> Excel format should be pre-selected automatically</li>
+                <li><strong>Clear Test:</strong> Click the 🗑️ button to clear preferences</li>
+                <li><strong>Change Test:</strong> Select CSV format, check remember, export</li>
+                <li><strong>Final Test:</strong> Reload page and verify CSV is now pre-selected</li>
+            </ol>
+        </div>
+
+        <h2>🧪 Test Tables for Format Memory</h2>
+
+        <div class="table-title">📊 Memory Test - Quarterly Sales</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Quarter</th>
+                    <th>Revenue</th>
+                    <th>Growth (%)</th>
+                    <th>Region</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Q1 2024</td>
+                    <td>$1,250,000</td>
+                    <td>12.5</td>
+                    <td>North America</td>
+                </tr>
+                <tr>
+                    <td>Q2 2024</td>
+                    <td>$1,420,000</td>
+                    <td>13.6</td>
+                    <td>North America</td>
+                </tr>
+                <tr>
+                    <td>Q3 2024</td>
+                    <td>$1,380,000</td>
+                    <td>-2.8</td>
+                    <td>North America</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="table-title">🔄 Format Preference Test</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Format</th>
+                    <th>Icon</th>
+                    <th>Should Remember</th>
+                    <th>Test Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Excel (XLSX)</td>
+                    <td>📊</td>
+                    <td>Yes</td>
+                    <td>🧪 Pending</td>
+                </tr>
+                <tr>
+                    <td>CSV</td>
+                    <td>📄</td>
+                    <td>Yes</td>
+                    <td>🧪 Pending</td>
+                </tr>
+                <tr>
+                    <td>Word (DOCX)</td>
+                    <td>📝</td>
+                    <td>Yes</td>
+                    <td>🧪 Pending</td>
+                </tr>
+                <tr>
+                    <td>PDF</td>
+                    <td>📋</td>
+                    <td>Yes</td>
+                    <td>🧪 Pending</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note success">
+            <strong>✅ Expected Behavior:</strong>
+            <ul>
+                <li>Checkbox "🧠 Запомнить мой формат" appears below format selector</li>
+                <li>When checked during export, format is saved to localStorage</li>
+                <li>On next modal open, saved format is pre-selected</li>
+                <li>🗑️ button appears when preference exists and clears it</li>
+                <li>Format is saved only on successful export</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Technical Features:</h3>
+            <ul>
+                <li><strong>localStorage Key:</strong> 'tabxport-preferred-format'</li>
+                <li><strong>Validation:</strong> Only saves valid format values</li>
+                <li><strong>Auto-load:</strong> Loads preference on modal open</li>
+                <li><strong>Clear Function:</strong> 🗑️ button removes preference</li>
+                <li><strong>Error Handling:</strong> Graceful fallback if localStorage fails</li>
+                <li><strong>Console Logging:</strong> Detailed logs for debugging</li>
+            </ul>
+        </div>
+
+        <div class="note warning">
+            <strong>🧪 Testing Instructions:</strong>
+            <ol>
+                <li>Open DevTools Console to see format preference logs</li>
+                <li>Check Application tab > Local Storage to see saved data</li>
+                <li>Try different formats and verify persistence</li>
+                <li>Test the clear functionality</li>
+                <li>Refresh page between tests to verify loading</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Debug Information:</h3>
+            <p>Open DevTools Console and look for these log messages:</p>
+            <ul>
+                <li><code>💾 Saved preferred format: xlsx</code> - When format is saved</li>
+                <li><code>📂 Loaded preferred format: xlsx</code> - When format is loaded</li>
+                <li><code>🧠 Using remembered format: xlsx</code> - When applying saved format</li>
+                <li><code>🗑️ Cleared format preference</code> - When preference is cleared</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Debug helper to check localStorage
+        function checkFormatPreference() {
+            const saved = localStorage.getItem('tabxport-preferred-format');
+            console.log('🔍 Current format preference:', saved || 'None');
+            return saved;
+        }
+
+        // Clear preference manually (for testing)
+        function clearFormatPreference() {
+            localStorage.removeItem('tabxport-preferred-format');
+            console.log('🗑️ Manually cleared format preference');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧠 Remember Format Test Page Loaded');
+            console.log('📋 Current preference:', checkFormatPreference());
+            
+            // Add global helper functions
+            window.checkFormatPreference = checkFormatPreference;
+            window.clearFormatPreference = clearFormatPreference;
+            
+            // Check extension presence
+            setTimeout(() => {
+                const exportButtons = document.querySelectorAll('[data-tabxport-type="export"]');
+                if (exportButtons.length > 0) {
+                    console.log('✅ TabXport extension detected!');
+                } else {
+                    console.log('⏳ Waiting for TabXport extension to load...');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

@@ -88,6 +88,51 @@ const COMBINED_EXPORT_LIMITS = {
 } as const;
 
 /**
+ * LocalStorage key for remembered format
+ */
+const STORAGE_KEY_PREFERRED_FORMAT = 'tabxport-preferred-format';
+
+/**
+ * Format preference utilities
+ */
+const FormatPreferences = {
+  save: (format: ExportFormat): void => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PREFERRED_FORMAT, format);
+      console.log(`💾 Saved preferred format: ${format}`);
+    } catch (error) {
+      console.warn('Failed to save format preference:', error);
+    }
+  },
+  
+  load: (): ExportFormat | null => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_PREFERRED_FORMAT);
+      if (saved && Object.keys(EXPORT_FORMATS).includes(saved)) {
+        console.log(`📂 Loaded preferred format: ${saved}`);
+        return saved as ExportFormat;
+      }
+    } catch (error) {
+      console.warn('Failed to load format preference:', error);
+    }
+    return null;
+  },
+  
+  clear: (): void => {
+    try {
+      localStorage.removeItem(STORAGE_KEY_PREFERRED_FORMAT);
+      console.log('🗑️ Cleared format preference');
+    } catch (error) {
+      console.warn('Failed to clear format preference:', error);
+    }
+  },
+  
+  exists: (): boolean => {
+    return FormatPreferences.load() !== null;
+  }
+};
+
+/**
  * Batch export modal state
  */
 interface BatchModalState {
@@ -154,13 +199,28 @@ const createFormatSelector = (): string => {
         ${format.icon} ${format.name}
       </option>
     `).join('');
-    
+  
+  const hasPreference = FormatPreferences.exists();
+  
   return `
     <div class="format-selector">
       <label class="format-label">Export Format:</label>
-      <select id="batch-format-select" class="format-select" title="Choose export format - Excel, CSV, Word, or PDF">
-        ${options}
-      </select>
+      <div class="format-select-container">
+        <select id="batch-format-select" class="format-select" title="Choose export format - Excel, CSV, Word, or PDF">
+          ${options}
+        </select>
+        <div class="format-preferences">
+          <label class="remember-format-label">
+            <input type="checkbox" id="remember-format-checkbox" class="remember-format-checkbox">
+            <span>🧠 Запомнить мой формат</span>
+          </label>
+          ${hasPreference ? `
+            <button type="button" id="clear-format-preference" class="clear-preference-btn" title="Очистить сохраненный формат">
+              🗑️
+            </button>
+          ` : ''}
+        </div>
+      </div>
     </div>
   `;
 };
@@ -440,6 +500,12 @@ const addModalStyles = (): void => {
       margin-bottom: 8px;
     }
     
+    .format-select-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
     .format-select {
       width: 100%;
       padding: 8px 12px;
@@ -455,6 +521,44 @@ const addModalStyles = (): void => {
       outline: none;
       border-color: #1B9358;
       box-shadow: 0 0 0 1px #1B9358;
+    }
+    
+    .format-preferences {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-left: 4px;
+    }
+    
+    .remember-format-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #6b7280;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .remember-format-checkbox {
+      cursor: pointer;
+    }
+    
+    .clear-preference-btn {
+      background: none;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #6b7280;
+      transition: all 0.2s ease;
+    }
+    
+    .clear-preference-btn:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+      color: #374151;
     }
     
     .options-row {
@@ -952,6 +1056,23 @@ const attachEventListeners = (): void => {
     const target = e.target as HTMLInputElement;
     modalState.config.combinedFileName = target.value.trim() || undefined;
   });
+  
+  // Remember format checkbox
+  const rememberFormatCheckbox = document.getElementById('remember-format-checkbox') as HTMLInputElement;
+  rememberFormatCheckbox?.addEventListener('change', (e) => {
+    const isChecked = (e.target as HTMLInputElement).checked;
+    if (isChecked) {
+      FormatPreferences.save(modalState.config.format);
+      updateModalContent(); // Refresh to show clear button
+    }
+  });
+  
+  // Clear format preference button
+  const clearPreferenceBtn = document.getElementById('clear-format-preference');
+  clearPreferenceBtn?.addEventListener('click', () => {
+    FormatPreferences.clear();
+    updateModalContent(); // Refresh to hide clear button
+  });
 };
 
 /**
@@ -1049,6 +1170,13 @@ const handleBatchExport = async (): Promise<void> => {
         document.body.removeChild(link);
         
         updateProgressWithMessage(1, 1, `✅ Combined file downloaded: ${result.filename}`);
+        
+        // Save format preference if remember checkbox is checked
+        const rememberCheckbox = document.getElementById('remember-format-checkbox') as HTMLInputElement;
+        if (rememberCheckbox?.checked) {
+          FormatPreferences.save(modalState.config.format);
+          console.log(`🧠 Saved format preference: ${modalState.config.format}`);
+        }
         
         // Close modal after delay
         setTimeout(() => {
@@ -1214,6 +1342,13 @@ const handleBatchExport = async (): Promise<void> => {
     console.warn(`⚠️ Export completed with ${errors.length} errors:`, errors);
   }
   
+  // Save format preference if remember checkbox is checked
+  const rememberCheckbox = document.getElementById('remember-format-checkbox') as HTMLInputElement;
+  if (rememberCheckbox?.checked && exportedCount > 0) {
+    FormatPreferences.save(modalState.config.format);
+    console.log(`🧠 Saved format preference: ${modalState.config.format}`);
+  }
+  
   // Close modal after delay
   setTimeout(() => {
     hideModal();
@@ -1226,6 +1361,13 @@ const handleBatchExport = async (): Promise<void> => {
 export const showBatchExportModal = (batchResult: BatchTableDetectionResult): void => {
   modalState.batchResult = batchResult;
   modalState.isVisible = true;
+  
+  // Load preferred format if available
+  const preferredFormat = FormatPreferences.load();
+  if (preferredFormat) {
+    modalState.config.format = preferredFormat;
+    console.log(`🧠 Using remembered format: ${preferredFormat}`);
+  }
   
   // Initialize with all tables selected
   modalState.config.selectedTables.clear();

@@ -151,19 +151,16 @@ const createFormatSelector = (): string => {
   const options = Object.entries(EXPORT_FORMATS)
     .map(([key, format]) => `
       <option value="${key}" ${modalState.config.format === key ? 'selected' : ''}>
-        ${format.icon} ${format.name} - ${format.description}
+        ${format.icon} ${format.name}
       </option>
     `).join('');
     
   return `
     <div class="format-selector">
       <label class="format-label">Export Format:</label>
-      <div class="format-select-wrapper">
-        <select id="batch-format-select" class="format-select" title="Choose export format - Excel, CSV, Word, or PDF">
-          ${options}
-        </select>
-        <span class="format-select-arrow" title="Click to see all export format options">⬇️</span>
-      </div>
+      <select id="batch-format-select" class="format-select" title="Choose export format - Excel, CSV, Word, or PDF">
+        ${options}
+      </select>
     </div>
   `;
 };
@@ -443,44 +440,21 @@ const addModalStyles = (): void => {
       margin-bottom: 8px;
     }
     
-    .format-select-wrapper {
-      position: relative;
-      display: inline-block;
-      width: 100%;
-    }
-    
     .format-select {
       width: 100%;
-      padding: 8px 40px 8px 12px;
+      padding: 8px 12px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       font-size: 14px;
       background: white;
+      color: #1f2937;
       cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
     }
     
     .format-select:focus {
       outline: none;
       border-color: #1B9358;
       box-shadow: 0 0 0 1px #1B9358;
-    }
-    
-    .format-select-arrow {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
-      font-size: 12px;
-      color: #6b7280;
-      transition: color 0.2s ease;
-    }
-    
-    .format-select-wrapper:hover .format-select-arrow {
-      color: #1B9358;
     }
     
     .options-row {

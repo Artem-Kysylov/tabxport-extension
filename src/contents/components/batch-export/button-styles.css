@@ -1,0 +1,38 @@
+/* Batch Export Button Styles */
+
+.tablexport-batch-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tablexport-batch-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.tablexport-batch-content {
+  flex: 1;
+}
+
+.tablexport-batch-title {
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.tablexport-batch-count {
+  opacity: 0.8;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.tablexport-batch-arrow {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+#tablexport-batch-export-button:hover .tablexport-batch-arrow {
+  transform: translateX(2px);
+} 

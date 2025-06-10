@@ -2,14 +2,11 @@ import type { BatchTableDetectionResult } from '../../utils/table-detection/type
 import { logger } from '../../utils/table-detection/common/logging';
 import { showBatchExportModal } from './batch-export-modal';
 
-/**
- * Interface for batch export button state
- */
-interface BatchButtonState {
-  visible: boolean;
-  count: number;
-  button: HTMLElement | null;
-}
+// Import from new modules
+import type { BatchButtonState } from './batch-export/types';
+import { BUTTON_ID, MIN_TABLES_FOR_BATCH } from './batch-export/constants';
+import { getButtonHTML } from './batch-export/button-html';
+import { addButtonStyles, removeButtonStyles } from './batch-export/styles';
 
 /**
  * Private state for batch export button management
@@ -23,10 +20,6 @@ const createBatchButtonState = (): BatchButtonState => ({
 // Global state
 const buttonState = createBatchButtonState();
 let currentBatchResult: BatchTableDetectionResult | null = null;
-
-// Constants
-const BUTTON_ID = 'tablexport-batch-export-button';
-const MIN_TABLES_FOR_BATCH = 2;
 
 /**
  * Shows a notification (placeholder for now)
@@ -56,88 +49,6 @@ const appendToPage = (button: HTMLElement): void => {
   // Try to append to body, with fallback
   const targetContainer = document.body || document.documentElement;
   targetContainer.appendChild(button);
-};
-
-/**
- * Adds CSS styles for internal button components
- */
-const addInternalStyles = (): void => {
-  const styleId = 'tablexport-batch-styles';
-  
-  if (document.getElementById(styleId)) {
-    return; // Styles already added
-  }
-
-  const style = document.createElement('style');
-  style.id = styleId;
-  style.textContent = `
-    .tablexport-batch-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .tablexport-batch-icon {
-      flex-shrink: 0;
-      opacity: 0.9;
-    }
-    
-    .tablexport-batch-content {
-      flex: 1;
-    }
-    
-    .tablexport-batch-title {
-      font-weight: 600;
-      line-height: 1.2;
-      margin-bottom: 2px;
-    }
-    
-    .tablexport-batch-count {
-      opacity: 0.8;
-      font-size: 12px;
-      line-height: 1.2;
-    }
-    
-    .tablexport-batch-arrow {
-      flex-shrink: 0;
-      opacity: 0.7;
-      transition: transform 0.2s ease;
-    }
-    
-    #${BUTTON_ID}:hover .tablexport-batch-arrow {
-      transform: translateX(2px);
-    }
-  `;
-  
-  document.head.appendChild(style);
-};
-
-/**
- * Generates the HTML content for the button
- */
-const getButtonHTML = (count: number): string => {
-  return `
-    <div class="tablexport-batch-container">
-      <div class="tablexport-batch-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14,2 14,8 20,8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10,9 9,9 8,9"/>
-        </svg>
-      </div>
-      <div class="tablexport-batch-content">
-        <div class="tablexport-batch-title">Export All Tables</div>
-        <div class="tablexport-batch-count">${count} tables found</div>
-      </div>
-      <div class="tablexport-batch-arrow">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9,18 15,12 9,6"/>
-        </svg>
-      </div>
-    </div>
-  `;
 };
 
 /**
@@ -182,7 +93,7 @@ const applyButtonStyles = (button: HTMLElement): void => {
   });
 
   // Add internal styles
-  addInternalStyles();
+  addButtonStyles();
 };
 
 /**
@@ -248,18 +159,18 @@ const createButton = (count: number): void => {
  * Shows or updates the batch export button
  */
 const showButton = (count: number): void => {
-  console.log(`TabXport Batch: showButton called with count: ${count}`);
-  console.log(`TabXport Batch: Current button state - visible: ${buttonState.visible}, button exists: ${!!buttonState.button}`);
+  console.log(`TableXport Batch: showButton called with count: ${count}`);
+  console.log(`TableXport Batch: Current button state - visible: ${buttonState.visible}, button exists: ${!!buttonState.button}`);
   
   if (buttonState.button && buttonState.visible) {
     // Update existing button
-    console.log(`TabXport Batch: Updating existing button text`);
+    console.log(`TableXport Batch: Updating existing button text`);
     updateButtonText(count);
     return;
   }
 
   // Create new button
-  console.log(`TabXport Batch: Creating new button`);
+  console.log(`TableXport Batch: Creating new button`);
   createButton(count);
 };
 
@@ -267,15 +178,15 @@ const showButton = (count: number): void => {
  * Hides the batch export button
  */
 const hideButton = (): void => {
-  console.log(`TabXport Batch: hideButton called`);
-  console.log(`TabXport Batch: Current button state - visible: ${buttonState.visible}, button exists: ${!!buttonState.button}`);
+  console.log(`TableXport Batch: hideButton called`);
+  console.log(`TableXport Batch: Current button state - visible: ${buttonState.visible}, button exists: ${!!buttonState.button}`);
   
   if (buttonState.button && buttonState.visible) {
     logger.debug('Hiding batch export button');
-    console.log(`TabXport Batch: Removing button from DOM`);
+    console.log(`TableXport Batch: Removing button from DOM`);
     removeButton();
   } else {
-    console.log(`TabXport Batch: No button to hide`);
+    console.log(`TableXport Batch: No button to hide`);
   }
 };
 
@@ -286,14 +197,14 @@ export const updateBatchButton = (batchResult: BatchTableDetectionResult): void 
   const shouldShow = batchResult.count >= MIN_TABLES_FOR_BATCH;
   
   logger.debug(`Batch button update: ${batchResult.count} tables, should show: ${shouldShow}`);
-  console.log(`TabXport Batch: Detected ${batchResult.count} tables on ${batchResult.source}, min required: ${MIN_TABLES_FOR_BATCH}, should show: ${shouldShow}`);
-  console.log(`TabXport Batch: Button currently visible: ${buttonState.visible}, current count: ${buttonState.count}`);
+  console.log(`TableXport Batch: Detected ${batchResult.count} tables on ${batchResult.source}, min required: ${MIN_TABLES_FOR_BATCH}, should show: ${shouldShow}`);
+  console.log(`TableXport Batch: Button currently visible: ${buttonState.visible}, current count: ${buttonState.count}`);
 
   if (shouldShow) {
-    console.log(`TabXport Batch: Showing button for ${batchResult.count} tables`);
+    console.log(`TableXport Batch: Showing button for ${batchResult.count} tables`);
     showButton(batchResult.count);
   } else {
-    console.log(`TabXport Batch: Hiding button (insufficient tables: ${batchResult.count} < ${MIN_TABLES_FOR_BATCH})`);
+    console.log(`TableXport Batch: Hiding button (insufficient tables: ${batchResult.count} < ${MIN_TABLES_FOR_BATCH})`);
     hideButton();
   }
 
@@ -312,10 +223,5 @@ export const getBatchButtonState = (): BatchButtonState => {
  */
 export const cleanupBatchButton = (): void => {
   removeButton();
-  
-  // Remove styles
-  const styleElement = document.getElementById('tablexport-batch-styles');
-  if (styleElement) {
-    styleElement.remove();
-  }
+  removeButtonStyles();
 }; 

@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "TabXport",
+  "name": "TableXport",
   "version": "0.2.3",
   "description": "Export tables from AI chat platforms (ChatGPT, Claude, Gemini, DeepSeek) to Excel/CSV",
-  "author": "TabXport Team",
+  "author": "TableXport Team",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",

@@ -90,7 +90,7 @@ const COMBINED_EXPORT_LIMITS = {
 /**
  * LocalStorage key for remembered format
  */
-const STORAGE_KEY_PREFERRED_FORMAT = 'tabxport-preferred-format';
+const STORAGE_KEY_PREFERRED_FORMAT = 'tablexport-preferred-format';
 
 /**
  * Format preference utilities
@@ -163,8 +163,8 @@ let modalState: BatchModalState = {
 };
 
 // Constants
-const MODAL_ID = 'tabxport-batch-modal';
-const OVERLAY_ID = 'tabxport-modal-overlay';
+const MODAL_ID = 'tablexport-batch-modal';
+const OVERLAY_ID = 'tablexport-modal-overlay';
 
 /**
  * Creates the modal overlay
@@ -434,7 +434,7 @@ const createModalContent = (): string => {
  * Adds CSS styles for the modal
  */
 const addModalStyles = (): void => {
-  const styleId = 'tabxport-modal-styles';
+  const styleId = 'tablexport-modal-styles';
   
   if (document.getElementById(styleId)) {
     return;

@@ -25,7 +25,7 @@ const buttonState = createBatchButtonState();
 let currentBatchResult: BatchTableDetectionResult | null = null;
 
 // Constants
-const BUTTON_ID = 'tabxport-batch-export-button';
+const BUTTON_ID = 'tablexport-batch-export-button';
 const MIN_TABLES_FOR_BATCH = 2;
 
 /**
@@ -62,7 +62,7 @@ const appendToPage = (button: HTMLElement): void => {
  * Adds CSS styles for internal button components
  */
 const addInternalStyles = (): void => {
-  const styleId = 'tabxport-batch-styles';
+  const styleId = 'tablexport-batch-styles';
   
   if (document.getElementById(styleId)) {
     return; // Styles already added
@@ -71,40 +71,40 @@ const addInternalStyles = (): void => {
   const style = document.createElement('style');
   style.id = styleId;
   style.textContent = `
-    .tabxport-batch-container {
+    .tablexport-batch-container {
       display: flex;
       align-items: center;
       gap: 12px;
     }
     
-    .tabxport-batch-icon {
+    .tablexport-batch-icon {
       flex-shrink: 0;
       opacity: 0.9;
     }
     
-    .tabxport-batch-content {
+    .tablexport-batch-content {
       flex: 1;
     }
     
-    .tabxport-batch-title {
+    .tablexport-batch-title {
       font-weight: 600;
       line-height: 1.2;
       margin-bottom: 2px;
     }
     
-    .tabxport-batch-count {
+    .tablexport-batch-count {
       opacity: 0.8;
       font-size: 12px;
       line-height: 1.2;
     }
     
-    .tabxport-batch-arrow {
+    .tablexport-batch-arrow {
       flex-shrink: 0;
       opacity: 0.7;
       transition: transform 0.2s ease;
     }
     
-    #${BUTTON_ID}:hover .tabxport-batch-arrow {
+    #${BUTTON_ID}:hover .tablexport-batch-arrow {
       transform: translateX(2px);
     }
   `;
@@ -117,8 +117,8 @@ const addInternalStyles = (): void => {
  */
 const getButtonHTML = (count: number): string => {
   return `
-    <div class="tabxport-batch-container">
-      <div class="tabxport-batch-icon">
+    <div class="tablexport-batch-container">
+      <div class="tablexport-batch-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14,2 14,8 20,8"/>
@@ -127,11 +127,11 @@ const getButtonHTML = (count: number): string => {
           <polyline points="10,9 9,9 8,9"/>
         </svg>
       </div>
-      <div class="tabxport-batch-content">
-        <div class="tabxport-batch-title">Export All Tables</div>
-        <div class="tabxport-batch-count">${count} tables found</div>
+      <div class="tablexport-batch-content">
+        <div class="tablexport-batch-title">Export All Tables</div>
+        <div class="tablexport-batch-count">${count} tables found</div>
       </div>
-      <div class="tabxport-batch-arrow">
+      <div class="tablexport-batch-arrow">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="9,18 15,12 9,6"/>
         </svg>
@@ -204,7 +204,7 @@ const removeButton = (): void => {
 const updateButtonText = (count: number): void => {
   if (!buttonState.button) return;
 
-  const countElement = buttonState.button.querySelector('.tabxport-batch-count');
+  const countElement = buttonState.button.querySelector('.tablexport-batch-count');
   if (countElement) {
     countElement.textContent = `${count} tables found`;
     buttonState.count = count;
@@ -314,7 +314,7 @@ export const cleanupBatchButton = (): void => {
   removeButton();
   
   // Remove styles
-  const styleElement = document.getElementById('tabxport-batch-styles');
+  const styleElement = document.getElementById('tablexport-batch-styles');
   if (styleElement) {
     styleElement.remove();
   }

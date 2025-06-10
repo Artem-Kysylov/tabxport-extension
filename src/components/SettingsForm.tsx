@@ -25,7 +25,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
         setSettings(userSettings);
         
         // Check if format memory is enabled
-        const savedFormat = localStorage.getItem('tabxport-remember-format-enabled');
+        const savedFormat = localStorage.getItem('tablexport-remember-format-enabled');
         setRememberFormat(savedFormat === 'true');
       } catch (error) {
         console.error('Failed to load settings:', error);
@@ -49,7 +49,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
       
       // If format changed and remember is enabled, save it
       if (key === 'defaultFormat' && rememberFormat) {
-        localStorage.setItem('tabxport-preferred-format', value);
+        localStorage.setItem('tablexport-preferred-format', value);
         console.log(`🧠 Auto-saved format preference: ${value}`);
       }
     } catch (error) {
@@ -62,15 +62,15 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
   // Handle remember format toggle
   const handleRememberFormatChange = (enabled: boolean) => {
     setRememberFormat(enabled);
-    localStorage.setItem('tabxport-remember-format-enabled', enabled.toString());
+    localStorage.setItem('tablexport-remember-format-enabled', enabled.toString());
     
     if (enabled) {
       // Save current format when enabling
-      localStorage.setItem('tabxport-preferred-format', settings.defaultFormat);
+      localStorage.setItem('tablexport-preferred-format', settings.defaultFormat);
       console.log(`🧠 Enabled format memory with current format: ${settings.defaultFormat}`);
     } else {
       // Clear saved format when disabling
-      localStorage.removeItem('tabxport-preferred-format');
+      localStorage.removeItem('tablexport-preferred-format');
       console.log('🗑️ Disabled format memory and cleared saved format');
     }
   };

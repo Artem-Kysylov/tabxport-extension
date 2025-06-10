@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './style.css';
 import type { UserSettings } from './types';
 import { Header } from './components/popup/common/Header';
 import { Footer } from './components/popup/common/Footer';

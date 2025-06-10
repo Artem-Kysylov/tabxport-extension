@@ -107,7 +107,7 @@ const handleTableExport = async (
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'assets/icon-48.png',
-        title: 'TabXport',
+        title: 'TableXport',
         message: `Table exported as ${result.filename}`,
       });
     } else {
@@ -173,14 +173,14 @@ const handleCheckSubscription = async (sendResponse: (response: any) => void): P
 
 // Обработчик установки расширения
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('TabXport: Extension installed', details.reason);
+  console.log('TableXport: Extension installed', details.reason);
   
   if (details.reason === 'install') {
     // Показ welcome уведомления
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'assets/icon-48.png',
-      title: 'TabXport Installed!',
+      title: 'TableXport Installed!',
       message: 'Start exporting tables from AI chats to Excel/CSV',
     });
   }
@@ -193,10 +193,10 @@ chrome.downloads.onChanged.addListener((downloadDelta) => {
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'assets/icon-48.png',
-      title: 'TabXport Error',
+      title: 'TableXport Error',
       message: 'Failed to download exported file',
     });
   }
 });
 
-console.log('TabXport: Background script loaded');
+console.log('TableXport: Background script loaded');

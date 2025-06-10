@@ -17,7 +17,7 @@ export const Header: React.FC<HeaderProps> = ({ isSupported }) => {
           <span className="text-xl">📊</span>
         </div>
         <div>
-          <h1 className="font-bold text-xl tracking-tight">TabXport</h1>
+          <h1 className="font-bold text-xl tracking-tight">TableXport</h1>
           <p className="text-sm text-emerald-100 font-medium">AI Table Exporter</p>
         </div>
       </div>

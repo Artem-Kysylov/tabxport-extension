@@ -1,11 +1,16 @@
 import type { UserSettings, UserSubscription } from '../types';
 
-// Ключи для хранения данных
+// Storage keys for TableXport extension
 const STORAGE_KEYS = {
-  USER_SETTINGS: 'tabxport_user_settings',
-  USER_SUBSCRIPTION: 'tabxport_user_subscription',
-  USER_ID: 'tabxport_user_id',
-  LAST_EXPORT: 'tabxport_last_export',
+  USER_SETTINGS: 'tablexport_user_settings',
+  USER_SUBSCRIPTION: 'tablexport_user_subscription',
+  USER_ID: 'tablexport_user_id',
+  LAST_EXPORT: 'tablexport_last_export',
+  // Legacy keys for backward compatibility
+  LEGACY_USER_SETTINGS: 'tabxport_user_settings',
+  LEGACY_USER_SUBSCRIPTION: 'tabxport_user_subscription',
+  LEGACY_USER_ID: 'tabxport_user_id',
+  LEGACY_LAST_EXPORT: 'tabxport_last_export',
 } as const;
 
 // Настройки по умолчанию

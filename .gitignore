@@ -1,4 +1,3 @@
-
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -9,7 +8,7 @@
 # testing
 /coverage
 
-#cache
+# cache
 .turbo
 
 # misc
@@ -24,9 +23,14 @@ yarn-error.log*
 
 # local env files
 .env*
+!env.example
 
+# build outputs
 out/
-build/
+build/dev/
+build/prod/
+build/chrome-mv3-*/
+!build/README.md
 dist/
 
 # plasmo - https://www.plasmo.com
@@ -37,3 +41,31 @@ keys.json
 
 # typescript
 .tsbuildinfo
+*.tsbuildinfo
+
+# temporary files
+temp-*
+test-*
+*-temp.*
+*-backup-*
+
+# development files
+debug-*
+diagnose-*
+
+# system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# logs
+logs/
+*.log

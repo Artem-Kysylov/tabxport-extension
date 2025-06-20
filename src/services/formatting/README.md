@@ -25,28 +25,32 @@ npm install cheerio node-html-parser parse-markdown-table normalize-text clean-t
 ### Основной сервис
 
 ```typescript
-import { TableFormatterService } from './services/formatting';
+import { TableFormatterService } from "./services/formatting"
 
 // Полное форматирование с настройками
 const result = await TableFormatterService.formatTable(
-  headers, 
-  rows, 
-  options, 
-  'chatgpt', 
+  headers,
+  rows,
+  options,
+  "chatgpt",
   element
-);
+)
 
 // Быстрое форматирование
-const quickResult = await TableFormatterService.quickFormat(headers, rows, 'claude');
+const quickResult = await TableFormatterService.quickFormat(
+  headers,
+  rows,
+  "claude"
+)
 
 // Анализ проблем таблицы
-const analysis = TableFormatterService.analyzeTable(headers, rows, element);
+const analysis = TableFormatterService.analyzeTable(headers, rows, element)
 ```
 
 ### Утилиты
 
 ```typescript
-import { FormattingUtils } from './services/formatting';
+import { FormattingUtils } from "./services/formatting"
 
 // Проверка необходимости форматирования
 if (FormattingUtils.needsFormatting(headers, rows)) {
@@ -54,10 +58,10 @@ if (FormattingUtils.needsFormatting(headers, rows)) {
 }
 
 // Получение рекомендуемых настроек
-const options = FormattingUtils.getRecommendedOptions('chatgpt');
+const options = FormattingUtils.getRecommendedOptions("chatgpt")
 
 // Подсчет потенциальных улучшений
-const improvements = FormattingUtils.countImprovements(headers, rows);
+const improvements = FormattingUtils.countImprovements(headers, rows)
 ```
 
 ## 🎛 Настройки форматирования
@@ -65,25 +69,25 @@ const improvements = FormattingUtils.countImprovements(headers, rows);
 ```typescript
 interface FormattingOptions {
   // Уровень агрессивности очистки
-  cleaningLevel: 'minimal' | 'standard' | 'aggressive';
-  
+  cleaningLevel: "minimal" | "standard" | "aggressive"
+
   // Обработка структуры
-  fixMergedCells: boolean;
-  restoreHeaders: boolean;
-  normalizeColumns: boolean;
-  
+  fixMergedCells: boolean
+  restoreHeaders: boolean
+  normalizeColumns: boolean
+
   // Очистка текста
-  removeMarkdownSymbols: boolean;
-  normalizeWhitespace: boolean;
-  normalizeDiacritics: boolean;
-  removeHtmlTags: boolean;
-  
+  removeMarkdownSymbols: boolean
+  normalizeWhitespace: boolean
+  normalizeDiacritics: boolean
+  removeHtmlTags: boolean
+
   // Платформо-специфичные настройки
-  platformSpecific: boolean;
-  
+  platformSpecific: boolean
+
   // Валидация и восстановление
-  validateStructure: boolean;
-  fillEmptyCells: boolean;
+  validateStructure: boolean
+  fillEmptyCells: boolean
 }
 ```
 
@@ -91,7 +95,7 @@ interface FormattingOptions {
 
 ```typescript
 const DEFAULT_OPTIONS = {
-  cleaningLevel: 'standard',
+  cleaningLevel: "standard",
   fixMergedCells: true,
   restoreHeaders: true,
   normalizeColumns: true,
@@ -102,7 +106,7 @@ const DEFAULT_OPTIONS = {
   platformSpecific: true,
   validateStructure: true,
   fillEmptyCells: true
-};
+}
 ```
 
 ## 🚀 Примеры использования
@@ -110,25 +114,25 @@ const DEFAULT_OPTIONS = {
 ### Пример 1: Базовое использование
 
 ```typescript
-import { TableFormatterService } from './services/formatting';
+import { TableFormatterService } from "./services/formatting"
 
 // Исходные данные с проблемами
-const headers = ['**Name**', '`Age`', '|City|'];
+const headers = ["**Name**", "`Age`", "|City|"]
 const rows = [
-  ['John Doe', '25', '|New York|'],
-  ['**Jane Smith**', '`30`']  // Пропущена ячейка
-];
+  ["John Doe", "25", "|New York|"],
+  ["**Jane Smith**", "`30`"] // Пропущена ячейка
+]
 
 // Форматирование
-const result = await TableFormatterService.formatTable(headers, rows);
+const result = await TableFormatterService.formatTable(headers, rows)
 
-console.log('Исходные заголовки:', result.originalHeaders);
+console.log("Исходные заголовки:", result.originalHeaders)
 // ['**Name**', '`Age`', '|City|']
 
-console.log('Очищенные заголовки:', result.headers);
+console.log("Очищенные заголовки:", result.headers)
 // ['Name', 'Age', 'City']
 
-console.log('Применённые операции:', result.formattingApplied);
+console.log("Применённые операции:", result.formattingApplied)
 // [
 //   { type: 'markdown-processed', description: 'Удалены Markdown символы' },
 //   { type: 'structure-fixed', description: 'Добавлена пустая ячейка' }
@@ -138,11 +142,11 @@ console.log('Применённые операции:', result.formattingApplied
 ### Пример 2: Анализ проблем
 
 ```typescript
-import { FormattingUtils } from './services/formatting';
+import { FormattingUtils } from "./services/formatting"
 
-const analysis = FormattingUtils.analyzeTable(headers, rows);
+const analysis = FormattingUtils.analyzeTable(headers, rows)
 
-console.log('Структура:', analysis.structure);
+console.log("Структура:", analysis.structure)
 // {
 //   hasHeaders: true,
 //   columnCount: 3,
@@ -152,7 +156,7 @@ console.log('Структура:', analysis.structure);
 //   detectedFormat: 'markdown'
 // }
 
-console.log('Проблемы:', analysis.issues);
+console.log("Проблемы:", analysis.issues)
 // [
 //   { type: 'inconsistent-columns', severity: 'medium', description: '...' },
 //   { type: 'text-artifacts', severity: 'low', description: '...' }
@@ -163,15 +167,15 @@ console.log('Проблемы:', analysis.issues);
 
 ```typescript
 // ChatGPT - агрессивная очистка Markdown
-const chatgptOptions = FormattingUtils.getRecommendedOptions('chatgpt');
+const chatgptOptions = FormattingUtils.getRecommendedOptions("chatgpt")
 // { removeMarkdownSymbols: true, cleaningLevel: 'standard' }
 
 // Claude - сохранение текстового форматирования
-const claudeOptions = FormattingUtils.getRecommendedOptions('claude');
+const claudeOptions = FormattingUtils.getRecommendedOptions("claude")
 // { removeMarkdownSymbols: false, normalizeColumns: true }
 
 // DeepSeek - поддержка китайских символов
-const deepseekOptions = FormattingUtils.getRecommendedOptions('deepseek');
+const deepseekOptions = FormattingUtils.getRecommendedOptions("deepseek")
 // { normalizeDiacritics: true }
 ```
 
@@ -181,22 +185,22 @@ const deepseekOptions = FormattingUtils.getRecommendedOptions('deepseek');
 
 ```javascript
 // В консоли DevTools
-await window.testTabXportFormatting();
+await window.testTabXportFormatting()
 ```
 
 Или импортируйте примеры:
 
 ```typescript
-import { examples } from './services/formatting/test-formatting';
+import { examples } from "./services/formatting/test-formatting"
 
 // Базовое использование
-const result1 = await examples.basicUsage();
+const result1 = await examples.basicUsage()
 
 // Анализ проблем
-const analysis = examples.quickAnalysis();
+const analysis = examples.quickAnalysis()
 
 // Платформо-специфичная обработка
-const result2 = await examples.platformSpecific();
+const result2 = await examples.platformSpecific()
 ```
 
 ## 🔄 Интеграция с существующим кодом
@@ -209,22 +213,22 @@ const result2 = await examples.platformSpecific();
 
 ```typescript
 // В extractTableData (utils/table-detector.ts) будет добавлено:
-import { TableFormatterService, FormattingUtils } from '../services/formatting';
+import { FormattingUtils, TableFormatterService } from "../services/formatting"
 
 // Опциональное форматирование
 if (shouldUseFormatting) {
-  const source = detectSource(window.location.href);
+  const source = detectSource(window.location.href)
   const formattedData = await TableFormatterService.formatTable(
-    headers, 
-    rows, 
+    headers,
+    rows,
     FormattingUtils.getRecommendedOptions(source),
     source,
     element
-  );
-  
+  )
+
   // Использовать отформатированные данные
-  headers = formattedData.headers;
-  rows = formattedData.rows;
+  headers = formattedData.headers
+  rows = formattedData.rows
 }
 ```
 
@@ -267,4 +271,4 @@ src/services/formatting/
 
 ---
 
-💡 **Примечание**: Это первая версия системы автоформатирования. Все изменения вносятся с осторожностью, не нарушая работающую функциональность. 
+💡 **Примечание**: Это первая версия системы автоформатирования. Все изменения вносятся с осторожностью, не нарушая работающую функциональность.

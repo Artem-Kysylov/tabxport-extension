@@ -23,5 +23,5 @@ export const getButtonHTML = (count: number): string => {
         </svg>
       </div>
     </div>
-  `;
-}; 
+  `
+}

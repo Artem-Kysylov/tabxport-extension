@@ -34,15 +34,19 @@
         "https://chat.deepseek.com/*",
         "https://deepseek.com/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "permissions": [
     "storage",
     "downloads",
-    "notifications"
+    "notifications",
+    "identity"
   ],
+
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
@@ -50,21 +54,28 @@
     "https://gemini.google.com/*",
     "https://bard.google.com/*",
     "https://chat.deepseek.com/*",
-    "https://deepseek.com/*"
+    "https://deepseek.com/*",
+    "https://www.googleapis.com/*",
+    "https://*.supabase.co/*",
+    "https://*.chromiumapp.org/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
   },
-  "web_accessible_resources": [{
-    "resources": ["assets/*"],
-    "matches": [
-      "https://chat.openai.com/*",
-      "https://chatgpt.com/*",
-      "https://claude.ai/*",
-      "https://gemini.google.com/*",
-      "https://bard.google.com/*",
-      "https://chat.deepseek.com/*",
-      "https://deepseek.com/*"
-    ]
-  }]
-} 
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://bard.google.com/*",
+        "https://chat.deepseek.com/*",
+        "https://deepseek.com/*"
+      ]
+    }
+  ]
+}

@@ -21,13 +21,6 @@
     },
     "types": ["chrome", "node"]
   },
-  "include": [
-    ".plasmo/index.d.ts",
-    "./**/*.ts",
-    "./**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "build"
-  ]
+  "include": [".plasmo/index.d.ts", "./**/*.ts", "./**/*.tsx"],
+  "exclude": ["node_modules", "build"]
 }

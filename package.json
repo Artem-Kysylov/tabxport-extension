@@ -5,16 +5,24 @@
   "description": "Export tables from AI chat platforms (ChatGPT, Claude, Gemini, DeepSeek) to Excel/CSV with intelligent filename generation",
   "author": "TabXport Team",
   "scripts": {
-    "dev": "plasmo dev",
-    "build": "plasmo build",
-    "package": "plasmo package",
+    "dev": "plasmo dev --target=chrome-mv3",
+    "build": "npm run build:prod",
+    "build:dev": "NODE_ENV=development plasmo build --target=chrome-mv3 && rm -rf build/dev && cp -r build/chrome-mv3-prod build/dev && rm -rf build/chrome-mv3-prod",
+    "build:chrome-dev": "NODE_ENV=development plasmo build --target=chrome-mv3 && rm -rf build/chrome-mv3-dev && cp -r build/chrome-mv3-prod build/chrome-mv3-dev && rm -rf build/chrome-mv3-prod",
+    "build:prod": "NODE_ENV=production plasmo build --target=chrome-mv3 --no-dev && rm -rf build/prod && cp -r build/chrome-mv3-prod build/prod && rm -rf build/chrome-mv3-prod",
+    "package": "npm run build:prod && plasmo package --source=build/prod",
+    "package:dev": "npm run build:dev && plasmo package --source=build/dev",
     "typecheck": "tsc --noEmit",
-    "lint": "prettier --check ."
+    "lint": "prettier --check .",
+    "get-extension-id": "node scripts/get-extension-id.js",
+    "test-oauth": "node scripts/test-oauth.js",
+    "clean-manifest": "node scripts/fix-manifest-oauth.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
     "@types/jszip": "^3.4.0",
     "docx": "^9.5.0",
+    "dotenv": "^16.5.0",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "jszip": "^3.10.1",
@@ -46,6 +54,7 @@
       "https://chat.deepseek.com/*",
       "https://deepseek.com/*",
       "https://www.googleapis.com/*",
+      "https://*.chromiumapp.org/*",
       "file:///*"
     ],
     "permissions": [

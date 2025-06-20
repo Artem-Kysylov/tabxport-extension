@@ -1,10 +1,9 @@
 // Основной экспорт всех модулей форматирования
-export { FormattingTypes } from './types';
-export { TextCleaner } from './text-cleaner';
-export { StructureFixer } from './structure-fixer';
-export { MarkdownProcessor } from './markdown-processor';
-export { FormattingUtils } from './formatting-utils';
-export { TableFormatterService, DEFAULT_FORMATTING_OPTIONS } from './TableFormatterService';
+export { FormattingUtils } from "./formatting-utils"
+export {
+  TableFormatterService,
+  DEFAULT_FORMATTING_OPTIONS
+} from "./TableFormatterService"
 
 // Основные типы и интерфейсы
 export type {
@@ -16,21 +15,7 @@ export type {
   CellData,
   FormattingOperation,
   TableStructureInfo
-} from './types';
+} from "./types"
 
-// Модули обработки
-export {
-  cleanCellText,
-  cleanMultilineText,
-  validateCleanedText
-} from './text-cleaner';
-
-export {
-  analyzeTableStructure,
-  fixTableStructure
-} from './structure-fixer';
-
-export {
-  parseMarkdownTableAdvanced,
-  processMultilineCells
-} from './markdown-processor'; 
+// Модули обработки (если экспорты существуют)
+// Удалены несуществующие экспорты для исправления TypeScript ошибок

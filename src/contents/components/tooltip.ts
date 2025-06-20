@@ -1,17 +1,17 @@
 interface TooltipOptions {
-  text: string;
-  targetElement: HTMLElement;
+  text: string
+  targetElement: HTMLElement
 }
 
 interface TooltipControls {
-  show: () => void;
-  hide: () => void;
-  destroy: () => void;
+  show: () => void
+  hide: () => void
+  destroy: () => void
 }
 
 const createTooltipElement = (text: string): HTMLDivElement => {
-  const tooltip = document.createElement('div');
-  
+  const tooltip = document.createElement("div")
+
   tooltip.style.cssText = `
     position: absolute !important;
     background-color: #000000 !important;
@@ -43,10 +43,10 @@ const createTooltipElement = (text: string): HTMLDivElement => {
     text-decoration: none !important;
     text-indent: 0 !important;
     text-shadow: none !important;
-  `;
+  `
 
   // Добавляем стрелку через псевдоэлемент
-  const arrow = document.createElement('div');
+  const arrow = document.createElement("div")
   arrow.style.cssText = `
     position: absolute !important;
     top: 50% !important;
@@ -55,50 +55,56 @@ const createTooltipElement = (text: string): HTMLDivElement => {
     width: 8px !important;
     height: 8px !important;
     background-color: #000000 !important;
-  `;
+  `
 
-  tooltip.textContent = text;
-  tooltip.appendChild(arrow);
-  
-  return tooltip;
-};
+  tooltip.textContent = text
+  tooltip.appendChild(arrow)
 
-const positionTooltip = (tooltip: HTMLDivElement, targetElement: HTMLElement): void => {
-  const targetRect = targetElement.getBoundingClientRect();
-  const tooltipRect = tooltip.getBoundingClientRect();
-  
+  return tooltip
+}
+
+const positionTooltip = (
+  tooltip: HTMLDivElement,
+  targetElement: HTMLElement
+): void => {
+  const targetRect = targetElement.getBoundingClientRect()
+  const tooltipRect = tooltip.getBoundingClientRect()
+
   // Позиционируем тултип слева от кнопки
-  const top = targetRect.top + (targetRect.height - tooltipRect.height) / 2;
-  const left = targetRect.left - tooltipRect.width - 12; // 12px отступ от кнопки
+  const top = targetRect.top + (targetRect.height - tooltipRect.height) / 2
+  const left = targetRect.left - tooltipRect.width - 12 // 12px отступ от кнопки
 
-  tooltip.style.top = `${top}px`;
-  tooltip.style.left = `${left}px`;
-};
+  tooltip.style.top = `${top}px`
+  tooltip.style.left = `${left}px`
+}
 
-export const createTooltip = ({ text, targetElement }: TooltipOptions): TooltipControls => {
-  const tooltipElement = createTooltipElement(text);
-  document.body.appendChild(tooltipElement);
+export const createTooltip = ({
+  text,
+  targetElement
+}: TooltipOptions): TooltipControls => {
+  const tooltipElement = createTooltipElement(text)
+  document.body.appendChild(tooltipElement)
 
   const show = (): void => {
-    positionTooltip(tooltipElement, targetElement);
-    tooltipElement.style.opacity = '1';
-    tooltipElement.style.visibility = 'visible';
-  };
+    positionTooltip(tooltipElement, targetElement)
+    tooltipElement.style.opacity = "1"
+    tooltipElement.style.visibility = "visible"
+  }
 
   const hide = (): void => {
-    tooltipElement.style.opacity = '0';
-    tooltipElement.style.visibility = 'hidden';
-  };
+    tooltipElement.style.opacity = "0"
+    tooltipElement.style.visibility = "hidden"
+  }
 
   const destroy = (): void => {
     if (tooltipElement.parentNode) {
-      tooltipElement.parentNode.removeChild(tooltipElement);
+      tooltipElement.parentNode.removeChild(tooltipElement)
     }
-  };
+  }
 
   return {
     show,
     hide,
     destroy
-  };
-}; 
+  }
+}

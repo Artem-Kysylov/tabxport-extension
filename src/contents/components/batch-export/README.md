@@ -65,10 +65,10 @@ batch-export-button.ts
 The refactored components maintain the same public API, so no changes are needed in consuming code:
 
 ```typescript
-import { showBatchExportModal } from './batch-export-modal';
-import { updateBatchButton } from './batch-export-button';
+import { updateBatchButton } from "./batch-export-button"
+import { showBatchExportModal } from "./batch-export-modal"
 
 // Usage remains the same
-showBatchExportModal(batchResult);
-updateBatchButton(batchResult);
-``` 
+showBatchExportModal(batchResult)
+updateBatchButton(batchResult)
+```

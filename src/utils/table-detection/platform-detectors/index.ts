@@ -1,9 +1,9 @@
-import { PlatformDetector } from '../types';
-import { chatGPTDetector } from './chatgpt-detector';
-import { claudeDetector } from './claude-detector';
-import { geminiDetector } from './gemini-detector';
-import { deepseekDetector } from './deepseek-detector';
-import { genericDetector } from './generic-detector';
+import { PlatformDetector } from "../types"
+import { chatGPTDetector } from "./chatgpt-detector"
+import { claudeDetector } from "./claude-detector"
+import { deepseekDetector } from "./deepseek-detector"
+import { geminiDetector } from "./gemini-detector"
+import { genericDetector } from "./generic-detector"
 
 /**
  * List of all available platform detectors
@@ -15,7 +15,7 @@ export const platformDetectors: PlatformDetector[] = [
   geminiDetector,
   deepseekDetector,
   genericDetector
-];
+]
 
 export {
   chatGPTDetector,
@@ -23,4 +23,4 @@ export {
   geminiDetector,
   deepseekDetector,
   genericDetector
-}; 
+}

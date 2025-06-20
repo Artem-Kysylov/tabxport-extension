@@ -448,7 +448,7 @@ const MODAL_STYLES = `
   color: #6b7280;
   font-style: italic;
 }
-`;
+`
 
 const BUTTON_STYLES = `
 /* Batch Export Button Styles */
@@ -489,48 +489,48 @@ const BUTTON_STYLES = `
 #tablexport-batch-export-button:hover .tablexport-batch-arrow {
   transform: translateX(2px);
 }
-`;
+`
 
 /**
  * Adds CSS styles for the modal
  */
 export const addModalStyles = (): void => {
-  const styleId = 'tablexport-modal-styles';
-  
+  const styleId = "tablexport-modal-styles"
+
   if (document.getElementById(styleId)) {
-    return;
+    return
   }
 
-  const style = document.createElement('style');
-  style.id = styleId;
-  style.textContent = MODAL_STYLES;
-  
-  document.head.appendChild(style);
-};
+  const style = document.createElement("style")
+  style.id = styleId
+  style.textContent = MODAL_STYLES
+
+  document.head.appendChild(style)
+}
 
 /**
  * Adds CSS styles for the button
  */
 export const addButtonStyles = (): void => {
-  const styleId = 'tablexport-batch-styles';
-  
+  const styleId = "tablexport-batch-styles"
+
   if (document.getElementById(styleId)) {
-    return; // Styles already added
+    return // Styles already added
   }
 
-  const style = document.createElement('style');
-  style.id = styleId;
-  style.textContent = BUTTON_STYLES;
-  
-  document.head.appendChild(style);
-};
+  const style = document.createElement("style")
+  style.id = styleId
+  style.textContent = BUTTON_STYLES
+
+  document.head.appendChild(style)
+}
 
 /**
  * Removes button styles from the document
  */
 export const removeButtonStyles = (): void => {
-  const styleElement = document.getElementById('tablexport-batch-styles');
+  const styleElement = document.getElementById("tablexport-batch-styles")
   if (styleElement) {
-    styleElement.remove();
+    styleElement.remove()
   }
-}; 
+}

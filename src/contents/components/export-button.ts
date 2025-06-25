@@ -351,19 +351,27 @@ export const createExportButton = (
 ): HTMLElement => {
   const button = document.createElement("button")
 
+  // Определяем платформу СНАЧАЛА
+  const isChatGPT = window.location.href.includes("chat.openai.com")
+  const isDeepSeek =
+    window.location.href.includes("chat.deepseek.com") ||
+    window.location.href.includes("deepseek.com")
+  const isGemini = 
+    window.location.href.includes("gemini.google.com") || 
+    window.location.href.includes("bard.google.com")
+
+  // Создаем SVG с платформо-специфичными стилями
+  const svgStyles = isGemini 
+    ? 'style="pointer-events: none !important; display: block !important; flex-shrink: 0 !important;"'
+    : 'style="pointer-events: none !important;"'
+    
   button.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ${svgStyles}>
       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
       <polyline points="7,10 12,15 17,10" />
       <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   `
-
-  // Определяем, если это ChatGPT или DeepSeek
-  const isChatGPT = window.location.href.includes("chat.openai.com")
-  const isDeepSeek =
-    window.location.href.includes("chat.deepseek.com") ||
-    window.location.href.includes("deepseek.com")
 
   // Создаем тултип
   const tooltip = createTooltip({
@@ -404,8 +412,15 @@ export const createExportButton = (
     -webkit-font-smoothing: antialiased !important;
   `
 
-  // Дополнительные стили для ChatGPT и DeepSeek больших таблиц
-  if (isChatGPT || isDeepSeek) {
+  // Дополнительные стили для разных платформ
+  if (isGemini) {
+    cssText += `
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      isolation: isolate !important;
+    `
+  } else if (isChatGPT || isDeepSeek) {
     cssText += `
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
     `
@@ -435,7 +450,15 @@ export const createExportButton = (
 
   // Обработчики событий
   buttonWrapper.addEventListener("mouseenter", () => {
-    if (isDeepSeek) {
+    if (isGemini) {
+      // Специальная обработка для Gemini - только меняем фон на прозрачный
+      button.style.backgroundColor = "transparent !important"
+      button.style.border = "1px solid #1B9358 !important"
+      const svg = button.querySelector("svg")
+      if (svg) {
+        svg.style.stroke = "#1B9358 !important"
+      }
+    } else if (isDeepSeek) {
       button.style.backgroundColor = "transparent"
       button.style.border = "2px solid #1B9358"
       button.style.transform = "none"
@@ -456,7 +479,15 @@ export const createExportButton = (
   })
 
   buttonWrapper.addEventListener("mouseleave", () => {
-    if (isDeepSeek) {
+    if (isGemini) {
+      // Специальная обработка для Gemini - возвращаем зеленый фон
+      button.style.backgroundColor = "#1B9358 !important"
+      button.style.border = "none !important"
+      const svg = button.querySelector("svg")
+      if (svg) {
+        svg.style.stroke = "white !important"
+      }
+    } else if (isDeepSeek) {
       button.style.backgroundColor = "#1B9358"
       button.style.border = "none"
       button.style.transform = "none"

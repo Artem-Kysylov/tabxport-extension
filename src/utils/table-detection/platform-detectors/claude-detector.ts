@@ -225,10 +225,44 @@ export const claudeDetector: PlatformDetector = {
       }
     })
 
+    // Enhanced deduplication - remove elements that contain the same content
+    const uniqueElements: HTMLElement[] = []
+    const finalProcessedContent = new Set<string>()
+
+    for (const element of elements) {
+      const content = domUtils.getTextContent(element).trim()
+      // Create a content hash from first 100 characters
+      const contentHash = content.substring(0, 100).replace(/\s+/g, ' ')
+      
+      // Skip if we've seen this content before
+      if (finalProcessedContent.has(contentHash)) {
+        console.log(`TabXport Claude: Skipping duplicate content: ${contentHash.substring(0, 50)}...`)
+        continue
+      }
+      
+      // Skip if this element is contained within another element we already have
+      const isContainedInExisting = uniqueElements.some(existing => 
+        existing.contains(element) || element.contains(existing)
+      )
+      
+      if (!isContainedInExisting) {
+        // Additional check - ensure element is visible
+        if (domUtils.isVisible(element)) {
+          uniqueElements.push(element)
+          finalProcessedContent.add(contentHash)
+          console.log(`TabXport Claude: Added unique table: ${contentHash.substring(0, 50)}...`)
+        } else {
+          console.log(`TabXport Claude: Skipping invisible element: ${contentHash.substring(0, 50)}...`)
+        }
+      } else {
+        console.log(`TabXport Claude: Skipping nested element: ${contentHash.substring(0, 50)}...`)
+      }
+    }
+
     console.log(
-      `TabXport Claude: Final result - found ${elements.length} table elements`
+      `TabXport Claude: Final result - found ${uniqueElements.length} unique table elements (was ${elements.length} before deduplication)`
     )
-    return elements
+    return uniqueElements
   },
 
   extractChatTitle: (): string => {

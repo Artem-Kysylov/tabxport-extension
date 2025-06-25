@@ -123,12 +123,25 @@ class UserService {
   }
 
   /**
-   * Проверка лимитов экспорта
+   * Проверка лимитов экспорта для пользователя
    */
   async checkExportLimits(
     userId: string,
     destination: ExportDestination = "download"
   ): Promise<ExportLimitCheck> {
+    // TESTING MODE: Always return unlimited access
+    console.log("🧪 TESTING MODE: Bypassing all export limits for user:", userId)
+    
+    return {
+      canExport: true,
+      canExportToGoogleDrive: true,
+      remainingExports: -1, // Unlimited
+      remainingGoogleDriveExports: -1, // Unlimited
+      limitMessage: undefined
+    }
+
+    // Original limit checking code commented out for testing
+    /*
     try {
       // Используем RPC функцию для проверки лимитов
       const { data: canExport, error } = await supabase.rpc(
@@ -219,6 +232,7 @@ class UserService {
         limitMessage: "Error checking limits"
       }
     }
+    */
   }
 
   /**
@@ -294,17 +308,30 @@ class UserService {
    * Проверка, нужно ли показать уведомление о лимитах
    */
   shouldShowLimitWarning(quota: UsageQuota): boolean {
+    // TESTING MODE: Never show limit warnings
+    console.log("🧪 TESTING MODE: Hiding limit warnings for testing")
+    return false
+
+    // Original warning logic commented out for testing
+    /*
     if (quota.exports_limit === -1) return false // Unlimited plan
 
     const usagePercentage =
       (quota.exports_this_month / quota.exports_limit) * 100
     return usagePercentage >= 80 // Show warning at 80% usage
+    */
   }
 
   /**
    * Получение сообщения о статусе использования
    */
   getUsageMessage(quota: UsageQuota): string {
+    // TESTING MODE: Always show unlimited access message
+    console.log("🧪 TESTING MODE: Showing unlimited access message")
+    return "🧪 ТЕСТОВЫЙ РЕЖИМ: Неограниченные экспорты ✨"
+
+    // Original usage message logic commented out for testing
+    /*
     if (quota.exports_limit === -1) {
       return "Неограниченные экспорты ✨"
     }
@@ -321,6 +348,7 @@ class UserService {
     }
 
     return `Использовано ${quota.exports_this_month} из ${quota.exports_limit} экспортов`
+    */
   }
 }
 

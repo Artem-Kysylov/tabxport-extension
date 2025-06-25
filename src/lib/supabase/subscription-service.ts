@@ -85,6 +85,18 @@ export class SubscriptionService {
     current: number
     limit: number
   }> {
+    // TESTING MODE: Always allow unlimited access
+    console.log("🧪 TESTING MODE: Bypassing subscription limits for user:", userId, "action:", action)
+    
+    return {
+      allowed: true,
+      reason: undefined,
+      current: 0,
+      limit: -1 // Unlimited
+    }
+
+    // Original subscription checking code commented out for testing
+    /*
     const { subscription, usage, planConfig } =
       await this.getUserSubscription(userId)
 
@@ -152,14 +164,22 @@ export class SubscriptionService {
           limit: 0
         }
     }
+    */
   }
 
   /**
    * Check if a file format is allowed for user's plan
    */
   async isFormatAllowed(userId: string, format: string): Promise<boolean> {
+    // TESTING MODE: Allow all formats
+    console.log("🧪 TESTING MODE: Allowing all formats for user:", userId, "format:", format)
+    return true
+
+    // Original format checking code commented out for testing
+    /*
     const { planConfig } = await this.getUserSubscription(userId)
     return planConfig.limits.exportFormats.includes(format.toUpperCase())
+    */
   }
 
   /**
@@ -169,8 +189,15 @@ export class SubscriptionService {
     userId: string,
     fileSizeMB: number
   ): Promise<boolean> {
+    // TESTING MODE: Allow all file sizes
+    console.log("🧪 TESTING MODE: Allowing all file sizes for user:", userId, "size:", fileSizeMB, "MB")
+    return true
+
+    // Original file size checking code commented out for testing
+    /*
     const { planConfig } = await this.getUserSubscription(userId)
     return fileSizeMB <= planConfig.limits.maxFileSize
+    */
   }
 
   /**

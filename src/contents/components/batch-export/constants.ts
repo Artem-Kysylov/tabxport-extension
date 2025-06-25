@@ -2,7 +2,7 @@
  * Constants for combined export
  */
 export const COMBINED_EXPORT_LIMITS = {
-  maxTables: 10,
+  maxTables: 999,
   maxSheetNameLength: 25
 } as const
 

@@ -1561,8 +1561,34 @@ export const findAllTables = (): HTMLElement[] => {
     console.log("TabXport: ChatGPT tables found:", chatGPTTables.length)
     tables.push(...chatGPTTables)
 
-    // Для ChatGPT возвращаем только результаты специального детектора
-    console.log("TabXport: Returning ChatGPT tables:", tables.length)
+    // ИСПРАВЛЕНИЕ: Если специальный детектор не нашел таблицы, используем общий
+    if (chatGPTTables.length === 0) {
+      console.log("TabXport: ChatGPT detector found no tables, trying general detection as fallback")
+      
+      // HTML таблицы
+      const htmlTables = document.querySelectorAll("table")
+      console.log("TabXport: Fallback - HTML tables found:", htmlTables.length)
+      htmlTables.forEach((table) => {
+        if (table.offsetParent !== null && table.rows.length > 0) {
+          tables.push(table)
+        }
+      })
+
+      // Pre и code блоки с markdown таблицами
+      const codeElements = document.querySelectorAll("pre, code")
+      console.log("TabXport: Fallback - Code elements found:", codeElements.length)
+      codeElements.forEach((element) => {
+        const htmlElement = element as HTMLElement
+        if (
+          htmlElement.offsetParent !== null &&
+          findMarkdownTablesInElement(htmlElement)
+        ) {
+          tables.push(htmlElement)
+        }
+      })
+    }
+
+    console.log("TabXport: Returning ChatGPT tables (with fallback):", tables.length)
     return tables
   }
 
@@ -1573,11 +1599,34 @@ export const findAllTables = (): HTMLElement[] => {
     console.log("TabXport: Claude tables found:", claudeTables.length)
     tables.push(...claudeTables)
 
-    // Для Claude возвращаем только результаты специального детектора
-    console.log(
-      "TabXport: Returning only Claude-specific results, skipping general detection"
-    )
-    console.log("TabXport: Returning Claude tables:", tables.length)
+    // ИСПРАВЛЕНИЕ: Если специальный детектор не нашел таблицы, используем общий
+    if (claudeTables.length === 0) {
+      console.log("TabXport: Claude detector found no tables, trying general detection as fallback")
+      
+      // HTML таблицы
+      const htmlTables = document.querySelectorAll("table")
+      console.log("TabXport: Fallback - HTML tables found:", htmlTables.length)
+      htmlTables.forEach((table) => {
+        if (table.offsetParent !== null && table.rows.length > 0) {
+          tables.push(table)
+        }
+      })
+
+      // Pre и code блоки с markdown таблицами
+      const codeElements = document.querySelectorAll("pre, code")
+      console.log("TabXport: Fallback - Code elements found:", codeElements.length)
+      codeElements.forEach((element) => {
+        const htmlElement = element as HTMLElement
+        if (
+          htmlElement.offsetParent !== null &&
+          findMarkdownTablesInElement(htmlElement)
+        ) {
+          tables.push(htmlElement)
+        }
+      })
+    }
+
+    console.log("TabXport: Returning Claude tables (with fallback):", tables.length)
     return tables
   }
 
@@ -1588,11 +1637,34 @@ export const findAllTables = (): HTMLElement[] => {
     console.log("TabXport: Gemini tables found:", geminiTables.length)
     tables.push(...geminiTables)
 
-    // Для Gemini возвращаем только результаты специального детектора
-    console.log(
-      "TabXport: Returning only Gemini-specific results, skipping general detection"
-    )
-    console.log("TabXport: Returning Gemini tables:", tables.length)
+    // ИСПРАВЛЕНИЕ: Если специальный детектор не нашел таблицы, используем общий
+    if (geminiTables.length === 0) {
+      console.log("TabXport: Gemini detector found no tables, trying general detection as fallback")
+      
+      // HTML таблицы
+      const htmlTables = document.querySelectorAll("table")
+      console.log("TabXport: Fallback - HTML tables found:", htmlTables.length)
+      htmlTables.forEach((table) => {
+        if (table.offsetParent !== null && table.rows.length > 0) {
+          tables.push(table)
+        }
+      })
+
+      // Pre и code блоки с markdown таблицами
+      const codeElements = document.querySelectorAll("pre, code")
+      console.log("TabXport: Fallback - Code elements found:", codeElements.length)
+      codeElements.forEach((element) => {
+        const htmlElement = element as HTMLElement
+        if (
+          htmlElement.offsetParent !== null &&
+          findMarkdownTablesInElement(htmlElement)
+        ) {
+          tables.push(htmlElement)
+        }
+      })
+    }
+
+    console.log("TabXport: Returning Gemini tables (with fallback):", tables.length)
     return tables
   }
 
@@ -1603,11 +1675,34 @@ export const findAllTables = (): HTMLElement[] => {
     console.log("TabXport: DeepSeek tables found:", deepseekTables.length)
     tables.push(...deepseekTables)
 
-    // Для DeepSeek возвращаем только результаты специального детектора
-    console.log(
-      "TabXport: Returning only DeepSeek-specific results, skipping general detection"
-    )
-    console.log("TabXport: Returning DeepSeek tables:", tables.length)
+    // ИСПРАВЛЕНИЕ: Если специальный детектор не нашел таблицы, используем общий
+    if (deepseekTables.length === 0) {
+      console.log("TabXport: DeepSeek detector found no tables, trying general detection as fallback")
+      
+      // HTML таблицы
+      const htmlTables = document.querySelectorAll("table")
+      console.log("TabXport: Fallback - HTML tables found:", htmlTables.length)
+      htmlTables.forEach((table) => {
+        if (table.offsetParent !== null && table.rows.length > 0) {
+          tables.push(table)
+        }
+      })
+
+      // Pre и code блоки с markdown таблицами
+      const codeElements = document.querySelectorAll("pre, code")
+      console.log("TabXport: Fallback - Code elements found:", codeElements.length)
+      codeElements.forEach((element) => {
+        const htmlElement = element as HTMLElement
+        if (
+          htmlElement.offsetParent !== null &&
+          findMarkdownTablesInElement(htmlElement)
+        ) {
+          tables.push(htmlElement)
+        }
+      })
+    }
+
+    console.log("TabXport: Returning DeepSeek tables (with fallback):", tables.length)
     return tables
   }
 

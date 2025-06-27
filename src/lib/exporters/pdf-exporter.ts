@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable"
 
 import type { ExportOptions, ExportResult, TableData } from "../../types"
 import { generateFilename } from "../export"
+import { googleDriveService } from "../google-drive-api"
 
 /**
  * PDF экспортер для TabXport с поддержкой кириллицы
@@ -108,6 +109,56 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     binary += String.fromCharCode(bytes[i])
   }
   return btoa(binary)
+}
+
+/**
+ * Converts data URL to blob for Google Drive upload
+ */
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const arr = dataUrl.split(',')
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/octet-stream'
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new Blob([u8arr], { type: mime })
+}
+
+/**
+ * Uploads PDF file to Google Drive
+ */
+const uploadToGoogleDrive = async (
+  filename: string,
+  dataUrl: string
+): Promise<{ success: boolean; error?: string; webViewLink?: string }> => {
+  try {
+    const blob = dataUrlToBlob(dataUrl)
+    const mimeType = 'application/pdf'
+    
+    console.log(`☁️ Uploading PDF to Google Drive: ${filename} (${blob.size} bytes)`)
+    
+    const result = await googleDriveService.uploadFile({
+      filename,
+      content: blob,
+      mimeType
+    })
+    
+    if (result.success) {
+      console.log(`✅ Successfully uploaded PDF to Google Drive: ${filename}`)
+      return { success: true, webViewLink: result.webViewLink }
+    } else {
+      console.error(`❌ Failed to upload PDF to Google Drive: ${result.error}`)
+      return { success: false, error: result.error }
+    }
+  } catch (error) {
+    console.error('💥 Error uploading PDF to Google Drive:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Upload failed' 
+    }
+  }
 }
 
 /**
@@ -290,6 +341,25 @@ export const exportToPDF = async (
     // Конвертируем в data URL
     const base64 = arrayBufferToBase64(pdfArrayBuffer)
     const dataUrl = `data:application/pdf;base64,${base64}`
+
+    // Handle Google Drive upload if needed
+    if (options.destination === 'google_drive') {
+      const uploadResult = await uploadToGoogleDrive(filename, dataUrl)
+      
+      if (uploadResult.success) {
+        console.log("PDF export and upload to Google Drive completed successfully with transliteration")
+        return {
+          success: true,
+          filename,
+          downloadUrl: uploadResult.webViewLink || dataUrl  // Use webViewLink or fallback to dataUrl
+        }
+      } else {
+        return {
+          success: false,
+          error: `Google Drive upload failed: ${uploadResult.error}`
+        }
+      }
+    }
 
     console.log("PDF export completed successfully with transliteration")
 

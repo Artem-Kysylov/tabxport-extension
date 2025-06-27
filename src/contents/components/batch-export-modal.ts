@@ -1,4 +1,6 @@
 import type { BatchTableDetectionResult } from "../../utils/table-detection/types"
+import { getUserSettings } from "../../lib/storage"
+import type { UserSettings } from "../../types"
 import { MODAL_ID, OVERLAY_ID } from "./batch-export/constants"
 import {
   createModalContent,
@@ -33,7 +35,8 @@ let modalState: BatchModalState = {
     customNames: new Map(),
     combinedFileName: undefined,
     includeHeaders: true,
-    zipArchive: false // Legacy field for backward compatibility - not used in UI
+    zipArchive: false, // Legacy field for backward compatibility - not used in UI
+    destination: "download" // Add destination field
   },
   isExporting: false,
   progress: { current: 0, total: 0 },
@@ -41,22 +44,83 @@ let modalState: BatchModalState = {
 }
 
 /**
+ * Loads user settings and updates modal state
+ */
+const loadUserSettingsForModal = async (): Promise<UserSettings> => {
+  try {
+    const settings = await getUserSettings()
+    
+    // Check Google Drive authentication before setting destination
+    const { checkGoogleDriveAuthentication } = await import("./batch-export/modal-handlers")
+    const authResult = await checkGoogleDriveAuthentication()
+    const isGoogleDriveAuthenticated = authResult.success
+    
+    // Update modal state with user settings
+    modalState.config.format = settings.defaultFormat as ExportFormat
+    
+    // Set destination based on authentication and user preferences
+    if (settings.defaultDestination === "google_drive" && !isGoogleDriveAuthenticated) {
+      // If user prefers Google Drive but not authenticated, default to download
+      modalState.config.destination = "download"
+      console.log("📋 Google Drive not authenticated, defaulting to download")
+    } else {
+      modalState.config.destination = settings.defaultDestination
+    }
+    
+    console.log("📋 Loaded user settings for batch export:", settings)
+    console.log("📋 Set destination to:", modalState.config.destination)
+    return settings
+  } catch (error) {
+    console.error("❌ Failed to load user settings for modal:", error)
+    
+    // Fallback to defaults
+    const defaultSettings: UserSettings = {
+      defaultFormat: "xlsx",
+      defaultDestination: "download",
+      autoExport: false,
+      theme: "auto"
+    }
+    
+    modalState.config.format = defaultSettings.defaultFormat as ExportFormat
+    modalState.config.destination = defaultSettings.defaultDestination
+    
+    return defaultSettings
+  }
+}
+
+/**
  * Attaches event listeners to modal elements
  */
 const attachEventListeners = (): void => {
-  // Close button
+  console.log('🔧 Attaching event listeners...')
+  
+  // Close button - remove old listeners first
   const closeBtn = document.getElementById("close-modal-btn")
-  closeBtn?.addEventListener("click", hideModal)
+  if (closeBtn) {
+    closeBtn.replaceWith(closeBtn.cloneNode(true))
+    const newCloseBtn = document.getElementById("close-modal-btn")
+    newCloseBtn?.addEventListener("click", hideModal)
+  }
 
-  // Cancel button
+  // Cancel button - remove old listeners first
   const cancelBtn = document.getElementById("cancel-btn")
-  cancelBtn?.addEventListener("click", hideModal)
+  if (cancelBtn) {
+    cancelBtn.replaceWith(cancelBtn.cloneNode(true))
+    const newCancelBtn = document.getElementById("cancel-btn")
+    newCancelBtn?.addEventListener("click", hideModal)
+  }
 
-  // Export button
+  // Export button - remove old listeners first to prevent multiple calls
   const exportBtn = document.getElementById("export-btn")
-  exportBtn?.addEventListener("click", () =>
-    handleBatchExport(modalState, hideModal)
-  )
+  if (exportBtn) {
+    console.log('🔧 Replacing export button to remove old listeners')
+    exportBtn.replaceWith(exportBtn.cloneNode(true))
+    const newExportBtn = document.getElementById("export-btn")
+    newExportBtn?.addEventListener("click", () => {
+      console.log('🎯 Export button clicked - calling handleBatchExport')
+      handleBatchExport(modalState, hideModal)
+    })
+  }
 
   // Format selector
   const formatSelect = document.getElementById(
@@ -72,7 +136,7 @@ const attachEventListeners = (): void => {
     ) {
       modalState.config.exportMode = "separate"
     }
-    updateModalContent(modalState, attachEventListeners)
+    updateModalContent(modalState, attachEventListeners).catch(console.error)
   })
 
   // Options checkboxes
@@ -89,7 +153,7 @@ const attachEventListeners = (): void => {
   ) as HTMLInputElement
   selectAllCheckbox?.addEventListener("change", (e) => {
     handleSelectAll(modalState, (e.target as HTMLInputElement).checked, () =>
-      updateModalContent(modalState, attachEventListeners)
+      updateModalContent(modalState, attachEventListeners).catch(console.error)
     )
   })
 
@@ -103,7 +167,7 @@ const attachEventListeners = (): void => {
       const tableId = target.dataset.tableId
       if (tableId) {
         handleTableSelection(modalState, tableId, target.checked, () =>
-          updateModalContent(modalState, attachEventListeners)
+          updateModalContent(modalState, attachEventListeners).catch(console.error)
         )
       }
     })
@@ -135,7 +199,7 @@ const attachEventListeners = (): void => {
       // Update legacy zipArchive field for backward compatibility
       modalState.config.zipArchive = target.value === "zip"
 
-      updateModalContent(modalState, attachEventListeners)
+      updateModalContent(modalState, attachEventListeners).catch(console.error)
     })
   })
 
@@ -146,6 +210,19 @@ const attachEventListeners = (): void => {
   combinedFilenameInput?.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement
     modalState.config.combinedFileName = target.value.trim() || undefined
+  })
+
+  // Destination selector
+  const destinationRadios = document.querySelectorAll(
+    'input[name="export-destination"]'
+  ) as NodeListOf<HTMLInputElement>
+  destinationRadios.forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      const target = e.target as HTMLInputElement
+      modalState.config.destination = target.value as "download" | "google_drive"
+      console.log(`🎯 Destination changed to: ${modalState.config.destination}`)
+      updateModalContent(modalState, attachEventListeners).catch(console.error)
+    })
   })
 
   // Remember format checkbox
@@ -164,20 +241,23 @@ const attachEventListeners = (): void => {
   const clearPreferenceBtn = document.getElementById("clear-format-preference")
   clearPreferenceBtn?.addEventListener("click", () => {
     FormatPreferences.clear()
-    updateModalContent(modalState, attachEventListeners) // Refresh to hide clear button
+    updateModalContent(modalState, attachEventListeners).catch(console.error) // Refresh to hide clear button
   })
 }
 
 /**
  * Shows the batch export modal
  */
-export const showBatchExportModal = (
+export const showBatchExportModal = async (
   batchResult: BatchTableDetectionResult
-): void => {
+): Promise<void> => {
   modalState.batchResult = batchResult
   modalState.isVisible = true
 
-  // Load preferred format if available
+  // Load user settings first
+  await loadUserSettingsForModal()
+
+  // Load preferred format if available (overrides user settings)
   const preferredFormat = FormatPreferences.load()
   if (preferredFormat) {
     modalState.config.format = preferredFormat
@@ -196,7 +276,18 @@ export const showBatchExportModal = (
 
   const modal = document.createElement("div")
   modal.id = MODAL_ID
-  modal.innerHTML = createModalContent(modalState)
+  
+  // Check Google Drive authentication status before creating modal content
+  const { checkGoogleDriveAuthentication } = await import("./batch-export/modal-handlers")
+  const authResult = await checkGoogleDriveAuthentication()
+  const isGoogleDriveAuthenticated = authResult.success
+  
+  // Set default destination to download if not authenticated
+  if (!isGoogleDriveAuthenticated && modalState.config.destination === "google_drive") {
+    modalState.config.destination = "download"
+  }
+  
+  modal.innerHTML = createModalContent(modalState, isGoogleDriveAuthenticated)
 
   overlay.appendChild(modal)
   document.body.appendChild(overlay)
@@ -209,6 +300,8 @@ export const showBatchExportModal = (
   })
 
   attachEventListeners()
+  
+  console.log(`📋 Batch export modal opened with destination: ${modalState.config.destination}`)
 }
 
 /**

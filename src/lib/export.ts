@@ -3,6 +3,7 @@ import * as XLSX from "xlsx"
 import type { ExportOptions, ExportResult, TableData } from "../types"
 import { exportToDOCX } from "./exporters/docx-exporter"
 import { exportToPDF } from "./exporters/pdf-exporter"
+import { googleDriveService } from "./google-drive-api"
 
 // Генерация имени файла
 export const generateFilename = (
@@ -62,6 +63,75 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   return btoa(binary)
 }
 
+/**
+ * Converts data URL to blob for Google Drive upload
+ */
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const arr = dataUrl.split(',')
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/octet-stream'
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new Blob([u8arr], { type: mime })
+}
+
+/**
+ * Gets MIME type for Google Drive upload
+ */
+const getMimeTypeForFormat = (format: "xlsx" | "csv" | "docx" | "pdf"): string => {
+  switch (format) {
+    case 'xlsx':
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    case 'csv':
+      return 'text/csv'
+    case 'docx':
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    case 'pdf':
+      return 'application/pdf'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
+/**
+ * Uploads file to Google Drive
+ */
+const uploadToGoogleDrive = async (
+  filename: string,
+  dataUrl: string,
+  format: "xlsx" | "csv" | "docx" | "pdf"
+): Promise<{ success: boolean; error?: string; webViewLink?: string }> => {
+  try {
+    const blob = dataUrlToBlob(dataUrl)
+    const mimeType = getMimeTypeForFormat(format)
+    
+    console.log(`☁️ Uploading to Google Drive: ${filename} (${blob.size} bytes, ${mimeType})`)
+    
+    const result = await googleDriveService.uploadFile({
+      filename,
+      content: blob,
+      mimeType
+    })
+    
+    if (result.success) {
+      console.log(`✅ Successfully uploaded to Google Drive: ${filename}`)
+      return { success: true, webViewLink: result.webViewLink }
+    } else {
+      console.error(`❌ Failed to upload to Google Drive: ${result.error}`)
+      return { success: false, error: result.error }
+    }
+  } catch (error) {
+    console.error('💥 Error uploading to Google Drive:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Upload failed' 
+    }
+  }
+}
+
 // Экспорт в XLSX формат
 export const exportToXLSX = async (
   tableData: TableData,
@@ -84,6 +154,24 @@ export const exportToXLSX = async (
     // Создаем data URL для скачивания
     const base64 = arrayBufferToBase64(buffer)
     const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`
+
+    // Handle Google Drive upload if needed
+    if (options.destination === 'google_drive') {
+      const uploadResult = await uploadToGoogleDrive(filename, dataUrl, 'xlsx')
+      
+      if (uploadResult.success) {
+        return {
+          success: true,
+          filename,
+          downloadUrl: uploadResult.webViewLink || dataUrl  // Use webViewLink or fallback to dataUrl
+        }
+      } else {
+        return {
+          success: false,
+          error: `Google Drive upload failed: ${uploadResult.error}`
+        }
+      }
+    }
 
     return {
       success: true,
@@ -119,6 +207,24 @@ export const exportToCSV = async (
     const base64 = btoa(unescape(encodeURIComponent(csv)))
     const dataUrl = `data:text/csv;charset=utf-8;base64,${base64}`
 
+    // Handle Google Drive upload if needed
+    if (options.destination === 'google_drive') {
+      const uploadResult = await uploadToGoogleDrive(filename, dataUrl, 'csv')
+      
+      if (uploadResult.success) {
+        return {
+          success: true,
+          filename,
+          downloadUrl: uploadResult.webViewLink || dataUrl  // Use webViewLink or fallback to dataUrl
+        }
+      } else {
+        return {
+          success: false,
+          error: `Google Drive upload failed: ${uploadResult.error}`
+        }
+      }
+    }
+
     return {
       success: true,
       filename,
@@ -138,6 +244,8 @@ export const exportTable = async (
   tableData: TableData,
   options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
+  console.log(`📤 Exporting table with destination: ${options.destination}`)
+  
   switch (options.format) {
     case "xlsx":
       return exportToXLSX(tableData, options)

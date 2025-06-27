@@ -98,7 +98,7 @@ const tableDataToWorksheet = (
 }
 
 /**
- * Converts ArrayBuffer to base64
+ * Converts ArrayBuffer to base64 (same as in export.ts)
  */
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer)
@@ -134,13 +134,13 @@ export const exportCombinedXLSX = async (
       }
     }
 
-    // Create new workbook
+    // Create new workbook using the exact same method as in export.ts
     const workbook = XLSX.utils.book_new()
     const existingSheetNames = new Set<string>()
 
     console.log(`📊 Creating workbook with ${tables.length} sheets...`)
 
-    // Process each table
+    // Process each table using the same method as single table export
     tables.forEach((table, index) => {
       console.log(`📋 Processing table ${index + 1}/${tables.length}`)
 
@@ -148,11 +148,15 @@ export const exportCombinedXLSX = async (
       const sheetName = generateSheetName(table, index, existingSheetNames)
       console.log(`📝 Sheet name: "${sheetName}"`)
 
-      // Create worksheet
+      // Create worksheet using the EXACT same method as export.ts
       const worksheet = tableDataToWorksheet(table, options.includeHeaders)
+      
+      console.log(`📊 Table ${index + 1} data: headers=${table.headers.length}, rows=${table.rows.length}`)
 
       // Add worksheet to workbook
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+      
+      console.log(`✅ Added sheet "${sheetName}" to workbook`)
     })
 
     // Generate filename
@@ -162,15 +166,15 @@ export const exportCombinedXLSX = async (
 
     console.log(`💾 Generated filename: ${filename}`)
 
-    // Generate file buffer
-    const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" })
+    // Generate file buffer - используем тот же метод что и в обычном экспорте
+    const arrayBuffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" })
 
-    // Convert to data URL
-    const base64 = arrayBufferToBase64(buffer)
+    // Создаем data URL точно так же, как в обычном экспорте
+    const base64 = arrayBufferToBase64(arrayBuffer)
     const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`
 
     console.log(`✅ Combined XLSX export completed successfully`)
-    console.log(`📊 File size: ${buffer.byteLength} bytes`)
+    console.log(`📊 File size: ${arrayBuffer.byteLength} bytes`)
     console.log(`📋 Sheets created: ${workbook.SheetNames.join(", ")}`)
 
     return {

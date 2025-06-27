@@ -200,6 +200,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true })
       break
 
+    case "SETTINGS_CHANGED":
+      console.log("📥 Settings changed:", message.key, "=", message.value)
+      
+      // Если изменилось назначение экспорта, обновляем кнопки НЕМЕДЛЕННО
+      if (message.key === "defaultDestination") {
+        console.log("🚀 IMMEDIATE: Refreshing batch export buttons due to destination change")
+        
+        // Немедленно импортируем и вызываем функцию обновления
+        import("./components/batch-export-button").then(({ refreshAllBatchExportButtons }) => {
+          console.log("📦 Module imported, calling refresh function...")
+          refreshAllBatchExportButtons().then(() => {
+            console.log("✅ IMMEDIATE batch button refresh completed")
+          }).catch(error => {
+            console.error("❌ IMMEDIATE batch button refresh failed:", error)
+          })
+        }).catch(error => {
+          console.error("❌ Failed to import batch export module:", error)
+        })
+      }
+      
+      sendResponse({ success: true })
+      break
+
     default:
       sendResponse({ success: false, error: "Unknown message type" })
   }

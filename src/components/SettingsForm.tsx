@@ -17,12 +17,39 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [rememberFormat, setRememberFormat] = useState(false)
+  const [isGoogleDriveAuthenticated, setIsGoogleDriveAuthenticated] = useState(false)
 
   // Load settings on component mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const userSettings = await getUserSettings()
+        
+        // Check Google Drive authentication
+        try {
+          const authResult = await chrome.runtime.sendMessage({
+            type: "CHECK_AUTH_STATUS"
+          })
+          
+          const isAuthenticated = authResult?.success && 
+                                 authResult?.authState?.isAuthenticated && 
+                                 authResult?.authState?.hasGoogleAccess
+          
+          setIsGoogleDriveAuthenticated(isAuthenticated)
+          
+          // If user prefers Google Drive but not authenticated, switch to download
+          if (userSettings.defaultDestination === "google_drive" && !isAuthenticated) {
+            userSettings.defaultDestination = "download"
+            console.log("📋 Google Drive not authenticated, defaulting to download in settings")
+          }
+        } catch (error) {
+          console.warn("Failed to check auth status in settings:", error)
+          setIsGoogleDriveAuthenticated(false)
+          if (userSettings.defaultDestination === "google_drive") {
+            userSettings.defaultDestination = "download"
+          }
+        }
+        
         setSettings(userSettings)
 
         // Check if format memory is enabled
@@ -42,13 +69,62 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
 
   // Handle setting changes
   const handleSettingChange = async (key: keyof UserSettings, value: any) => {
-    const newSettings = { ...settings, [key]: value }
-    setSettings(newSettings)
-
     setIsSaving(true)
+
     try {
-      await saveUserSettings({ [key]: value })
+      const newSettings = { ...settings, [key]: value }
+      setSettings(newSettings)
+      await saveUserSettings(newSettings)
+
+      // Notify parent component immediately
       onSettingsChange?.(newSettings)
+
+      // 🚀 НЕМЕДЛЕННОЕ обновление content script (не ждем сохранения)
+      if (key === "defaultDestination") {
+        console.log(`🔄 IMMEDIATE: Notifying content script about ${key} change: ${value}`)
+        
+        try {
+          const [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+          })
+          
+          if (tab.id) {
+            // Отправляем сообщение сразу при клике
+            await chrome.tabs.sendMessage(tab.id, {
+              type: "SETTINGS_CHANGED",
+              key,
+              value,
+              settings: newSettings
+            })
+            console.log(`🚀 IMMEDIATE notification sent to content script: ${key} = ${value}`)
+          }
+        } catch (error) {
+          console.log("Content script not available (expected on non-supported sites)")
+        }
+      }
+
+      // Notify content script about settings changes (for other keys)
+      if (key !== "defaultDestination") {
+        try {
+          const [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+          })
+          
+          if (tab.id) {
+            await chrome.tabs.sendMessage(tab.id, {
+              type: "SETTINGS_CHANGED",
+              key,
+              value,
+              settings: newSettings
+            })
+            console.log(`📤 Notified content script about ${key} change:`, value)
+          }
+        } catch (error) {
+          console.log("Content script not available (expected on non-supported sites)")
+        }
+      }
 
       // If format changed and remember is enabled, save it
       if (key === "defaultFormat" && rememberFormat) {
@@ -200,20 +276,29 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
 
           <button
             onClick={() =>
-              handleSettingChange("defaultDestination", "google_drive")
+              isGoogleDriveAuthenticated && handleSettingChange("defaultDestination", "google_drive")
             }
             className={`group px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 relative ${
               settings.defaultDestination === "google_drive"
                 ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 shadow-lg"
-                : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:bg-orange-50"
+                : isGoogleDriveAuthenticated
+                ? "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:bg-orange-50"
+                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
             }`}
-            disabled={isSaving}>
+            disabled={isSaving || !isGoogleDriveAuthenticated}>
             <div className="flex items-center justify-center space-x-2">
               <span className="text-lg">☁️</span>
               <span className="font-medium">Google Drive</span>
-              <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-                PRO
-              </span>
+              {!isGoogleDriveAuthenticated && (
+                <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
+                  🔒 Login Required
+                </span>
+              )}
+              {isGoogleDriveAuthenticated && (
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                  ✅ Connected
+                </span>
+              )}
             </div>
           </button>
         </div>

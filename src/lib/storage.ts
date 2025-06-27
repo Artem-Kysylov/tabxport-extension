@@ -1,4 +1,5 @@
 import type { UserSettings, UserSubscription } from "../types"
+import { safeStorageOperation, logExtensionError, createErrorNotification } from "./error-handlers"
 
 // Storage keys for TableXport extension
 const STORAGE_KEYS = {
@@ -16,127 +17,192 @@ const STORAGE_KEYS = {
 // Настройки по умолчанию
 const DEFAULT_SETTINGS: UserSettings = {
   defaultFormat: "xlsx",
-  defaultDestination: "google_drive", // Изменено для тестирования Google Drive
+  defaultDestination: "download", // По умолчанию локальное скачивание
   autoExport: false,
   theme: "auto"
 }
 
 // Получение настроек пользователя
 export const getUserSettings = async (): Promise<UserSettings> => {
-  try {
-    console.log("🔍 Storage: Getting user settings...")
-    const result = await chrome.storage.sync.get(STORAGE_KEYS.USER_SETTINGS)
-    console.log("🔍 Storage: Raw storage result:", result)
-    
-    let settings = { ...DEFAULT_SETTINGS, ...result[STORAGE_KEYS.USER_SETTINGS] }
-    console.log("🔍 Storage: Settings after merge with defaults:", settings)
-    
-    // Миграция старого формата "google-drive" на новый "google_drive"
-    if (settings.defaultDestination === "google-drive" as any) {
-      console.log("🔄 Storage: Migrating old 'google-drive' format to 'google_drive'")
-      settings.defaultDestination = "google_drive"
+  const result = await safeStorageOperation(
+    async () => {
+      console.log("🔍 Storage: Getting user settings...")
+      const result = await chrome.storage.sync.get(STORAGE_KEYS.USER_SETTINGS)
+      console.log("🔍 Storage: Raw storage result:", result)
       
-      // Сохраняем исправленные настройки
-      await chrome.storage.sync.set({
-        [STORAGE_KEYS.USER_SETTINGS]: settings
-      })
-      console.log("✅ Storage: Migration completed, settings saved:", settings)
+      let settings = { ...DEFAULT_SETTINGS, ...result[STORAGE_KEYS.USER_SETTINGS] }
+      console.log("🔍 Storage: Settings after merge with defaults:", settings)
+      
+      // Миграция старого формата "google-drive" на новый "google_drive"
+      if (settings.defaultDestination === "google-drive" as any) {
+        console.log("🔄 Storage: Migrating old 'google-drive' format to 'google_drive'")
+        settings.defaultDestination = "google_drive"
+        
+        // Сохраняем исправленные настройки
+        await chrome.storage.sync.set({
+          [STORAGE_KEYS.USER_SETTINGS]: settings
+        })
+        console.log("✅ Storage: Migration completed, settings saved:", settings)
+      }
+      
+      console.log("✅ Storage: Final settings returned:", settings)
+      return settings
+    },
+    "getUserSettings",
+    DEFAULT_SETTINGS
+  )
+  
+  if (!result.success) {
+    if (result.error?.type === 'CONTEXT_INVALIDATED') {
+      createErrorNotification(result.error)
     }
-    
-    console.log("✅ Storage: Final settings returned:", settings)
-    return settings
-  } catch (error) {
-    console.error("❌ Storage: Error getting user settings:", error)
-    console.log("🔄 Storage: Returning default settings:", DEFAULT_SETTINGS)
-    return DEFAULT_SETTINGS
+    console.log("🔄 Storage: Returning default settings due to error")
+    return result.data || DEFAULT_SETTINGS
   }
+  
+  return result.data!
 }
 
 // Сохранение настроек пользователя
 export const saveUserSettings = async (
   settings: Partial<UserSettings>
 ): Promise<void> => {
-  try {
-    const currentSettings = await getUserSettings()
-    const updatedSettings = { ...currentSettings, ...settings }
-    await chrome.storage.sync.set({
-      [STORAGE_KEYS.USER_SETTINGS]: updatedSettings
-    })
-  } catch (error) {
-    console.error("Error saving user settings:", error)
-    throw error
+  const result = await safeStorageOperation(
+    async () => {
+      const currentSettings = await getUserSettings()
+      const updatedSettings = { ...currentSettings, ...settings }
+      await chrome.storage.sync.set({
+        [STORAGE_KEYS.USER_SETTINGS]: updatedSettings
+      })
+    },
+    "saveUserSettings"
+  )
+  
+  if (!result.success) {
+    if (result.error?.type === 'CONTEXT_INVALIDATED') {
+      createErrorNotification(result.error)
+    }
+    throw new Error(result.error?.message || "Failed to save user settings")
   }
 }
 
 // Получение подписки пользователя
 export const getUserSubscription =
   async (): Promise<UserSubscription | null> => {
-    try {
-      const result = await chrome.storage.local.get(
-        STORAGE_KEYS.USER_SUBSCRIPTION
-      )
-      return result[STORAGE_KEYS.USER_SUBSCRIPTION] || null
-    } catch (error) {
-      console.error("Error getting user subscription:", error)
+    const result = await safeStorageOperation(
+      async () => {
+        const result = await chrome.storage.local.get(
+          STORAGE_KEYS.USER_SUBSCRIPTION
+        )
+        return result[STORAGE_KEYS.USER_SUBSCRIPTION] || null
+      },
+      "getUserSubscription",
+      null
+    )
+    
+    if (!result.success) {
+      if (result.error?.type === 'CONTEXT_INVALIDATED') {
+        createErrorNotification(result.error)
+      }
       return null
     }
+    
+    return result.data
   }
 
 // Сохранение подписки пользователя
 export const saveUserSubscription = async (
   subscription: UserSubscription
 ): Promise<void> => {
-  try {
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.USER_SUBSCRIPTION]: subscription
-    })
-  } catch (error) {
-    console.error("Error saving user subscription:", error)
-    throw error
+  const result = await safeStorageOperation(
+    async () => {
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.USER_SUBSCRIPTION]: subscription
+      })
+    },
+    "saveUserSubscription"
+  )
+  
+  if (!result.success) {
+    if (result.error?.type === 'CONTEXT_INVALIDATED') {
+      createErrorNotification(result.error)
+    }
+    throw new Error(result.error?.message || "Failed to save user subscription")
   }
 }
 
 // Получение ID пользователя
 export const getUserId = async (): Promise<string | null> => {
-  try {
-    const result = await chrome.storage.local.get(STORAGE_KEYS.USER_ID)
-    return result[STORAGE_KEYS.USER_ID] || null
-  } catch (error) {
-    console.error("Error getting user ID:", error)
+  const result = await safeStorageOperation(
+    async () => {
+      const result = await chrome.storage.local.get(STORAGE_KEYS.USER_ID)
+      return result[STORAGE_KEYS.USER_ID] || null
+    },
+    "getUserId",
+    null
+  )
+  
+  if (!result.success) {
+    if (result.error?.type === 'CONTEXT_INVALIDATED') {
+      createErrorNotification(result.error)
+    }
     return null
   }
+  
+  return result.data
 }
 
 // Сохранение ID пользователя
 export const saveUserId = async (userId: string): Promise<void> => {
-  try {
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.USER_ID]: userId
-    })
-  } catch (error) {
-    console.error("Error saving user ID:", error)
-    throw error
+  const result = await safeStorageOperation(
+    async () => {
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.USER_ID]: userId
+      })
+    },
+    "saveUserId"
+  )
+  
+  if (!result.success) {
+    if (result.error?.type === 'CONTEXT_INVALIDATED') {
+      createErrorNotification(result.error)
+    }
+    throw new Error(result.error?.message || "Failed to save user ID")
   }
 }
 
 // Очистка всех данных пользователя
 export const clearUserData = async (): Promise<void> => {
-  try {
-    await chrome.storage.local.clear()
-    await chrome.storage.sync.clear()
-  } catch (error) {
-    console.error("Error clearing user data:", error)
-    throw error
+  const result = await safeStorageOperation(
+    async () => {
+      await chrome.storage.local.clear()
+      await chrome.storage.sync.clear()
+    },
+    "clearUserData"
+  )
+  
+  if (!result.success) {
+    if (result.error?.type === 'CONTEXT_INVALIDATED') {
+      createErrorNotification(result.error)
+    }
+    throw new Error(result.error?.message || "Failed to clear user data")
   }
 }
 
 // Сохранение времени последнего экспорта
 export const saveLastExportTime = async (): Promise<void> => {
-  try {
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.LAST_EXPORT]: Date.now()
-    })
-  } catch (error) {
-    console.error("Error saving last export time:", error)
+  const result = await safeStorageOperation(
+    async () => {
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.LAST_EXPORT]: Date.now()
+      })
+    },
+    "saveLastExportTime"
+  )
+  
+  if (!result.success) {
+    // For last export time, we don't need to throw error or notify user
+    // Just log the error
+    console.warn("Failed to save last export time:", result.error?.message)
   }
 }

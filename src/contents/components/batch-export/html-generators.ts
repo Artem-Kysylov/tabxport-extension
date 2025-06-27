@@ -213,9 +213,53 @@ export const createProgressIndicator = (
 }
 
 /**
+ * Creates destination selector HTML
+ */
+export const createDestinationSelector = (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): string => {
+  return `
+    <div class="destination-selector">
+      <label class="section-label">Export Destination:</label>
+      <div class="destination-options">
+        <label class="destination-option ${modalState.config.destination === "download" ? "selected" : ""}">
+          <input type="radio" name="export-destination" value="download" 
+                 ${modalState.config.destination === "download" ? "checked" : ""} 
+                 class="destination-radio">
+          <div class="destination-content">
+            <div class="destination-header">
+              <span class="destination-icon">💾</span>
+              <span class="destination-name">Download to Device</span>
+            </div>
+            <div class="destination-description">Save files directly to your computer</div>
+          </div>
+        </label>
+        
+        <label class="destination-option ${modalState.config.destination === "google_drive" ? "selected" : ""} ${!isGoogleDriveAuthenticated ? "disabled" : ""}">
+          <input type="radio" name="export-destination" value="google_drive" 
+                 ${modalState.config.destination === "google_drive" ? "checked" : ""} 
+                 ${!isGoogleDriveAuthenticated ? "disabled" : ""}
+                 class="destination-radio">
+          <div class="destination-content">
+            <div class="destination-header">
+              <span class="destination-icon">☁️</span>
+              <span class="destination-name">Google Drive</span>
+              ${!isGoogleDriveAuthenticated ? '<span class="auth-required">🔒 Login Required</span>' : ''}
+            </div>
+            <div class="destination-description">
+              ${isGoogleDriveAuthenticated 
+                ? "Upload files directly to your Google Drive" 
+                : "Sign in to your Google account to enable this option"}
+            </div>
+          </div>
+        </label>
+      </div>
+    </div>
+  `
+}
+
+/**
  * Creates the modal content
  */
-export const createModalContent = (modalState: BatchModalState): string => {
+export const createModalContent = (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): string => {
   const selectedCount = modalState.config.selectedTables.size
   const totalCount = modalState.batchResult?.tables.length || 0
   const isOverLimit =
@@ -254,6 +298,7 @@ export const createModalContent = (modalState: BatchModalState): string => {
         </label>
       </div>
       
+      ${createDestinationSelector(modalState, isGoogleDriveAuthenticated)}
       ${createExportModeSelector(modalState)}
       ${createCombinedFilenameInput(modalState)}
       ${createTableList(modalState)}

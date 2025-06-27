@@ -1,4 +1,5 @@
 import { authService } from "./supabase/auth-service"
+import { logExtensionError, safeStorageOperation, createErrorNotification } from "./error-handlers"
 
 export interface DriveUploadOptions {
   filename: string
@@ -19,17 +20,52 @@ class GoogleDriveService {
   private uploadUrl = "https://www.googleapis.com/upload/drive/v3/files"
 
   /**
-   * Проверка и получение действующего Google токена
+   * Проверка и получение действующего Google токена через authService
    */
   private async getValidToken(): Promise<string | null> {
-    let token = authService.getGoogleToken()
+    console.log("🔐 GoogleDriveService: Getting valid token via authService...")
+    
+    try {
+      // Получаем токен из authService
+      let token = authService.getGoogleToken()
+      console.log("📋 AuthService token status:", {
+        hasToken: !!token,
+        tokenLength: token?.length || 0
+      })
 
-    if (!token) {
-      // Попытка обновить токен
-      token = await authService.refreshGoogleToken()
+      if (!token) {
+        console.log("🔄 No token found, attempting refresh...")
+        // Попытка обновить токен
+        try {
+          token = await authService.refreshGoogleToken()
+          console.log("✅ Token refresh result:", {
+            success: !!token,
+            newTokenLength: token?.length || 0
+          })
+        } catch (error) {
+          const categorizedError = logExtensionError(
+            error as Error,
+            "Google token refresh via authService"
+          )
+          
+          if (categorizedError.type === 'AUTH_ERROR') {
+            console.log("📝 User needs to re-authenticate with Google Drive")
+          }
+          
+          return null
+        }
+      }
+
+      return token
+    } catch (error) {
+      const categorizedError = logExtensionError(
+        error as Error,
+        "Google Drive token retrieval via authService",
+        { operation: "getValidToken" }
+      )
+      
+      return null
     }
-
-    return token
   }
 
   /**
@@ -50,6 +86,10 @@ class GoogleDriveService {
         }
       )
 
+      if (!searchResponse.ok) {
+        throw new Error(`Search failed: ${searchResponse.status} ${searchResponse.statusText}`)
+      }
+
       const searchData = await searchResponse.json()
 
       if (searchData.files && searchData.files.length > 0) {
@@ -69,16 +109,23 @@ class GoogleDriveService {
         })
       })
 
+      if (!createResponse.ok) {
+        throw new Error(`Folder creation failed: ${createResponse.status} ${createResponse.statusText}`)
+      }
+
       const createData = await createResponse.json()
       return createData.id
     } catch (error) {
-      console.error("Error creating TableXport folder:", error)
+      logExtensionError(
+        error as Error,
+        "Google Drive folder creation"
+      )
       return null
     }
   }
 
   /**
-   * Загрузка файла в Google Drive
+   * Загрузка файла в Google Drive с улучшенной обработкой ошибок
    */
   async uploadFile(options: DriveUploadOptions): Promise<DriveUploadResult> {
     const token = await this.getValidToken()
@@ -86,7 +133,7 @@ class GoogleDriveService {
     if (!token) {
       return {
         success: false,
-        error: "Google authentication required"
+        error: "Google authentication required. Please reconnect your Google Drive account."
       }
     }
 
@@ -105,19 +152,67 @@ class GoogleDriveService {
       const close_delim = `\r\n--${delimiter}--`
 
       const contentType = options.mimeType
-      const content =
-        typeof options.content === "string"
-          ? options.content
-          : await (options.content as Blob).text()
+      
+      // 🔧 ИСПРАВЛЕНИЕ: Правильная обработка Blob данных
+      let content: string | ArrayBuffer
+      let originalSize = 0
+      
+      if (typeof options.content === "string") {
+        content = options.content
+        originalSize = content.length
+        console.log(`📄 String content: ${originalSize} characters`)
+      } else {
+        // Для Blob используем ArrayBuffer вместо .text()
+        const blob = options.content as Blob
+        originalSize = blob.size
+        content = await blob.arrayBuffer()
+        console.log(`📦 Blob content: ${originalSize} bytes → ArrayBuffer: ${content.byteLength} bytes`)
+      }
 
-      const multipartRequestBody =
-        delimiter_line +
-        "Content-Type: application/json\r\n\r\n" +
-        JSON.stringify(metadata) +
-        delimiter_line +
-        `Content-Type: ${contentType}\r\n\r\n` +
-        content +
-        close_delim
+      // Для multipart upload нужно правильно сформировать body
+      let multipartRequestBody: string | Uint8Array
+
+      if (typeof content === "string") {
+        // Текстовые файлы (CSV и т.д.)
+        multipartRequestBody =
+          delimiter_line +
+          "Content-Type: application/json\r\n\r\n" +
+          JSON.stringify(metadata) +
+          delimiter_line +
+          `Content-Type: ${contentType}\r\n\r\n` +
+          content +
+          close_delim
+      } else {
+        // Бинарные файлы (XLSX, ZIP, PDF, DOCX) - НЕ используем строки!
+        const encoder = new TextEncoder()
+        
+        const headerPart = 
+          delimiter_line +
+          "Content-Type: application/json\r\n\r\n" +
+          JSON.stringify(metadata) +
+          delimiter_line +
+          `Content-Type: ${contentType}\r\n\r\n`
+        
+        const footerPart = close_delim
+        
+        // Конвертируем заголовки в байты
+        const headerBytes = encoder.encode(headerPart)
+        const footerBytes = encoder.encode(footerPart)
+        const contentBytes = new Uint8Array(content)
+        
+        // Собираем multipart body как чистые байты БЕЗ строковых конвертаций
+        const totalLength = headerBytes.length + contentBytes.length + footerBytes.length
+        multipartRequestBody = new Uint8Array(totalLength)
+        
+        let offset = 0
+        multipartRequestBody.set(headerBytes, offset)
+        offset += headerBytes.length
+        multipartRequestBody.set(contentBytes, offset)
+        offset += contentBytes.length
+        multipartRequestBody.set(footerBytes, offset)
+        
+        console.log(`🔧 Binary upload: header=${headerBytes.length} + content=${contentBytes.length} + footer=${footerBytes.length} = ${totalLength} bytes (NO STRING CONVERSIONS)`)
+      }
 
       const response = await fetch(`${this.uploadUrl}?uploadType=multipart`, {
         method: "POST",
@@ -129,21 +224,63 @@ class GoogleDriveService {
       })
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`)
+        const errorText = await response.text()
+        const error = new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`)
+        
+        // Log detailed error for debugging
+        logExtensionError(
+          error,
+          "Google Drive file upload",
+          {
+            filename: options.filename,
+            responseStatus: response.status,
+            responseStatusText: response.statusText,
+            errorText,
+            originalSize,
+            uploadSize: typeof multipartRequestBody === 'string' ? multipartRequestBody.length : multipartRequestBody.byteLength
+          }
+        )
+        
+        throw error
       }
 
       const result = await response.json()
 
+      // Генерируем webViewLink если его нет в ответе
+      const webViewLink = result.webViewLink || `https://drive.google.com/file/d/${result.id}/view`
+
+      console.log("✅ Google Drive upload successful:", {
+        fileId: result.id,
+        name: result.name,
+        webViewLink: webViewLink,
+        originalWebViewLink: result.webViewLink,
+        generatedLink: !result.webViewLink,
+        uploadStats: {
+          originalSize,
+          uploadSize: typeof multipartRequestBody === 'string' ? multipartRequestBody.length : multipartRequestBody.byteLength,
+          contentType
+        }
+      })
+
       return {
         success: true,
         fileId: result.id,
-        webViewLink: result.webViewLink
+        webViewLink: webViewLink
       }
     } catch (error) {
-      console.error("Error uploading to Google Drive:", error)
+      const categorizedError = logExtensionError(
+        error as Error,
+        "Google Drive file upload",
+        {
+          filename: options.filename,
+          mimeType: options.mimeType,
+          originalSize
+        }
+      )
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Upload failed"
+        error: categorizedError.userAction || categorizedError.message
       }
     }
   }
@@ -193,17 +330,18 @@ class GoogleDriveService {
       default:
         return {
           success: false,
-          error: "Unsupported format"
+          error: `Unsupported format: ${format}`
         }
     }
 
-    const finalFilename = filename.includes(".")
+    // Добавляем расширение к имени файла, если его нет
+    const finalFilename = filename.endsWith(fileExtension)
       ? filename
       : `${filename}${fileExtension}`
 
     return this.uploadFile({
       filename: finalFilename,
-      content: content,
+      content,
       mimeType
     })
   }

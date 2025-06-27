@@ -119,6 +119,7 @@ const handleTableExport = async (
     console.log("🔍 Background: Options destination:", options.destination)
     console.log("🔍 Background: Options format:", options.format)
     console.log("🔍 Background: Platform:", platform)
+    console.log("🔍 Background: Is batch upload:", !!options.isBatchUpload)
 
     if (!tableData || !options) {
       console.error("❌ Background: Missing required data")
@@ -165,6 +166,67 @@ const handleTableExport = async (
     if (normalizedDestination === "google_drive") {
       console.log("✅ Background: Using Google Drive export...")
       
+      // Для batch upload с dataUrl используем прямую загрузку в Google Drive
+      if (options.isBatchUpload && options.dataUrl) {
+        console.log("🔄 Background: Handling batch upload with dataUrl")
+        
+        try {
+          // Конвертируем dataUrl в blob
+          const response = await fetch(options.dataUrl)
+          const blob = await response.blob()
+          
+          // Определяем MIME type
+          const mimeType = blob.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          
+          console.log("🔍 Background: Blob details:", {
+            size: blob.size,
+            type: blob.type,
+            filename: options.filename
+          })
+          
+          // Загружаем в Google Drive
+          const uploadResult = await googleDriveService.uploadFile({
+            filename: options.filename || `batch_export_${Date.now()}.xlsx`,
+            content: blob,
+            mimeType: mimeType
+          })
+          
+          console.log("🔍 Background: Direct upload result:", uploadResult)
+          
+          if (uploadResult.success) {
+            sendResponse({
+              success: true,
+              googleDriveLink: uploadResult.webViewLink,
+              fileId: uploadResult.fileId
+            })
+            
+            // Показ уведомления
+            chrome.notifications.create({
+              type: "basic",
+              iconUrl: "/icon48.plasmo.aced7582.png",
+              title: "TableXport",
+              message: `File uploaded to Google Drive successfully!`
+            })
+          } else {
+            console.error("❌ Background: Direct upload failed:", uploadResult.error)
+            sendResponse({
+              success: false,
+              error: uploadResult.error || "Google Drive upload failed"
+            })
+          }
+          
+          return
+        } catch (error) {
+          console.error("❌ Background: Error processing batch upload:", error)
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : "Batch upload failed"
+          })
+          return
+        }
+      }
+      
+      // Обычный экспорт через exportService
       // Преобразуем tableData в формат массива массивов
       const tableArray: any[][] = []
       
@@ -184,7 +246,7 @@ const handleTableExport = async (
       
       const exportResult = await exportService.exportTable({
         userId,
-        tableName: `table_${Date.now()}`,
+        tableName: options.filename || `table_${Date.now()}`,
         tableData: tableArray, // Передаем массив массивов
         format: options.format as "csv" | "xlsx" | "docx" | "pdf",
         platform,
@@ -196,8 +258,16 @@ const handleTableExport = async (
       })
 
       console.log("🔍 Background: Google Drive export result:", exportResult)
+      console.log("🔍 Background: Export result detailed:", {
+        success: exportResult.success,
+        googleDriveLink: exportResult.googleDriveLink,
+        exportId: exportResult.exportId,
+        error: exportResult.error,
+        allKeys: Object.keys(exportResult)
+      })
 
       if (exportResult.success) {
+        console.log("🔍 Background: Sending response with googleDriveLink:", exportResult.googleDriveLink)
         sendResponse({
           success: true,
           googleDriveLink: exportResult.googleDriveLink,

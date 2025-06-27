@@ -63,6 +63,11 @@ export const EXPORT_FORMATS = {
 export type ExportFormat = keyof typeof EXPORT_FORMATS
 
 /**
+ * Export destinations
+ */
+export type ExportDestination = "download" | "google_drive"
+
+/**
  * Interface for batch export configuration
  */
 export interface BatchExportConfig {
@@ -73,6 +78,7 @@ export interface BatchExportConfig {
   combinedFileName?: string
   includeHeaders: boolean
   zipArchive: boolean // Legacy field for backward compatibility
+  destination: ExportDestination
 }
 
 /**

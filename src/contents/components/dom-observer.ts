@@ -13,6 +13,69 @@ import {
   calculateButtonPosition,
   createExportButton
 } from "./export-button"
+import { runCompleteTableDiagnosis } from "../../debug/table-detection-comparison"
+// Новый умный переключатель алгоритмов
+import { smartTableDetection, enableDebugMode, setDetectionMode } from "../../utils/table-detection/algorithm-switcher"
+// Глобальный debug интерфейс
+import "../../contents/global-debug"
+// Утилита принудительного обновления
+import "../../utils/table-detection/force-refresh"
+
+// ВРЕМЕННО: Добавим debug функции напрямую в window
+if (typeof window !== 'undefined') {
+  (window as any).TabXportDebugTemp = {
+    runDiagnosis: async () => {
+      console.log("🔬 ВРЕМЕННАЯ ДИАГНОСТИКА: Запуск...")
+      try {
+        return await runCompleteTableDiagnosis()
+      } catch (error) {
+        console.error("Ошибка диагностики:", error)
+        return null
+      }
+    },
+    findOldTables: () => {
+      console.log("📊 СТАРЫЙ АЛГОРИТМ:")
+      const tables = findAllTables()
+      console.log(`Найдено ${tables.length} элементов`)
+      tables.forEach((table, i) => {
+        console.log(`[${i}] ${table.tagName}.${table.className}:`, table.textContent?.substring(0, 100))
+      })
+      return tables
+    },
+    findNewTables: async () => {
+      console.log("🆕 НОВЫЙ АЛГОРИТМ:")
+      const result = await detectAllTables()
+      console.log(`Найдено ${result.count} элементов`)
+      result.tables.forEach((table, i) => {
+        console.log(`[${i}] ${table.element.tagName}.${table.element.className}:`, table.element.textContent?.substring(0, 100))
+      })
+      return result
+    },
+    highlightTables: () => {
+      console.log("🎨 ВЫДЕЛЕНИЕ ТАБЛИЦ:")
+      const oldTables = findAllTables()
+      oldTables.forEach((table, i) => {
+        table.style.border = '3px solid blue'
+        table.style.backgroundColor = 'rgba(0,0,255,0.1)'
+        const label = document.createElement('div')
+        label.textContent = `OLD ${i}`
+        label.style.cssText = 'position:absolute;top:0;left:0;background:blue;color:white;padding:2px;font-size:12px;z-index:10000;'
+        table.style.position = 'relative'
+        table.appendChild(label)
+      })
+    },
+         clearHighlights: () => {
+       document.querySelectorAll('[style*="border: 3px solid"]').forEach(el => {
+         const htmlEl = el as HTMLElement
+         htmlEl.style.border = ''
+         htmlEl.style.backgroundColor = ''
+         htmlEl.style.position = ''
+         htmlEl.querySelectorAll('div[style*="position:absolute"]').forEach(label => label.remove())
+       })
+     }
+  }
+  console.log("🎮 ВРЕМЕННЫЙ DEBUG ИНТЕРФЕЙС: window.TabXportDebugTemp")
+}
 
 // Функция для получения целевых контейнеров для наблюдения
 const getTargetContainers = (): HTMLElement[] => {
@@ -180,6 +243,25 @@ export const scanAndProcessTables = async (): Promise<void> => {
       "*** TabXport NEW VERSION: Scanning for tables with BATCH DETECTION ***"
     )
     console.log("TabXport: Scanning for tables...")
+
+    // ВРЕМЕННО: Диагностика для Claude - сравнение алгоритмов
+    if (window.location.href.includes("claude.ai")) {
+      console.log("🔬 ДИАГНОСТИКА: Сравнение алгоритмов обнаружения таблиц для Claude...")
+      try {
+        const diagnosis = await runCompleteTableDiagnosis()
+        console.log("📊 РЕЗУЛЬТАТ ДИАГНОСТИКИ:", diagnosis)
+        
+        // Если есть расхождения, покажем дополнительную информацию
+        if (diagnosis.discrepancies.extraInNew.length > 0) {
+          console.warn(`⚠️  НАЙДЕНЫ ЛОЖНЫЕ СРАБАТЫВАНИЯ: ${diagnosis.discrepancies.extraInNew.length} лишних элементов в новом алгоритме`)
+        }
+        if (diagnosis.discrepancies.extraInOld.length > 0) {
+          console.warn(`⚠️  ПРОПУЩЕННЫЕ ТАБЛИЦЫ: ${diagnosis.discrepancies.extraInOld.length} элементов пропущено в новом алгоритме`)
+        }
+      } catch (diagError) {
+        console.error("❌ Ошибка диагностики:", diagError)
+      }
+    }
 
     // Запускаем batch detection параллельно с обычным поиском
     const [tables, batchResult] = await Promise.all([

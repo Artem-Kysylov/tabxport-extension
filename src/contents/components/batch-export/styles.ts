@@ -448,6 +448,85 @@ const MODAL_STYLES = `
   color: #6b7280;
   font-style: italic;
 }
+
+/* Destination Selector Styles */
+.destination-selector {
+  margin-bottom: 20px;
+}
+
+.destination-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.destination-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.destination-option:hover:not(.disabled) {
+  border-color: #1B9358;
+  background: #f8fdf9;
+}
+
+.destination-option.selected {
+  border-color: #1B9358;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 1px #1B9358;
+}
+
+.destination-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.destination-radio {
+  margin-top: 2px;
+}
+
+.destination-content {
+  flex: 1;
+}
+
+.destination-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.destination-icon {
+  font-size: 16px;
+}
+
+.destination-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.auth-required {
+  font-size: 11px;
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.destination-description {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
 `
 
 const BUTTON_STYLES = `

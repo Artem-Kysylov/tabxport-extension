@@ -529,6 +529,71 @@ const MODAL_STYLES = `
 }
 `
 
+const SPINNER_STYLES = `
+/* Export Spinner Styles */
+
+#tablexport-export-spinner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+
+.spinner-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.spinner-content {
+  background: white;
+  border-radius: 16px;
+  padding: 40px 48px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  max-width: 320px;
+  width: 90vw;
+}
+
+.spinner-icon {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.spinner-circle {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.spinner-subtext {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+`
+
 const BUTTON_STYLES = `
 /* Batch Export Button Styles */
 
@@ -582,7 +647,7 @@ export const addModalStyles = (): void => {
 
   const style = document.createElement("style")
   style.id = styleId
-  style.textContent = MODAL_STYLES
+  style.textContent = MODAL_STYLES + SPINNER_STYLES
 
   document.head.appendChild(style)
 }

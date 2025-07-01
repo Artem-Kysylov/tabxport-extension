@@ -5,11 +5,12 @@ import type { TableData } from "../../types"
  */
 export const generateFilename = (
   tableData: TableData,
-  format: "xlsx" | "csv",
+  format: "xlsx" | "csv" | "google_sheets",
   customName?: string
 ): string => {
   if (customName) {
-    return `${customName}.${format}`
+    // Google Sheets doesn't use file extensions
+    return format === "google_sheets" ? customName : `${customName}.${format}`
   }
 
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
@@ -19,5 +20,8 @@ export const generateFilename = (
     ? `_${tableData.chatTitle.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30)}`
     : ""
 
-  return `${source}${chatTitle}_Table_${timestamp}.${format}`
+  // Google Sheets doesn't need file extension
+  return format === "google_sheets" 
+    ? `${source}${chatTitle}_Table_${timestamp}`
+    : `${source}${chatTitle}_Table_${timestamp}.${format}`
 }

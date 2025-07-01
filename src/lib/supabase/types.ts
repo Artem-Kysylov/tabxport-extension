@@ -395,12 +395,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanConfig> = {
       maxFileSize: 50,
       cloudStorage: 1000,
       sharedTables: 20,
-      exportFormats: ["CSV", "XLSX", "DOCX", "PDF"],
+      exportFormats: ["CSV", "XLSX", "DOCX", "PDF", "GOOGLE_SHEETS"],
       historyRetention: 90
     },
     features: [
       "500 exports per month",
-      "All export formats (CSV, XLSX, DOCX, PDF)",
+      "All export formats (CSV, XLSX, DOCX, PDF, Google Sheets)",
       "50 MB max file size",
       "1 GB cloud storage",
       "20 shared tables",
@@ -418,12 +418,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlan, PlanConfig> = {
       maxFileSize: 500,
       cloudStorage: 10000,
       sharedTables: -1, // unlimited
-      exportFormats: ["CSV", "XLSX", "DOCX", "PDF"],
+      exportFormats: ["CSV", "XLSX", "DOCX", "PDF", "GOOGLE_SHEETS"],
       historyRetention: 365
     },
     features: [
       "Unlimited exports",
-      "All export formats (CSV, XLSX, DOCX, PDF)",
+      "All export formats (CSV, XLSX, DOCX, PDF, Google Sheets)",
       "500 MB max file size",
       "10 GB cloud storage",
       "Unlimited shared tables",
@@ -490,13 +490,13 @@ export type ExportDestination = "download" | "google_drive"
 export type PaymentProvider = "paypal" | "stripe"
 
 // Export format types
-export type ExportFormat = "csv" | "xlsx" | "docx" | "pdf"
+export type ExportFormat = "csv" | "xlsx" | "docx" | "pdf" | "google_sheets"
 
 // Plan feature constants
-export const SUPPORTED_FORMATS: ExportFormat[] = ["csv", "xlsx", "docx", "pdf"]
+export const SUPPORTED_FORMATS: ExportFormat[] = ["csv", "xlsx", "docx", "pdf", "google_sheets"]
 
 export const FREE_PLAN_FORMATS: ExportFormat[] = ["csv", "xlsx", "docx", "pdf"]
-export const PRO_PLAN_FORMATS: ExportFormat[] = ["csv", "xlsx", "docx", "pdf"]
+export const PRO_PLAN_FORMATS: ExportFormat[] = ["csv", "xlsx", "docx", "pdf", "google_sheets"]
 
 // Plan limits
 export const PLAN_LIMITS = {

@@ -29,7 +29,7 @@ let globalExportId: string | null = null
 /**
  * Enhanced authentication check using background script
  */
-const checkGoogleDriveAuthentication = async (): Promise<{
+export const checkGoogleDriveAuthentication = async (): Promise<{
   success: boolean
   error?: string
   needsAuth?: boolean
@@ -97,7 +97,7 @@ const checkGoogleDriveAuthentication = async (): Promise<{
 /**
  * Upload file to Google Drive via background script
  */
-const uploadToGoogleDriveViaBackground = async (
+export const uploadToGoogleDriveViaBackground = async (
   filename: string,
   dataUrl: string,
   format: ExportFormat | 'zip'
@@ -605,7 +605,7 @@ export const handleBatchExport = async (
       )
 
       const exportOptions: ExportOptions & { tableIndex?: number } = {
-        format: modalState.config.format as "xlsx" | "csv" | "docx" | "pdf",
+        format: modalState.config.format as "xlsx" | "csv" | "docx" | "pdf" | "google_sheets",
         filename: customName,
         includeHeaders: modalState.config.includeHeaders,
         destination: modalState.config.destination,
@@ -640,18 +640,34 @@ export const handleBatchExport = async (
         try {
           const result = await chrome.runtime.sendMessage(message)
           console.log(`📤 Background export result for table ${tableNumber}:`, result)
+          console.log(`🔧 FIXED GOOGLE SHEETS BATCH EXPORT - VERSION 2025-07-01-14:30`)
           
           if (result.success) {
-            if (result.googleDriveLink) {
-              googleDriveLinks.push(result.googleDriveLink)
-              console.log(`✅ Table ${tableNumber} exported to Google Drive successfully`)
-              console.log(`🔗 Google Drive link: ${result.googleDriveLink}`)
-              exportedCount++
+            // Handle different result types based on format
+            if (modalState.config.format === 'google_sheets') {
+              if (result.googleSheetsUrl) {
+                googleDriveLinks.push(result.googleSheetsUrl)
+                console.log(`✅ Table ${tableNumber} exported to Google Sheets successfully`)
+                console.log(`🔗 Google Sheets link: ${result.googleSheetsUrl}`)
+                exportedCount++
+              } else {
+                console.error(`❌ Table ${tableNumber}: No Google Sheets URL returned`)
+                console.error(`🔍 Result details:`, result)
+                errors.push(`Table ${tableNumber}: No Google Sheets URL returned`)
+                failedCount++
+              }
             } else {
-              console.error(`❌ Table ${tableNumber}: No Google Drive link returned`)
-              console.error(`🔍 Result details:`, result)
-              errors.push(`Table ${tableNumber}: No Google Drive link returned`)
-              failedCount++
+              if (result.googleDriveLink) {
+                googleDriveLinks.push(result.googleDriveLink)
+                console.log(`✅ Table ${tableNumber} exported to Google Drive successfully`)
+                console.log(`🔗 Google Drive link: ${result.googleDriveLink}`)
+                exportedCount++
+              } else {
+                console.error(`❌ Table ${tableNumber}: No Google Drive link returned`)
+                console.error(`🔍 Result details:`, result)
+                errors.push(`Table ${tableNumber}: No Google Drive link returned`)
+                failedCount++
+              }
             }
           } else {
             console.error(`❌ Table ${tableNumber} export failed:`, result.error)

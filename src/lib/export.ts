@@ -4,16 +4,18 @@ import type { ExportOptions, ExportResult, TableData } from "../types"
 import { exportToDOCX } from "./exporters/docx-exporter"
 import { exportToPDF } from "./exporters/pdf-exporter"
 import { googleDriveService } from "./google-drive-api"
+import { googleSheetsService } from "./google-sheets-api"
 
 // Генерация имени файла
 export const generateFilename = (
   tableData: TableData,
-  format: "xlsx" | "csv" | "docx" | "pdf",
+  format: "xlsx" | "csv" | "docx" | "pdf" | "google_sheets",
   customName?: string,
   tableIndex?: number
 ): string => {
   if (customName) {
-    return `${customName}.${format}`
+    // Google Sheets doesn't use file extensions
+    return format === "google_sheets" ? customName : `${customName}.${format}`
   }
 
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
@@ -31,10 +33,14 @@ export const generateFilename = (
       .replace(/\s+/g, "_")
       .substring(0, 40) // Ограничиваем длину для имени файла
 
-    return `${cleanChatTitle}_Table${tableNumberSuffix}_${timestamp}.${format}`
+    return format === "google_sheets" 
+      ? `${cleanChatTitle}_Table${tableNumberSuffix}_${timestamp}`
+      : `${cleanChatTitle}_Table${tableNumberSuffix}_${timestamp}.${format}`
   }
 
-  return `${source}_Table${tableNumberSuffix}_${timestamp}.${format}`
+  return format === "google_sheets"
+    ? `${source}_Table${tableNumberSuffix}_${timestamp}`
+    : `${source}_Table${tableNumberSuffix}_${timestamp}.${format}`
 }
 
 // Конвертация TableData в worksheet
@@ -239,6 +245,50 @@ export const exportToCSV = async (
   }
 }
 
+// Экспорт в Google Sheets формат
+export const exportToGoogleSheets = async (
+  tableData: TableData,
+  options: ExportOptions & { tableIndex?: number }
+): Promise<ExportResult> => {
+  try {
+    const title = generateFilename(
+      tableData,
+      "google_sheets",
+      options.filename,
+      options.tableIndex
+    )
+
+    console.log(`📊 Exporting table to Google Sheets: "${title}"`)
+
+    const result = await googleSheetsService.exportTable(tableData, {
+      spreadsheetTitle: title,
+      sheetTitle: "Table_Data",
+      includeHeaders: options.includeHeaders
+    })
+
+    if (result.success) {
+      return {
+        success: true,
+        filename: title,
+        downloadUrl: result.spreadsheetUrl || "",
+        googleSheetsId: result.spreadsheetId,
+        googleSheetsUrl: result.spreadsheetUrl
+      }
+    } else {
+      return {
+        success: false,
+        error: result.error || "Failed to export to Google Sheets"
+      }
+    }
+  } catch (error) {
+    console.error("Error exporting to Google Sheets:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred"
+    }
+  }
+}
+
 // Основная функция экспорта
 export const exportTable = async (
   tableData: TableData,
@@ -255,6 +305,8 @@ export const exportTable = async (
       return exportToDOCX(tableData, options)
     case "pdf":
       return exportToPDF(tableData, options)
+    case "google_sheets":
+      return exportToGoogleSheets(tableData, options)
     default:
       return {
         success: false,

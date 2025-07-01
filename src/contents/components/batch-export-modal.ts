@@ -1,7 +1,7 @@
 import type { BatchTableDetectionResult } from "../../utils/table-detection/types"
 import { getUserSettings } from "../../lib/storage"
 import type { UserSettings } from "../../types"
-import { MODAL_ID, OVERLAY_ID } from "./batch-export/constants"
+import { MODAL_ID, OVERLAY_ID, SPINNER_ID } from "./batch-export/constants"
 import {
   createModalContent,
   createModalOverlay
@@ -41,6 +41,133 @@ let modalState: BatchModalState = {
   isExporting: false,
   progress: { current: 0, total: 0 },
   rememberFormat: false // Initialize remember format state
+}
+
+/**
+ * Creates export spinner overlay
+ */
+const createExportSpinner = (modalState: BatchModalState): HTMLElement => {
+  const spinner = document.createElement("div")
+  spinner.id = SPINNER_ID
+  
+  const { format, exportMode, selectedTables, destination } = modalState.config
+  const tableCount = selectedTables.size
+  
+  // Format-specific messages
+  const formatMessages = {
+    google_sheets: {
+      text: 'Creating Google Spreadsheets...',
+      subtext: 'Uploading to your Google Drive'
+    },
+    xlsx: {
+      text: 'Generating Excel files...',
+      subtext: `Processing ${tableCount} table${tableCount !== 1 ? 's' : ''}`
+    },
+    csv: {
+      text: 'Generating CSV files...',
+      subtext: `Processing ${tableCount} table${tableCount !== 1 ? 's' : ''}`
+    },
+    docx: {
+      text: 'Creating Word documents...',
+      subtext: `Processing ${tableCount} table${tableCount !== 1 ? 's' : ''}`
+    },
+    pdf: {
+      text: 'Generating PDF files...',
+      subtext: `Processing ${tableCount} table${tableCount !== 1 ? 's' : ''}`
+    }
+  }
+  
+  // Mode-specific adjustments
+  let mainText = formatMessages[format]?.text || 'Exporting tables...'
+  let subText = formatMessages[format]?.subtext || `Processing ${tableCount} tables`
+  
+  if (exportMode === 'combined') {
+    mainText = `Creating combined ${format.toUpperCase()} file...`
+    subText = `Merging ${tableCount} tables into one file`
+  } else if (exportMode === 'zip') {
+    mainText = `Creating ZIP archive...`
+    subText = `Packaging ${tableCount} ${format.toUpperCase()} files`
+  }
+  
+  // Destination-specific adjustments
+  if (destination === 'google_drive' && format !== 'google_sheets') {
+    subText += ', then uploading to Google Drive'
+  }
+  
+  spinner.innerHTML = `
+    <div class="spinner-container">
+      <div class="spinner-content">
+        <div class="spinner-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="#007bff" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="60 20" class="spinner-circle">
+              <animateTransform attributeName="transform" type="rotate" dur="1s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        </div>
+        <div class="spinner-text">${mainText}</div>
+        <div class="spinner-subtext">${subText}</div>
+      </div>
+    </div>
+  `
+  return spinner
+}
+
+/**
+ * Shows export spinner and hides modal
+ */
+const showExportSpinner = (): void => {
+  const modal = document.getElementById(MODAL_ID)
+  const overlay = document.getElementById(OVERLAY_ID)
+  
+  if (modal && overlay) {
+    // Hide modal but keep overlay
+    modal.style.display = 'none'
+    
+    // Add spinner with current modal state
+    const spinner = createExportSpinner(modalState)
+    overlay.appendChild(spinner)
+    
+    console.log('🔄 Export spinner shown, modal hidden')
+  }
+}
+
+/**
+ * Hides export spinner and closes everything
+ */
+const hideExportSpinner = (): void => {
+  const spinner = document.getElementById(SPINNER_ID)
+  const overlay = document.getElementById(OVERLAY_ID)
+  
+  if (spinner) {
+    spinner.remove()
+  }
+  
+  if (overlay) {
+    overlay.remove()
+  }
+  
+  modalState.isVisible = false
+  modalState.isExporting = false
+  
+  console.log('✅ Export spinner hidden, overlay closed')
+}
+
+/**
+ * Handles export with spinner
+ */
+const handleExportWithSpinner = async (): Promise<void> => {
+  console.log('🎯 Starting export with spinner...')
+  
+  // Show spinner immediately
+  showExportSpinner()
+  
+  try {
+    // Call the actual export function
+    await handleBatchExport(modalState, hideExportSpinner)
+  } catch (error) {
+    console.error('💥 Export error:', error)
+    hideExportSpinner()
+  }
 }
 
 /**
@@ -117,8 +244,8 @@ const attachEventListeners = (): void => {
     exportBtn.replaceWith(exportBtn.cloneNode(true))
     const newExportBtn = document.getElementById("export-btn")
     newExportBtn?.addEventListener("click", () => {
-      console.log('🎯 Export button clicked - calling handleBatchExport')
-      handleBatchExport(modalState, hideModal)
+      console.log('🎯 Export button clicked - showing spinner')
+      handleExportWithSpinner()
     })
   }
 
@@ -129,13 +256,22 @@ const attachEventListeners = (): void => {
   formatSelect?.addEventListener("change", (e) => {
     modalState.config.format = (e.target as HTMLSelectElement)
       .value as ExportFormat
+    
+    // For Google Sheets, only separate mode is allowed
+    if (modalState.config.format === 'google_sheets') {
+      if (modalState.config.exportMode !== 'separate') {
+        modalState.config.exportMode = "separate"
+        console.log('🔄 Switched to separate mode for Google Sheets format')
+      }
+    }
     // Reset to separate mode if format doesn't support combined
-    if (
+    else if (
       modalState.config.exportMode === "combined" &&
       !EXPORT_FORMATS[modalState.config.format].supportsCombined
     ) {
       modalState.config.exportMode = "separate"
     }
+    
     updateModalContent(modalState, attachEventListeners).catch(console.error)
   })
 

@@ -54,11 +54,20 @@ export const createExportModeSelector = (
 ): string => {
   const currentFormat = modalState.config.format
   const formatSupportsCombin = EXPORT_FORMATS[currentFormat].supportsCombined
+  const isGoogleSheets = currentFormat === 'google_sheets'
 
   const modeOptions = Object.entries(EXPORT_MODES)
     .map(([key, mode]) => {
-      const isDisabled = key === "combined" && !formatSupportsCombin
+      // For Google Sheets, only allow 'separate' mode
+      const isDisabled = (key === "combined" && !formatSupportsCombin) || 
+                         (isGoogleSheets && (key === "combined" || key === "zip"))
       const isSelected = modalState.config.exportMode === key
+
+      // Add explanatory text for disabled Google Sheets options
+      let modeDescription = mode.description
+      if (isGoogleSheets && (key === "combined" || key === "zip")) {
+        modeDescription = "Not available for Google Sheets (cloud-native format)"
+      }
 
       return `
         <label class="mode-option ${isSelected ? "selected" : ""} ${isDisabled ? "disabled" : ""}">
@@ -71,7 +80,7 @@ export const createExportModeSelector = (
               <span class="mode-icon">${mode.icon}</span>
               <span class="mode-name">${mode.name}</span>
             </div>
-            <div class="mode-description">${mode.description}</div>
+            <div class="mode-description">${modeDescription}</div>
           </div>
         </label>
       `

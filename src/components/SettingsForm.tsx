@@ -19,6 +19,31 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
   const [rememberFormat, setRememberFormat] = useState(false)
   const [isGoogleDriveAuthenticated, setIsGoogleDriveAuthenticated] = useState(false)
 
+  // Refresh authentication state function
+  const refreshAuthState = async () => {
+    try {
+      const authResult = await chrome.runtime.sendMessage({
+        type: "CHECK_AUTH_STATUS"
+      })
+      
+      const isAuthenticated = authResult?.success && 
+                             authResult?.authState?.isAuthenticated &&
+                             authResult?.authState?.hasGoogleAccess
+      
+      console.log("🔄 [SettingsForm] Auth state refreshed:", {
+        authResult,
+        isAuthenticated
+      })
+      
+      setIsGoogleDriveAuthenticated(isAuthenticated)
+      return isAuthenticated
+    } catch (error) {
+      console.warn("Failed to refresh auth state:", error)
+      setIsGoogleDriveAuthenticated(false)
+      return false
+    }
+  }
+
   // Load settings on component mount
   useEffect(() => {
     const loadSettings = async () => {
@@ -26,28 +51,12 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
         const userSettings = await getUserSettings()
         
         // Check Google Drive authentication
-        try {
-          const authResult = await chrome.runtime.sendMessage({
-            type: "CHECK_AUTH_STATUS"
-          })
-          
-          const isAuthenticated = authResult?.success && 
-                                 authResult?.authState?.isAuthenticated && 
-                                 authResult?.authState?.hasGoogleAccess
-          
-          setIsGoogleDriveAuthenticated(isAuthenticated)
-          
-          // If user prefers Google Drive but not authenticated, switch to download
-          if (userSettings.defaultDestination === "google_drive" && !isAuthenticated) {
-            userSettings.defaultDestination = "download"
-            console.log("📋 Google Drive not authenticated, defaulting to download in settings")
-          }
-        } catch (error) {
-          console.warn("Failed to check auth status in settings:", error)
-          setIsGoogleDriveAuthenticated(false)
-          if (userSettings.defaultDestination === "google_drive") {
-            userSettings.defaultDestination = "download"
-          }
+        const isAuthenticated = await refreshAuthState()
+        
+        // If user prefers Google Drive but not authenticated, switch to download
+        if (userSettings.defaultDestination === "google_drive" && !isAuthenticated) {
+          userSettings.defaultDestination = "download"
+          console.log("📋 Google Drive not authenticated, defaulting to download in settings")
         }
         
         setSettings(userSettings)
@@ -65,6 +74,22 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
     }
 
     loadSettings()
+
+    // Listen for auth state changes
+    const handleMessage = (message: any) => {
+      if (message.type === "AUTH_STATE_CHANGED" || message.type === "GOOGLE_AUTH_SUCCESS") {
+        console.log("🔄 [SettingsForm] Auth state changed, refreshing...")
+        refreshAuthState()
+      }
+    }
+
+    // Add message listener
+    chrome.runtime.onMessage.addListener(handleMessage)
+
+    // Cleanup
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleMessage)
+    }
   }, [])
 
   // Handle setting changes
@@ -124,6 +149,15 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
         } catch (error) {
           console.log("Content script not available (expected on non-supported sites)")
         }
+      }
+
+      // If Google Sheets format is selected, automatically set destination to google_drive
+      if (key === "defaultFormat" && value === "google_sheets" && settings.defaultDestination !== "google_drive") {
+        console.log("📊 Google Sheets selected, auto-switching to Google Drive destination")
+        const updatedSettings = { ...newSettings, defaultDestination: "google_drive" as const }
+        setSettings(updatedSettings)
+        await saveUserSettings(updatedSettings)
+        onSettingsChange?.(updatedSettings)
       }
 
       // If format changed and remember is enabled, save it
@@ -186,13 +220,25 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { key: "xlsx", icon: "📊", name: "Excel", ext: ".xlsx" },
-            { key: "csv", icon: "📄", name: "CSV", ext: "" },
-            { key: "docx", icon: "📝", name: "Word", ext: ".docx" },
-            { key: "pdf", icon: "📋", name: "PDF", ext: "" }
-          ].map((format) => (
+        <div className={`grid gap-3 ${isGoogleDriveAuthenticated ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {(() => {
+            const formats = [
+              { key: "xlsx", icon: "📊", name: "Excel", ext: ".xlsx", cloudNative: false },
+              { key: "csv", icon: "📄", name: "CSV", ext: "", cloudNative: false },
+              { key: "docx", icon: "📝", name: "Word", ext: ".docx", cloudNative: false },
+              { key: "pdf", icon: "📋", name: "PDF", ext: "", cloudNative: false },
+              // Google Sheets - only show if authenticated
+              ...(isGoogleDriveAuthenticated ? [{ key: "google_sheets", icon: "📊", name: "Google Sheets", ext: "☁️", cloudNative: true }] : [])
+            ] as Array<{ key: string; icon: string; name: string; ext: string; cloudNative: boolean }>
+            
+            console.log("🔍 [SettingsForm] Rendering formats:", {
+              isGoogleDriveAuthenticated,
+              totalFormats: formats.length,
+              formats: formats.map(f => f.key)
+            })
+            
+            return formats
+          })().map((format) => (
             <button
               key={format.key}
               onClick={() => handleSettingChange("defaultFormat", format.key)}
@@ -205,8 +251,13 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
               <div className="flex flex-col items-center space-y-1">
                 <span className="text-lg">{format.icon}</span>
                 <span className="font-medium">{format.name}</span>
-                {format.ext && (
+                {format.ext && !format.cloudNative && (
                   <span className="text-xs opacity-70">{format.ext}</span>
+                )}
+                {format.cloudNative && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                    {format.ext} Cloud Native
+                  </span>
                 )}
               </div>
               {settings.defaultFormat === format.key && (
@@ -217,6 +268,29 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
             </button>
           ))}
         </div>
+
+        {/* Google Sheets Info */}
+        {settings.defaultFormat === "google_sheets" && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-700 flex items-center">
+              <span className="mr-2">☁️</span>
+              Google Sheets creates native cloud spreadsheets with real-time collaboration
+            </p>
+          </div>
+        )}
+
+        {/* Google Sheets Not Available Info */}
+        {!isGoogleDriveAuthenticated && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs text-amber-700 flex items-center">
+              <span className="mr-2">📊</span>
+              Google Sheets format requires Google Drive connection
+            </p>
+            <p className="text-xs text-amber-600 mt-1">
+              Connect your Google account below to unlock Google Sheets export
+            </p>
+          </div>
+        )}
 
         {/* Format Memory Toggle */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
@@ -260,17 +334,24 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
         <div className="grid grid-cols-1 gap-3">
           <button
             onClick={() =>
-              handleSettingChange("defaultDestination", "download")
+              settings.defaultFormat !== "google_sheets" && handleSettingChange("defaultDestination", "download")
             }
             className={`group px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 ${
               settings.defaultDestination === "download"
                 ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-lg"
+                : settings.defaultFormat === "google_sheets"
+                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                 : "bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
             }`}
-            disabled={isSaving}>
+            disabled={isSaving || settings.defaultFormat === "google_sheets"}>
             <div className="flex items-center justify-center space-x-2">
               <span className="text-lg">💾</span>
               <span className="font-medium">Download to Device</span>
+              {settings.defaultFormat === "google_sheets" && (
+                <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                  ❌ N/A for Sheets
+                </span>
+              )}
             </div>
           </button>
 

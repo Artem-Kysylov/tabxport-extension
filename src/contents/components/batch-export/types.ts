@@ -57,6 +57,13 @@ export const EXPORT_FORMATS = {
     description: "PDF document",
     extension: ".pdf",
     supportsCombined: true
+  },
+  google_sheets: {
+    name: "Google Sheets",
+    icon: "📊",
+    description: "Google Sheets spreadsheet (cloud native)",
+    extension: "",
+    supportsCombined: true
   }
 } as const
 

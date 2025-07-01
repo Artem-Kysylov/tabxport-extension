@@ -162,8 +162,42 @@ const handleTableExport = async (
     console.log("🔍 Background: Is google_drive?", normalizedDestination === "google_drive")
     console.log("🔍 Background: Is google-drive?", normalizedDestination === "google-drive")
 
+    // Специальная обработка для Google Sheets формата
+    if (options.format === "google_sheets") {
+      console.log("✅ Background: Using Google Sheets export...")
+      
+      // Очистка данных таблицы
+      const cleanedTableData = cleanTableData(tableData)
+      
+      // Экспорт таблицы через Google Sheets API
+      const result: ExportResult = await exportTable(cleanedTableData, options)
+      console.log("🔍 Background: Google Sheets export result:", result)
+
+      if (result.success) {
+        sendResponse({
+          success: true,
+          googleSheetsId: result.googleSheetsId,
+          googleSheetsUrl: result.googleSheetsUrl,
+          filename: result.filename
+        })
+
+        // Показ уведомления
+        chrome.notifications.create({
+          type: "basic",
+          iconUrl: "/icon48.plasmo.aced7582.png",
+          title: "TableXport",
+          message: `Table exported to Google Sheets successfully!`
+        })
+      } else {
+        console.error("❌ Background: Google Sheets export failed:", result.error)
+        sendResponse({
+          success: false,
+          error: result.error || "Google Sheets export failed"
+        })
+      }
+    }
     // Используем новый ExportService для экспорта с проверками лимитов
-    if (normalizedDestination === "google_drive") {
+    else if (normalizedDestination === "google_drive") {
       console.log("✅ Background: Using Google Drive export...")
       
       // Для batch upload с dataUrl используем прямую загрузку в Google Drive
@@ -248,7 +282,7 @@ const handleTableExport = async (
         userId,
         tableName: options.filename || `table_${Date.now()}`,
         tableData: tableArray, // Передаем массив массивов
-        format: options.format as "csv" | "xlsx" | "docx" | "pdf",
+        format: options.format as "csv" | "xlsx" | "docx" | "pdf" | "google_sheets",
         platform,
         destination: "google_drive",
         metadata: {

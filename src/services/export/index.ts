@@ -2,6 +2,7 @@ import * as XLSX from "xlsx"
 
 import type { ExportOptions, ExportResult, TableData } from "../../types"
 import { generateFilename } from "./utils"
+import { googleSheetsService } from "../../lib/google-sheets-api"
 
 export class ExportService {
   private tableDataToWorksheet(
@@ -93,6 +94,46 @@ export class ExportService {
     }
   }
 
+  private async exportToGoogleSheets(
+    tableData: TableData,
+    options: ExportOptions
+  ): Promise<ExportResult> {
+    try {
+      const title = options.filename || `${tableData.source}_Table_${Date.now()}`
+      
+      console.log(`📊 ExportService: Exporting table to Google Sheets: "${title}"`)
+
+      const result = await googleSheetsService.exportTable(tableData, {
+        spreadsheetTitle: title,
+        sheetTitle: "Table_Data",
+        includeHeaders: options.includeHeaders
+      })
+
+      if (result.success) {
+        console.log(`✅ ExportService: Successfully exported to Google Sheets`)
+        return {
+          success: true,
+          filename: title,
+          downloadUrl: result.spreadsheetUrl || "",
+          googleSheetsId: result.spreadsheetId,
+          googleSheetsUrl: result.spreadsheetUrl
+        }
+      } else {
+        console.error(`❌ ExportService: Failed to export to Google Sheets: ${result.error}`)
+        return {
+          success: false,
+          error: result.error || "Failed to export to Google Sheets"
+        }
+      }
+    } catch (error) {
+      console.error("Error exporting to Google Sheets:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error occurred"
+      }
+    }
+  }
+
   public async exportTable(
     tableData: TableData,
     options: ExportOptions
@@ -106,6 +147,8 @@ export class ExportService {
           return await this.exportToXLSX(tableData, options)
         case "csv":
           return await this.exportToCSV(tableData, options)
+        case "google_sheets":
+          return await this.exportToGoogleSheets(tableData, options)
         default:
           return {
             success: false,
@@ -121,3 +164,4 @@ export class ExportService {
     }
   }
 }
+

@@ -17,6 +17,7 @@ export const STORAGE_KEY_PREFERRED_FORMAT = "tablexport-preferred-format"
 export const MODAL_ID = "tablexport-batch-modal"
 export const OVERLAY_ID = "tablexport-modal-overlay"
 export const BUTTON_ID = "tablexport-batch-export-button"
+export const SPINNER_ID = "tablexport-export-spinner"
 
 /**
  * Minimum tables required for batch export

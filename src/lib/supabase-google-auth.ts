@@ -5,11 +5,12 @@ export interface GoogleAuthConfig {
   redirectTo?: string
 }
 
-// Scopes для Google Drive API
+// Scopes для Google Drive API и Google Sheets API
 export const GOOGLE_DRIVE_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
-  "https://www.googleapis.com/auth/drive.file" // Создание и редактирование файлов
+  "https://www.googleapis.com/auth/drive.file", // Создание и редактирование файлов
+  "https://www.googleapis.com/auth/spreadsheets" // Создание и редактирование Google Sheets
 ]
 
 // Аутентификация через Google с нужными scopes

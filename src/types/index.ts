@@ -11,14 +11,14 @@ export interface TableData {
 }
 
 export interface ExportOptions {
-  format: "xlsx" | "csv" | "docx" | "pdf"
+  format: "xlsx" | "csv" | "docx" | "pdf" | "google_sheets"
   filename?: string
   includeHeaders: boolean
   destination: "download" | "google_drive"
 }
 
 export interface UserSettings {
-  defaultFormat: "xlsx" | "csv" | "docx" | "pdf"
+  defaultFormat: "xlsx" | "csv" | "docx" | "pdf" | "google_sheets"
   defaultDestination: "download" | "google_drive"
   autoExport: boolean
   theme: "light" | "dark" | "auto"
@@ -38,6 +38,8 @@ export interface ExportResult {
   filename?: string
   error?: string
   downloadUrl?: string
+  googleSheetsId?: string
+  googleSheetsUrl?: string
 }
 
 // Типы для различных сообщений

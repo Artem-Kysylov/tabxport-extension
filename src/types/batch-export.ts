@@ -2,7 +2,7 @@
  * Batch export specific types
  */
 
-export type ExportFormat = "xlsx" | "csv" | "docx" | "pdf"
+export type ExportFormat = "xlsx" | "csv" | "docx" | "pdf" | "google_sheets"
 
 export interface BatchExportResult {
   success: boolean

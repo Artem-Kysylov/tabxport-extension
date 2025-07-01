@@ -16,6 +16,7 @@ import * as XLSX from "xlsx"
 
 import type { ExportOptions, ExportResult, TableData } from "../../types"
 import { generateFilename } from "../export"
+import { googleSheetsService } from "../google-sheets-api"
 
 /**
  * Combined export options interface
@@ -862,7 +863,77 @@ export const exportCombinedPDF = async (
 }
 
 /**
- * Main combined export function (currently supports XLSX only)
+ * Exports multiple tables into a single Google Spreadsheet with multiple sheets
+ */
+export const exportCombinedGoogleSheets = async (
+  tables: TableData[],
+  options: CombinedExportOptions
+): Promise<ExportResult> => {
+  try {
+    console.log(`🔄 Starting combined Google Sheets export for ${tables.length} tables`)
+
+    // Validate table count
+    if (tables.length === 0) {
+      return {
+        success: false,
+        error: "No tables to export"
+      }
+    }
+
+    if (tables.length > COMBINED_LIMITS.MAX_TABLES) {
+      return {
+        success: false,
+        error: `Too many tables. Maximum ${COMBINED_LIMITS.MAX_TABLES} tables allowed, got ${tables.length}`
+      }
+    }
+
+    console.log(`📊 Creating Google Spreadsheet with ${tables.length} sheets...`)
+
+    // Generate spreadsheet title
+    const baseTitle = options.combinedFileName || "Combined_Tables"
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
+    const spreadsheetTitle = `${baseTitle}_${timestamp}`
+
+    console.log(`📝 Spreadsheet title: "${spreadsheetTitle}"`)
+
+    // Use the Google Sheets API service to export multiple tables
+    const result = await googleSheetsService.exportMultipleTables(tables, {
+      spreadsheetTitle: spreadsheetTitle,
+      includeHeaders: options.includeHeaders
+    })
+
+    if (result.success) {
+      console.log(`✅ Combined Google Sheets export completed successfully`)
+      console.log(`📊 Spreadsheet ID: ${result.spreadsheetId}`)
+      console.log(`🔗 Spreadsheet URL: ${result.spreadsheetUrl}`)
+
+      return {
+        success: true,
+        filename: spreadsheetTitle,
+        downloadUrl: result.spreadsheetUrl || "",
+        googleSheetsId: result.spreadsheetId,
+        googleSheetsUrl: result.spreadsheetUrl
+      }
+    } else {
+      console.error("💥 Error in combined Google Sheets export:", result.error)
+      return {
+        success: false,
+        error: result.error || "Failed to export to Google Sheets"
+      }
+    }
+  } catch (error) {
+    console.error("💥 Error in combined Google Sheets export:", error)
+    return {
+      success: false,
+      error: error instanceof Error 
+        ? error.message 
+        : "Unknown error occurred during combined Google Sheets export"
+    }
+  }
+}
+
+/**
+ * Main combined export function
  */
 export const exportCombinedTables = async (
   tables: TableData[],
@@ -877,6 +948,8 @@ export const exportCombinedTables = async (
       return exportCombinedDOCX(tables, options)
     case "pdf":
       return exportCombinedPDF(tables, options)
+    case "google_sheets":
+      return exportCombinedGoogleSheets(tables, options)
     default:
       return {
         success: false,

@@ -4,10 +4,16 @@ export interface TableData {
   id: string
   headers: string[]
   rows: string[][]
-  source: "chatgpt" | "claude" | "gemini" | "deepseek" | "other"
+  source: "chatgpt" | "claude" | "gemini" | "deepseek" | "batch-export" | "other"
   timestamp: number
   url: string
   chatTitle?: string // Название чата для генерации имени файла
+  // Analytics metadata (optional)
+  analytics?: {
+    summaryRows?: string[][]
+    columnTypes?: Record<string, ColumnDataType>
+    errors?: AnalysisError[]
+  }
 }
 
 export interface ExportOptions {
@@ -15,6 +21,53 @@ export interface ExportOptions {
   filename?: string
   includeHeaders: boolean
   destination: "download" | "google_drive"
+  // Analytics options (optional)
+  analytics?: {
+    enabled: boolean
+    summaryTypes: SummaryType[]
+  }
+}
+
+// Analytics-specific types
+export type ColumnDataType = 
+  | 'number' 
+  | 'currency' 
+  | 'percentage'
+  | 'date'
+  | 'datetime'
+  | 'text'
+  | 'boolean'
+  | 'mixed'
+
+export type SummaryType = 'sum' | 'average' | 'count' | 'unique' | 'min' | 'max'
+
+export interface AnalysisError {
+  type: 'mixed_data' | 'invalid_format' | 'empty_column' | 'calculation_error'
+  columnName: string
+  message: string
+  affectedRows?: number[]
+  severity: 'low' | 'medium' | 'high'
+}
+
+export interface ColumnMetadata {
+  name: string
+  dataType: ColumnDataType
+  hasErrors: boolean
+  errorCount?: number
+  sampleValues?: string[]
+}
+
+export interface SummaryRow {
+  type: SummaryType
+  label: string
+  values: string[]
+}
+
+export interface AnalyticsSettings {
+  enabled: boolean
+  calculateSums: boolean
+  calculateAverages: boolean
+  countUnique: boolean
 }
 
 export interface UserSettings {
@@ -22,6 +75,8 @@ export interface UserSettings {
   defaultDestination: "download" | "google_drive"
   autoExport: boolean
   theme: "light" | "dark" | "auto"
+  // Analytics settings (optional, feature flag pattern)
+  analytics?: AnalyticsSettings
 }
 
 export interface UserSubscription {
@@ -40,6 +95,9 @@ export interface ExportResult {
   downloadUrl?: string
   googleSheetsId?: string
   googleSheetsUrl?: string
+  // Analytics results (optional)
+  analyticsApplied?: boolean
+  analyticsErrors?: AnalysisError[]
 }
 
 // Типы для различных сообщений

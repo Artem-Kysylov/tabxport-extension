@@ -1,4 +1,4 @@
-import type { UserSettings, UserSubscription } from "../types"
+import type { UserSettings, UserSubscription, AnalyticsSettings } from "../types"
 import { safeStorageOperation, logExtensionError, createErrorNotification } from "./error-handlers"
 
 // Storage keys for TableXport extension
@@ -19,7 +19,14 @@ const DEFAULT_SETTINGS: UserSettings = {
   defaultFormat: "xlsx",
   defaultDestination: "download", // По умолчанию локальное скачивание
   autoExport: false,
-  theme: "auto"
+  theme: "auto",
+  // Analytics settings (feature flag pattern - disabled by default)
+  analytics: {
+    enabled: false,
+    calculateSums: true,
+    calculateAverages: true,
+    countUnique: true
+  }
 }
 
 // Получение настроек пользователя
@@ -43,6 +50,18 @@ export const getUserSettings = async (): Promise<UserSettings> => {
           [STORAGE_KEYS.USER_SETTINGS]: settings
         })
         console.log("✅ Storage: Migration completed, settings saved:", settings)
+      }
+      
+      // Миграция: добавление настроек аналитики для существующих пользователей
+      if (!settings.analytics) {
+        console.log("🔄 Storage: Adding analytics settings for existing user")
+        settings.analytics = DEFAULT_SETTINGS.analytics
+        
+        // Сохраняем обновленные настройки
+        await chrome.storage.sync.set({
+          [STORAGE_KEYS.USER_SETTINGS]: settings
+        })
+        console.log("✅ Storage: Analytics settings migration completed:", settings.analytics)
       }
       
       console.log("✅ Storage: Final settings returned:", settings)
@@ -205,4 +224,33 @@ export const saveLastExportTime = async (): Promise<void> => {
     // Just log the error
     console.warn("Failed to save last export time:", result.error?.message)
   }
+}
+
+// Analytics-specific helper functions
+
+// Получение настроек аналитики
+export const getAnalyticsSettings = async () => {
+  const settings = await getUserSettings()
+  return settings.analytics || DEFAULT_SETTINGS.analytics!
+}
+
+// Сохранение настроек аналитики
+export const saveAnalyticsSettings = async (analyticsSettings: Partial<AnalyticsSettings>) => {
+  const currentSettings = await getUserSettings()
+  const updatedAnalytics = { 
+    ...currentSettings.analytics || DEFAULT_SETTINGS.analytics!, 
+    ...analyticsSettings 
+  }
+  
+  await saveUserSettings({
+    analytics: updatedAnalytics
+  })
+  
+  console.log("✅ Storage: Analytics settings saved:", updatedAnalytics)
+}
+
+// Проверка включена ли аналитика
+export const isAnalyticsEnabled = async (): Promise<boolean> => {
+  const analyticsSettings = await getAnalyticsSettings()
+  return analyticsSettings.enabled
 }

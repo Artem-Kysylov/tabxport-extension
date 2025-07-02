@@ -89,7 +89,21 @@ class GoogleSheetsService {
       values.push(tableData.headers)
     }
 
+    // Add regular table rows
     values.push(...tableData.rows)
+
+    // Add analytics summary rows if available
+    if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
+      console.log("📊 GoogleSheetsService: Adding analytics summary rows")
+      
+      // Add empty row for separation
+      values.push(new Array(tableData.headers.length).fill(""))
+      
+      // Add summary rows with analytics data
+      values.push(...tableData.analytics.summaryRows)
+      
+      console.log(`📊 GoogleSheetsService: Added ${tableData.analytics.summaryRows.length} summary rows`)
+    }
 
     return values
   }
@@ -382,6 +396,124 @@ class GoogleSheetsService {
   }
 
   /**
+   * Format analytics summary rows with special styling
+   */
+  async formatAnalyticsSummaryRows(
+    spreadsheetId: string,
+    sheetId: number,
+    tableData: TableData,
+    includeHeaders: boolean = true
+  ): Promise<{ success: boolean; error?: string }> {
+    const token = await this.getValidToken()
+
+    if (!token) {
+      return {
+        success: false,
+        error: "Google authentication required"
+      }
+    }
+
+    // Check if analytics data exists
+    if (!tableData.analytics?.summaryRows || tableData.analytics.summaryRows.length === 0) {
+      return { success: true } // Nothing to format
+    }
+
+    try {
+      console.log(`📊 Formatting analytics summary rows for sheet ${sheetId}`)
+
+      const headerOffset = includeHeaders ? 1 : 0
+      const dataRowsCount = tableData.rows.length
+      const summaryRowsCount = tableData.analytics.summaryRows.length
+      
+      // Calculate row indices for summary rows
+      const summaryStartRow = headerOffset + dataRowsCount + 1 // +1 for empty separator row
+      const summaryEndRow = summaryStartRow + summaryRowsCount
+
+      console.log(`📊 Summary rows range: ${summaryStartRow} to ${summaryEndRow}`)
+
+      const requests = []
+
+      // Format summary rows with bold text and background
+      requests.push({
+        repeatCell: {
+          range: {
+            sheetId: sheetId,
+            startRowIndex: summaryStartRow,
+            endRowIndex: summaryEndRow,
+            startColumnIndex: 0
+          },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: {
+                red: 0.95,
+                green: 0.95,
+                blue: 0.95
+              },
+              textFormat: {
+                bold: true,
+                fontSize: 10
+              }
+            }
+          },
+          fields: "userEnteredFormat(backgroundColor,textFormat)"
+        }
+      })
+
+      // Add top border to summary section
+      requests.push({
+        updateBorders: {
+          range: {
+            sheetId: sheetId,
+            startRowIndex: summaryStartRow,
+            endRowIndex: summaryStartRow + 1,
+            startColumnIndex: 0
+          },
+          top: {
+            style: "SOLID",
+            width: 2,
+            color: { red: 0.0, green: 0.0, blue: 0.0 }
+          }
+        }
+      })
+
+      const requestBody = {
+        requests: requests
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/${spreadsheetId}:batchUpdate`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(requestBody)
+        }
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Summary row formatting failed: ${response.status} ${response.statusText} - ${errorText}`)
+      }
+
+      console.log(`✅ Successfully formatted analytics summary rows`)
+      return { success: true }
+    } catch (error) {
+      logExtensionError(
+        error as Error,
+        "Google Sheets analytics formatting",
+        { spreadsheetId, sheetId }
+      )
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to format analytics summary rows"
+      }
+    }
+  }
+
+  /**
    * Create a new sheet within an existing spreadsheet
    */
   async addSheet(
@@ -511,6 +643,25 @@ class GoogleSheetsService {
         // Continue anyway - formatting is not critical
       }
 
+      // Step 5: Format analytics summary rows if present
+      if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
+        console.log("📊 Applying analytics formatting to Google Sheet")
+        
+        const analyticsFormatResult = await this.formatAnalyticsSummaryRows(
+          createResult.spreadsheetId,
+          0, // First sheet ID is always 0
+          tableData,
+          includeHeaders
+        )
+
+        if (!analyticsFormatResult.success) {
+          console.warn(`⚠️ Analytics formatting failed: ${analyticsFormatResult.error}`)
+          // Continue anyway - analytics formatting is not critical
+        } else {
+          console.log("✅ Analytics formatting applied successfully")
+        }
+      }
+
       console.log(`✅ Google Sheets export completed successfully`)
 
       return {
@@ -587,6 +738,22 @@ class GoogleSheetsService {
       // Step 3: Format first sheet
       await this.formatSheet(createResult.spreadsheetId, 0, includeHeaders ? 1 : 0)
 
+      // Format analytics for first sheet if present
+      if (firstTable.analytics?.summaryRows && firstTable.analytics.summaryRows.length > 0) {
+        console.log(`📊 Applying analytics formatting to first sheet "${firstSheetTitle}"`)
+        
+        const analyticsFormatResult = await this.formatAnalyticsSummaryRows(
+          createResult.spreadsheetId,
+          0,
+          firstTable,
+          includeHeaders
+        )
+
+        if (!analyticsFormatResult.success) {
+          console.warn(`⚠️ Analytics formatting failed for first sheet: ${analyticsFormatResult.error}`)
+        }
+      }
+
       // Step 4: Process remaining tables
       for (let i = 1; i < tables.length; i++) {
         const table = tables[i]
@@ -621,6 +788,22 @@ class GoogleSheetsService {
           addSheetResult.sheetId,
           includeHeaders ? 1 : 0
         )
+
+        // Format analytics summary rows if present
+        if (table.analytics?.summaryRows && table.analytics.summaryRows.length > 0) {
+          console.log(`📊 Applying analytics formatting to sheet "${sheetTitle}"`)
+          
+          const analyticsFormatResult = await this.formatAnalyticsSummaryRows(
+            createResult.spreadsheetId,
+            addSheetResult.sheetId,
+            table,
+            includeHeaders
+          )
+
+          if (!analyticsFormatResult.success) {
+            console.warn(`⚠️ Analytics formatting failed for "${sheetTitle}": ${analyticsFormatResult.error}`)
+          }
+        }
       }
 
       console.log(`✅ Google Sheets batch export completed successfully`)

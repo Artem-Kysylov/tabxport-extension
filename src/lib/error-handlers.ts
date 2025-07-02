@@ -150,10 +150,15 @@ export const createErrorNotification = (error: ExtensionError): void => {
   
   // Only create notification if chrome.notifications is available
   if (chrome?.notifications?.create) {
-    chrome.notifications.create(notification).catch(() => {
-      // Fallback to console if notifications fail
+    try {
+      // Wrap in Promise.resolve to handle both callback and promise-based Chrome API
+      Promise.resolve(chrome.notifications.create(notification)).catch(() => {
+        console.warn("⚠️ Failed to create notification, error:", error.message)
+      })
+    } catch (err) {
+      // Fallback to console if notifications fail synchronously
       console.warn("⚠️ Failed to create notification, error:", error.message)
-    })
+    }
   } else {
     console.warn("⚠️ Chrome notifications not available, error:", error.message)
   }

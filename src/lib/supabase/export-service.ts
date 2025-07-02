@@ -7,7 +7,7 @@ export interface ExportOptions {
   userId: string
   tableName: string
   tableData: any[][]
-  format: "csv" | "xlsx" | "docx" | "pdf"
+  format: "csv" | "xlsx" | "docx" | "pdf" | "google_sheets"
   platform: string
   destination: ExportDestination
   metadata?: Record<string, any>
@@ -129,7 +129,7 @@ class ExportService {
   private async exportToGoogleDrive(
     tableName: string,
     tableData: any[][],
-    format: "csv" | "xlsx" | "docx" | "pdf"
+    format: "csv" | "xlsx" | "docx" | "pdf" | "google_sheets"
   ): Promise<ExportResult> {
     try {
       const result = await googleDriveService.exportTable(
@@ -165,7 +165,7 @@ class ExportService {
   private async exportAsDownload(
     tableName: string,
     tableData: any[][],
-    format: "csv" | "xlsx" | "docx" | "pdf"
+    format: "csv" | "xlsx" | "docx" | "pdf" | "google_sheets"
   ): Promise<ExportResult> {
     try {
       let content: string | Blob

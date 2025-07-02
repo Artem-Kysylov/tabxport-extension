@@ -449,3 +449,156 @@
   color: #6b7280;
   font-style: italic;
 }
+
+/* Analytics Options Styles */
+.analytics-options {
+  margin-bottom: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.analytics-header {
+  margin-bottom: 12px;
+}
+
+.analytics-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.analytics-toggle-checkbox {
+  cursor: pointer;
+  transform: scale(1.1);
+}
+
+.analytics-toggle-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-icon {
+  font-size: 18px;
+}
+
+.analytics-title {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 15px;
+}
+
+.analytics-description {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.analytics-controls {
+  transition: all 0.3s ease;
+}
+
+.analytics-controls.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.analytics-controls.enabled {
+  opacity: 1;
+}
+
+.analytics-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.analytics-type-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.analytics-type-label:hover {
+  border-color: #1b9358;
+  background: #f8fdf9;
+}
+
+.analytics-type-label:has(input:checked) {
+  border-color: #1b9358;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 1px #1b9358;
+}
+
+.analytics-type-checkbox {
+  cursor: pointer;
+}
+
+.analytics-type-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analytics-type-icon {
+  font-size: 14px;
+}
+
+.analytics-type-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.analytics-info {
+  padding: 12px;
+  background: #f8fdf9;
+  border: 1px solid #d1e7dd;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.analytics-info.hidden {
+  display: none;
+}
+
+.analytics-info.visible {
+  display: block;
+}
+
+.analytics-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.analytics-info-item:last-child {
+  margin-bottom: 0;
+}
+
+.analytics-info-icon {
+  font-size: 12px;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.analytics-info-text {
+  font-size: 12px;
+  color: #374151;
+  line-height: 1.4;
+}

@@ -81,7 +81,7 @@ const generateSheetName = (
 }
 
 /**
- * Converts TableData to XLSX worksheet
+ * Converts TableData to XLSX worksheet with analytics support
  */
 const tableDataToWorksheet = (
   tableData: TableData,
@@ -93,9 +93,30 @@ const tableDataToWorksheet = (
     data.push(tableData.headers)
   }
 
+  // Add regular table rows
   data.push(...tableData.rows)
 
-  return XLSX.utils.aoa_to_sheet(data)
+  // Add analytics summary rows if available
+  if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
+    console.log("📊 Combined Export: Adding analytics summary rows to worksheet")
+    
+    // Add empty row for separation
+    data.push(new Array(tableData.headers.length).fill(""))
+    
+    // Add summary rows with analytics data
+    data.push(...tableData.analytics.summaryRows)
+    
+    console.log(`📊 Combined Export: Added ${tableData.analytics.summaryRows.length} summary rows`)
+  }
+
+  const worksheet = XLSX.utils.aoa_to_sheet(data)
+
+  // Apply styling to summary rows if analytics data exists
+  if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
+    applySummaryRowStyling(worksheet, tableData, includeHeaders)
+  }
+
+  return worksheet
 }
 
 /**
@@ -108,6 +129,65 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     binary += String.fromCharCode(bytes[i])
   }
   return btoa(binary)
+}
+
+/**
+ * Apply styling to analytics summary rows in XLSX worksheet
+ */
+const applySummaryRowStyling = (
+  worksheet: XLSX.WorkSheet,
+  tableData: TableData,
+  includeHeaders: boolean
+): void => {
+  try {
+    const headerOffset = includeHeaders ? 1 : 0
+    const dataRowsCount = tableData.rows.length
+    const summaryRowsCount = tableData.analytics?.summaryRows?.length || 0
+    
+    // Calculate row indices for summary rows
+    const summaryStartRow = headerOffset + dataRowsCount + 1 // +1 for empty separator row
+    
+    console.log(`📊 Combined Export: Applying styling to summary rows starting at row ${summaryStartRow}`)
+    
+    // Initialize worksheet style object if not exists
+    if (!worksheet['!rows']) {
+      worksheet['!rows'] = []
+    }
+    
+    // Apply bold formatting and borders to summary rows
+    for (let i = 0; i < summaryRowsCount; i++) {
+      const rowIndex = summaryStartRow + i
+      
+      // Set row style properties
+      if (!worksheet['!rows'][rowIndex]) {
+        worksheet['!rows'][rowIndex] = {}
+      }
+      
+      // Apply styles to each cell in the summary row
+      for (let col = 0; col < tableData.headers.length; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: col })
+        
+        if (!worksheet[cellAddress]) {
+          worksheet[cellAddress] = { v: "", t: "s" }
+        }
+        
+        // Apply bold font and border styling
+        worksheet[cellAddress].s = {
+          font: { bold: true },
+          border: {
+            top: { style: "medium", color: { rgb: "000000" } }
+          },
+          fill: {
+            fgColor: { rgb: "F0F0F0" }
+          }
+        }
+      }
+    }
+    
+    console.log("✅ Combined Export: Summary row styling applied successfully")
+  } catch (error) {
+    console.warn("⚠️ Combined Export: Failed to apply summary row styling:", error)
+  }
 }
 
 /**
@@ -249,6 +329,15 @@ export const exportCombinedCSV = async (
       }
 
       tableData.push(...table.rows)
+
+      // Add analytics summary rows if available
+      if (table.analytics?.summaryRows && table.analytics.summaryRows.length > 0) {
+        console.log(`📊 Combined CSV: Adding analytics to section ${index + 1}`)
+        tableData.push([]) // Empty separator row
+        table.analytics.summaryRows.forEach(row => {
+          tableData.push(row.map(cell => `# ${cell}`)) // Add comment prefix for CSV
+        })
+      }
 
       // Convert to CSV format manually for better control
       const csvRows = tableData.map((row) =>
@@ -394,6 +483,65 @@ const createDocxTable = (
     })
     rows.push(tableRow)
   })
+
+  // Add analytics summary rows if available
+  if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
+    console.log("📊 Combined DOCX: Adding analytics summary rows")
+    
+    // Add empty separator row
+    const emptyRow = new TableRow({
+      children: new Array(tableData.headers.length).fill("").map(() => 
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "",
+                  font: "Calibri",
+                  size: 22
+                })
+              ]
+            })
+          ],
+          width: {
+            size: 100 / tableData.headers.length,
+            type: WidthType.PERCENTAGE
+          }
+        })
+      )
+    })
+    rows.push(emptyRow)
+    
+    // Add summary rows
+    tableData.analytics.summaryRows.forEach(row => {
+      const summaryRow = new TableRow({
+        children: row.map(
+          (cell) =>
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: cell || "",
+                      bold: true, // Make summary rows bold
+                      font: "Calibri",
+                      size: 22 // 11pt
+                    })
+                  ]
+                })
+              ],
+              width: {
+                size: 100 / row.length,
+                type: WidthType.PERCENTAGE
+              }
+            })
+        )
+      })
+      rows.push(summaryRow)
+    })
+    
+    console.log(`📊 Combined DOCX: Added ${tableData.analytics.summaryRows.length} summary rows`)
+  }
 
   return new Table({
     rows,
@@ -694,6 +842,19 @@ const addTableToPDF = (
     row.map((cell) => encodeTextForPDF(cell))
   )
 
+  // Add analytics summary rows if available
+  let summaryStartIndex = -1
+  if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
+    console.log(`📊 Combined PDF: Adding analytics to table ${tableIndex + 1}`)
+    // Add empty separator row
+    tableRows.push(new Array(tableData.headers.length).fill(""))
+    summaryStartIndex = tableRows.length
+    // Add summary rows
+    tableData.analytics.summaryRows.forEach(row => {
+      tableRows.push(row.map(encodeTextForPDF))
+    })
+  }
+
   // Table configuration
   const tableConfig = {
     startY: tableStartY,
@@ -722,6 +883,13 @@ const addTableToPDF = (
     margin: {
       left: 14,
       right: 14
+    },
+    didParseCell: function(data: any) {
+      // Style summary rows
+      if (summaryStartIndex >= 0 && data.row.index >= summaryStartIndex) {
+        data.cell.styles.fontStyle = 'bold'
+        data.cell.styles.fillColor = [245, 245, 245]
+      }
     }
   }
 

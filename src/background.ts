@@ -1,4 +1,4 @@
-import { cleanTableData, exportTable, validateTableData } from "./lib/export"
+import { cleanTableData, validateTableData } from "./lib/export"
 import {
   getUserSettings,
   getUserSubscription,
@@ -10,12 +10,16 @@ import { SessionManager } from "./lib/supabase/session-manager"
 import { googleDriveService } from "./lib/google-drive-api"
 import { exportService } from "./lib/supabase/export-service"
 import { userService } from "./lib/supabase/user-service"
+import { ExportService } from "./services/export"
 import type {
   ChromeMessage,
   ExportOptions,
   ExportResult,
   TableData
 } from "./types"
+
+// Create ExportService instance
+const newExportService = new ExportService()
 
 // Обработчик сообщений от content scripts
 chrome.runtime.onMessage.addListener(
@@ -164,29 +168,36 @@ const handleTableExport = async (
 
     // Специальная обработка для Google Sheets формата
     if (options.format === "google_sheets") {
-      console.log("✅ Background: Using Google Sheets export...")
+      console.log("✅ Background: Using new ExportService for Google Sheets...")
       
       // Очистка данных таблицы
       const cleanedTableData = cleanTableData(tableData)
       
-      // Экспорт таблицы через Google Sheets API
-      const result: ExportResult = await exportTable(cleanedTableData, options)
+      // Экспорт таблицы через новый ExportService с analytics поддержкой
+      const result: ExportResult = await newExportService.exportTable(cleanedTableData, options)
       console.log("🔍 Background: Google Sheets export result:", result)
+      
+      // Log analytics info
+      if (result.analyticsApplied) {
+        console.log("📊 Background: Google Sheets export completed with analytics")
+      }
 
       if (result.success) {
         sendResponse({
           success: true,
           googleSheetsId: result.googleSheetsId,
           googleSheetsUrl: result.googleSheetsUrl,
-          filename: result.filename
+          filename: result.filename,
+          analyticsApplied: result.analyticsApplied
         })
 
         // Показ уведомления
+        const analyticsMessage = result.analyticsApplied ? " with analytics" : ""
         chrome.notifications.create({
           type: "basic",
           iconUrl: "/icon48.plasmo.aced7582.png",
           title: "TableXport",
-          message: `Table exported to Google Sheets successfully!`
+          message: `Table exported to Google Sheets successfully${analyticsMessage}!`
         })
       } else {
         console.error("❌ Background: Google Sheets export failed:", result.error)
@@ -323,16 +334,21 @@ const handleTableExport = async (
         })
       }
     } else {
-      // Старый метод для обычного скачивания
-      console.log("📥 Background: Using download export...")
+      // Новый метод для обычного скачивания через ExportService с analytics
+      console.log("📥 Background: Using new ExportService for download export...")
       console.log("🔍 Background: Destination was:", options.destination, "-> normalized to:", normalizedDestination)
       
       // Очистка данных таблицы
       const cleanedTableData = cleanTableData(tableData)
       
-      // Экспорт таблицы
-      const result: ExportResult = await exportTable(cleanedTableData, options)
+      // Экспорт таблицы через новый ExportService с analytics поддержкой
+      const result: ExportResult = await newExportService.exportTable(cleanedTableData, options)
       console.log("🔍 Background: Download export result:", result)
+      
+      // Log analytics info
+      if (result.analyticsApplied) {
+        console.log("📊 Background: Download export completed with analytics")
+      }
 
       if (result.success && result.downloadUrl) {
         // Скачивание файла через Chrome Downloads API
@@ -348,15 +364,17 @@ const handleTableExport = async (
         sendResponse({
           success: true,
           filename: result.filename,
-          downloadId
+          downloadId,
+          analyticsApplied: result.analyticsApplied
         })
 
         // Показ уведомления
+        const analyticsMessage = result.analyticsApplied ? " with analytics" : ""
         chrome.notifications.create({
           type: "basic",
           iconUrl: "/icon48.plasmo.aced7582.png", // Используем прямой путь к файлу иконки
           title: "TableXport",
-          message: `Table exported as ${result.filename}`
+          message: `Table exported as ${result.filename}${analyticsMessage}`
         })
       } else {
         console.error("❌ Background: Download export failed:", result.error)

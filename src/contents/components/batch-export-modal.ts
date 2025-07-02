@@ -36,7 +36,11 @@ let modalState: BatchModalState = {
     combinedFileName: undefined,
     includeHeaders: true,
     zipArchive: false, // Legacy field for backward compatibility - not used in UI
-    destination: "download" // Add destination field
+    destination: "download", // Add destination field
+    analytics: {
+      enabled: false, // Default to disabled
+      summaryTypes: ["sum", "average", "count"] // Default summary types
+    }
   },
   isExporting: false,
   progress: { current: 0, total: 0 },
@@ -192,6 +196,29 @@ const loadUserSettingsForModal = async (): Promise<UserSettings> => {
       console.log("📋 Google Drive not authenticated, defaulting to download")
     } else {
       modalState.config.destination = settings.defaultDestination
+    }
+    
+    // Load analytics settings from user preferences
+    if (settings.analytics) {
+      modalState.config.analytics = {
+        enabled: settings.analytics.enabled || false,
+        summaryTypes: []
+      }
+      
+      // Convert user analytics settings to batch export format
+      if (settings.analytics.calculateSums) {
+        modalState.config.analytics.summaryTypes.push("sum")
+      }
+      if (settings.analytics.calculateAverages) {
+        modalState.config.analytics.summaryTypes.push("average")
+      }
+      if (settings.analytics.countUnique) {
+        modalState.config.analytics.summaryTypes.push("count")
+      }
+      
+      console.log("📊 Loaded analytics settings:", modalState.config.analytics)
+    } else {
+      console.log("📊 No analytics settings found, using defaults")
     }
     
     console.log("📋 Loaded user settings for batch export:", settings)
@@ -378,6 +405,53 @@ const attachEventListeners = (): void => {
   clearPreferenceBtn?.addEventListener("click", () => {
     FormatPreferences.clear()
     updateModalContent(modalState, attachEventListeners).catch(console.error) // Refresh to hide clear button
+  })
+
+  // Analytics enabled checkbox
+  const analyticsEnabledCheckbox = document.getElementById(
+    "analytics-enabled-checkbox"
+  ) as HTMLInputElement
+  analyticsEnabledCheckbox?.addEventListener("change", (e) => {
+    const isEnabled = (e.target as HTMLInputElement).checked
+    if (!modalState.config.analytics) {
+      modalState.config.analytics = {
+        enabled: false,
+        summaryTypes: ["sum", "average", "count"]
+      }
+    }
+    modalState.config.analytics.enabled = isEnabled
+    console.log(`📊 Analytics ${isEnabled ? "enabled" : "disabled"}`)
+    updateModalContent(modalState, attachEventListeners).catch(console.error)
+  })
+
+  // Analytics type checkboxes
+  const analyticsTypeCheckboxes = document.querySelectorAll(
+    ".analytics-type-checkbox"
+  ) as NodeListOf<HTMLInputElement>
+  analyticsTypeCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener("change", (e) => {
+      const target = e.target as HTMLInputElement
+      const summaryType = target.value as "sum" | "average" | "count"
+      
+      if (!modalState.config.analytics) {
+        modalState.config.analytics = {
+          enabled: true,
+          summaryTypes: []
+        }
+      }
+      
+      if (target.checked) {
+        if (!modalState.config.analytics.summaryTypes.includes(summaryType)) {
+          modalState.config.analytics.summaryTypes.push(summaryType)
+        }
+      } else {
+        modalState.config.analytics.summaryTypes = modalState.config.analytics.summaryTypes.filter(
+          type => type !== summaryType
+        )
+      }
+      
+      console.log(`📊 Analytics summary types updated:`, modalState.config.analytics.summaryTypes)
+    })
   })
 }
 

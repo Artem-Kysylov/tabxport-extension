@@ -1,7 +1,7 @@
 import JSZip from "jszip"
 
-import { exportTable } from "../../../lib/export"
-import { exportCombinedTables } from "../../../lib/exporters/combined-exporter"
+import { cleanTableData, validateTableData } from "../../../lib/export"
+import { ExportService } from "../../../services/export"
 import { googleDriveService } from "../../../lib/google-drive-api"
 import { safeStorageOperation, logExtensionError, createErrorNotification } from "../../../lib/error-handlers"
 import type { ExportOptions, ChromeMessage, ChromeMessageType } from "../../../types"
@@ -17,6 +17,8 @@ import { EXPORT_FORMATS } from "./types"
 import { showNotification } from "../export-button"
 
 // Google Drive service is imported as a singleton instance
+// Create ExportService instance for analytics support
+const exportService = new ExportService()
 
 // Global flag to prevent multiple simultaneous exports across all instances
 let globalExportInProgress = false
@@ -103,13 +105,15 @@ export const uploadToGoogleDriveViaBackground = async (
   format: ExportFormat | 'zip'
 ): Promise<{ success: boolean; error?: string; webViewLink?: string }> => {
   try {
-    console.log(`🔍 Uploading to Google Drive via background: ${filename}`)
+    console.log(`🔍 [FIXED] Uploading ready file to Google Drive via background: ${filename}`)
+    console.log(`🔍 DataURL preview: ${dataUrl.substring(0, 100)}...`)
     
-    const message: ChromeMessage = {
+    // FIXED: Send ready file for direct upload instead of empty table
+    const message = {
       type: "EXPORT_TABLE" as ChromeMessageType,
       payload: {
         tableData: {
-          source: "batch-export",
+          source: "batch-export-ready-file",
           headers: [],
           rows: [],
           id: `batch-${Date.now()}`
@@ -119,28 +123,33 @@ export const uploadToGoogleDriveViaBackground = async (
           includeHeaders: true,
           destination: 'google_drive',
           filename: filename,
-          dataUrl: dataUrl,
-          isBatchUpload: true
-        }
+          // NEW: Add ready file data for direct upload
+          isBatchUpload: true,
+          dataUrl: dataUrl
+        } as any
       }
     }
+    
+    console.log(`📤 [FIXED] Sending ready file upload request for: ${filename}`)
     
     const response = await chrome.runtime.sendMessage(message)
     console.log(`📤 Background upload response:`, response)
     
     if (response.success) {
+      console.log(`✅ [FIXED] Ready file uploaded successfully: ${filename}`)
       return {
         success: true,
         webViewLink: response.googleDriveLink
       }
     } else {
+      console.error(`❌ [FIXED] Ready file upload failed: ${response.error}`)
       return {
         success: false,
         error: response.error || 'Upload failed'
       }
     }
   } catch (error) {
-    console.error('💥 Error uploading via background:', error)
+    console.error('💥 Error uploading ready file via background:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed'
@@ -458,10 +467,11 @@ export const handleBatchExport = async (
         includeHeaders: modalState.config.includeHeaders,
         combinedFileName:
           modalState.config.combinedFileName || `Combined_Export_${Date.now()}`,
-        destination: modalState.config.destination
+        destination: modalState.config.destination,
+        analytics: modalState.config.analytics
       }
 
-      const result = await exportCombinedTables(
+      const result = await exportService.combineTables(
         selectedTables.map((t) => t.data),
         exportOptions
       )
@@ -609,6 +619,7 @@ export const handleBatchExport = async (
         filename: customName,
         includeHeaders: modalState.config.includeHeaders,
         destination: modalState.config.destination,
+        analytics: modalState.config.analytics,
         tableIndex: i // Add table index for unique filenames
       }
 
@@ -632,7 +643,8 @@ export const handleBatchExport = async (
               format: modalState.config.format,
               includeHeaders: modalState.config.includeHeaders,
               destination: 'google_drive',
-              filename: customName || `table_${tableNumber}`
+              filename: customName || `table_${tableNumber}`,
+              analytics: modalState.config.analytics
             }
           }
         }
@@ -693,7 +705,7 @@ export const handleBatchExport = async (
             destination: 'download' as const // Принудительно устанавливаем локальный экспорт
           }
           
-          const result = await exportTable(table.data, localExportOptions)
+          const result = await exportService.exportTable(table.data, localExportOptions)
 
           if (result.success && result.downloadUrl) {
             console.log(

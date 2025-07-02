@@ -47,6 +47,85 @@ export const createFormatSelector = (modalState: BatchModalState): string => {
 }
 
 /**
+ * Creates analytics options HTML
+ */
+export const createAnalyticsOptions = (modalState: BatchModalState): string => {
+  const analyticsEnabled = modalState.config.analytics?.enabled || false
+  const summaryTypes = modalState.config.analytics?.summaryTypes || []
+  
+  return `
+    <div class="analytics-options">
+      <div class="analytics-header">
+        <label class="analytics-toggle-label">
+          <input type="checkbox" id="analytics-enabled-checkbox" 
+                 class="analytics-toggle-checkbox" 
+                 ${analyticsEnabled ? "checked" : ""}>
+          <span class="analytics-toggle-text">
+            <span class="analytics-icon">📊</span>
+            <span class="analytics-title">Analytics & Summaries</span>
+          </span>
+        </label>
+        <div class="analytics-description">
+          Add automatic calculations (sums, averages, counts) to exported tables
+        </div>
+      </div>
+      
+      <div class="analytics-controls ${analyticsEnabled ? "enabled" : "disabled"}">
+        <div class="analytics-types">
+          <label class="analytics-type-label">
+            <input type="checkbox" class="analytics-type-checkbox" 
+                   value="sum" 
+                   ${summaryTypes.includes("sum") ? "checked" : ""}
+                   ${analyticsEnabled ? "" : "disabled"}>
+            <span class="analytics-type-content">
+              <span class="analytics-type-icon">➕</span>
+              <span class="analytics-type-name">Calculate Sums</span>
+            </span>
+          </label>
+          
+          <label class="analytics-type-label">
+            <input type="checkbox" class="analytics-type-checkbox" 
+                   value="average" 
+                   ${summaryTypes.includes("average") ? "checked" : ""}
+                   ${analyticsEnabled ? "" : "disabled"}>
+            <span class="analytics-type-content">
+              <span class="analytics-type-icon">📊</span>
+              <span class="analytics-type-name">Calculate Averages</span>
+            </span>
+          </label>
+          
+          <label class="analytics-type-label">
+            <input type="checkbox" class="analytics-type-checkbox" 
+                   value="count" 
+                   ${summaryTypes.includes("count") ? "checked" : ""}
+                   ${analyticsEnabled ? "" : "disabled"}>
+            <span class="analytics-type-content">
+              <span class="analytics-type-icon">🔢</span>
+              <span class="analytics-type-name">Count Unique Values</span>
+            </span>
+          </label>
+        </div>
+        
+        <div class="analytics-info ${analyticsEnabled ? "visible" : "hidden"}">
+          <div class="analytics-info-item">
+            <span class="analytics-info-icon">💡</span>
+            <span class="analytics-info-text">
+              Summary rows will be added below each table with calculated values
+            </span>
+          </div>
+          <div class="analytics-info-item">
+            <span class="analytics-info-icon">🎯</span>
+            <span class="analytics-info-text">
+              Works with numeric data, currencies, and percentages
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+/**
  * Creates export mode selector HTML
  */
 export const createExportModeSelector = (
@@ -64,10 +143,9 @@ export const createExportModeSelector = (
       const isSelected = modalState.config.exportMode === key
 
       // Add explanatory text for disabled Google Sheets options
-      let modeDescription = mode.description
-      if (isGoogleSheets && (key === "combined" || key === "zip")) {
-        modeDescription = "Not available for Google Sheets (cloud-native format)"
-      }
+      const modeDescription = isGoogleSheets && (key === "combined" || key === "zip")
+        ? "Not available for Google Sheets (cloud-native format)"
+        : mode.description
 
       return `
         <label class="mode-option ${isSelected ? "selected" : ""} ${isDisabled ? "disabled" : ""}">
@@ -307,6 +385,7 @@ export const createModalContent = (modalState: BatchModalState, isGoogleDriveAut
         </label>
       </div>
       
+      ${createAnalyticsOptions(modalState)}
       ${createDestinationSelector(modalState, isGoogleDriveAuthenticated)}
       ${createExportModeSelector(modalState)}
       ${createCombinedFilenameInput(modalState)}

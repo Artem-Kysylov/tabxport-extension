@@ -86,6 +86,10 @@ export interface BatchExportConfig {
   includeHeaders: boolean
   zipArchive: boolean // Legacy field for backward compatibility
   destination: ExportDestination
+  analytics?: {
+    enabled: boolean
+    summaryTypes: Array<"sum" | "average" | "count">
+  }
 }
 
 /**

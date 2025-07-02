@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 
 import { getUserSettings, saveUserSettings } from "../lib/storage"
-import type { UserSettings } from "../types"
+import type { UserSettings, AnalyticsSettings } from "../types"
 
 interface SettingsFormProps {
   onSettingsChange?: (settings: UserSettings) => void
@@ -12,7 +12,13 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
     defaultFormat: "xlsx",
     defaultDestination: "download",
     autoExport: false,
-    theme: "auto"
+    theme: "auto",
+    analytics: {
+      enabled: false,
+      calculateSums: true,
+      calculateAverages: true,
+      countUnique: true
+    }
   })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -194,6 +200,17 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
       localStorage.removeItem("tablexport-preferred-format")
       console.log("🗑️ Disabled format memory and cleared saved format")
     }
+  }
+
+  // Handle analytics settings changes
+  const handleAnalyticsSettingChange = async (key: keyof AnalyticsSettings, value: any) => {
+    const newAnalyticsSettings = { 
+      ...settings.analytics!, 
+      [key]: value 
+    }
+    
+    console.log(`📊 Analytics setting changed: ${key} = ${value}`)
+    await handleSettingChange("analytics", newAnalyticsSettings)
   }
 
   if (isLoading) {
@@ -451,6 +468,167 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
           <option value="light">☀️ Light Mode</option>
           <option value="dark">🌙 Dark Mode</option>
         </select>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-semibold text-gray-800">
+            📊 Analytics & Summarization
+          </label>
+          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
+            ⚡ NEW
+          </span>
+        </div>
+        
+        {/* Main Analytics Toggle */}
+        <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Enable Table Analytics
+                </span>
+                <div className="group relative">
+                  <span className="text-xs text-gray-500 cursor-help">ⓘ</span>
+                  <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-800 rounded whitespace-nowrap max-w-xs">
+                    Add automatic calculations to your exported tables
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Automatically add summary rows with calculations to your exports
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                handleAnalyticsSettingChange("enabled", !settings.analytics?.enabled)
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                settings.analytics?.enabled ? "bg-indigo-500" : "bg-gray-300"
+              }`}
+              disabled={isSaving}>
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  settings.analytics?.enabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Analytics Options - Only show when enabled */}
+        {settings.analytics?.enabled && (
+          <div className="space-y-3 p-4 bg-white border border-indigo-200 rounded-xl">
+            <div className="flex items-center space-x-2 mb-3">
+              <span className="text-sm font-medium text-gray-700">
+                🔢 Calculation Types
+              </span>
+              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                Choose what to calculate
+              </span>
+            </div>
+            
+            {/* Individual calculation toggles */}
+            <div className="space-y-3">
+              {/* Sum calculation */}
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg">➕</span>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Calculate Sums</span>
+                    <p className="text-xs text-gray-500">Add totals for numeric columns</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() =>
+                    handleAnalyticsSettingChange("calculateSums", !settings.analytics?.calculateSums)
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.analytics?.calculateSums ? "bg-green-500" : "bg-gray-300"
+                  }`}
+                  disabled={isSaving}>
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      settings.analytics?.calculateSums ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Average calculation */}
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg">📊</span>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Calculate Averages</span>
+                    <p className="text-xs text-gray-500">Add average values for numeric columns</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() =>
+                    handleAnalyticsSettingChange("calculateAverages", !settings.analytics?.calculateAverages)
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.analytics?.calculateAverages ? "bg-blue-500" : "bg-gray-300"
+                  }`}
+                  disabled={isSaving}>
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      settings.analytics?.calculateAverages ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Count unique calculation */}
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg">🔢</span>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Count Unique Values</span>
+                    <p className="text-xs text-gray-500">Count distinct values in text columns</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() =>
+                    handleAnalyticsSettingChange("countUnique", !settings.analytics?.countUnique)
+                  }
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    settings.analytics?.countUnique ? "bg-purple-500" : "bg-gray-300"
+                  }`}
+                  disabled={isSaving}>
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      settings.analytics?.countUnique ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Analytics Info */}
+            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg mt-3">
+              <p className="text-xs text-indigo-700 flex items-center">
+                <span className="mr-2">💡</span>
+                Analytics add summary rows to both single table and batch exports
+              </p>
+              <p className="text-xs text-indigo-600 mt-1">
+                Summary rows are clearly marked and styled for easy identification
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Analytics Disabled State */}
+        {!settings.analytics?.enabled && (
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-xs text-gray-600 flex items-center">
+              <span className="mr-2">💤</span>
+              Analytics are currently disabled. Enable above to add automatic calculations to your exports.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Save Indicator */}

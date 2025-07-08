@@ -20,6 +20,71 @@ import { analyticsService } from "../analytics"
 import { getUserSettings } from "../../lib/storage"
 
 export class ExportService {
+  /**
+   * Converts TableData array to table merger format
+   */
+  private convertToMergerFormat(tables: TableData[]): Array<{
+    id: string
+    name?: string
+    columns: Array<{
+      name: string
+      values: (string | number)[]
+    }>
+  }> {
+    return tables.map(table => {
+      // Convert headers + rows to columns format
+      const columns = table.headers.map((header, colIndex) => ({
+        name: header,
+        values: table.rows.map(row => row[colIndex] || '') as (string | number)[]
+      }))
+
+      return {
+        id: table.id,
+        name: table.chatTitle || `${table.source}_Table`,
+        columns
+      }
+    })
+  }
+
+  /**
+   * Converts merged table result back to TableData format
+   */
+  private convertFromMergerFormat(mergedTable: { 
+    name: string, 
+    columns: Array<{ 
+      name: string, 
+      values: (string | number)[] 
+    }> 
+  }): TableData {
+    // Extract headers from merged columns
+    const headers = mergedTable.columns.map(col => col.name)
+    
+    // Find maximum row count across all columns
+    const maxRows = Math.max(...mergedTable.columns.map(col => col.values.length))
+    
+    // Convert columns back to rows format
+    const rows: string[][] = []
+    for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+      const row = headers.map((_, colIndex) => {
+        const column = mergedTable.columns[colIndex]
+        const value = column?.values[rowIndex]
+        return value !== undefined && value !== null ? value.toString() : ''
+      })
+      rows.push(row)
+    }
+
+    // Create merged table data
+    return {
+      id: `merged_${Date.now()}`,
+      headers,
+      rows,
+      source: 'batch-export' as const,
+      timestamp: Date.now(),
+      url: window.location.href,
+      chatTitle: mergedTable.name || 'Merged Tables'
+    }
+  }
+
   private tableDataToWorksheet(
     tableData: TableData,
     includeHeaders: boolean = true
@@ -640,599 +705,6 @@ export class ExportService {
 
     } catch (error) {
       console.error("ExportService: Export error:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred"
-      }
-    }
-  }
-
-  /**
-   * Export multiple tables to a single combined file with analytics support
-   */
-  public async combineTables(
-    tables: TableData[],
-    options: ExportOptions & { combinedFileName?: string }
-  ): Promise<ExportResult> {
-    try {
-      console.log(`🔄 ExportService: Starting combined export for ${tables.length} tables`)
-
-      if (tables.length === 0) {
-        return {
-          success: false,
-          error: "No tables to export"
-        }
-      }
-
-      // Get user settings for analytics
-      const userSettings = await getUserSettings()
-
-      // Apply analytics to each table if enabled
-      const processedTables = await Promise.all(
-        tables.map(async (table) => {
-          // Fixed analytics logic: check both options and user settings
-          const analyticsFromOptions = options.analytics?.enabled === true
-          const analyticsFromSettings = userSettings.analytics?.enabled === true
-          const shouldApplyAnalytics = analyticsFromOptions || analyticsFromSettings
-
-          console.log(`📊 ExportService: Analytics check for table ${table.id}:`, {
-            analyticsFromOptions,
-            analyticsFromSettings, 
-            shouldApplyAnalytics,
-            optionsAnalytics: options.analytics,
-            userAnalytics: userSettings.analytics
-          })
-
-          if (shouldApplyAnalytics && userSettings.analytics) {
-            console.log(`📊 ExportService: Applying analytics to table ${table.id}`)
-            const analyticsResult = await analyticsService.analyzeTable(table, userSettings.analytics)
-            
-            if (analyticsResult.success && analyticsResult.data) {
-              // Fixed: analyticsResult.data already contains the enhanced table
-              return analyticsResult.data
-            } else {
-              console.warn(`⚠️ ExportService: Analytics failed for table ${table.id}: ${analyticsResult.error}`)
-            }
-          } else {
-            console.log(`📊 ExportService: Skipping analytics for table ${table.id}`)
-          }
-          
-          return table
-        })
-      )
-
-      // Generate combined file based on format
-      switch (options.format) {
-        case "xlsx":
-          return await this.exportCombinedXLSX(processedTables, options)
-        case "csv":
-          return await this.exportCombinedCSV(processedTables, options)
-        case "docx":
-          return await this.exportCombinedDOCX(processedTables, options)
-        case "pdf":
-          return await this.exportCombinedPDF(processedTables, options)
-        case "google_sheets":
-          return await this.exportCombinedGoogleSheets(processedTables, options)
-        default:
-          return {
-            success: false,
-            error: `Unsupported format for combined export: ${options.format}`
-          }
-      }
-    } catch (error) {
-      console.error("Error in combined tables export:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred"
-      }
-    }
-  }
-
-  private async exportCombinedXLSX(
-    tables: TableData[],
-    options: ExportOptions & { combinedFileName?: string }
-  ): Promise<ExportResult> {
-    try {
-      console.log(`📊 ExportService: Creating combined XLSX with ${tables.length} sheets`)
-
-      const workbook = XLSX.utils.book_new()
-      const existingSheetNames = new Set<string>()
-
-      tables.forEach((table, index) => {
-        // Generate unique sheet name
-        const baseSheetName = table.chatTitle && 
-          table.chatTitle !== `${table.source}_Chat`
-          ? table.chatTitle.replace(/[^\w\s-]/g, "").trim().substring(0, 25)
-          : `Table_${index + 1}`
-          
-        let sheetName = baseSheetName
-        let counter = 1
-        while (existingSheetNames.has(sheetName)) {
-          sheetName = `${baseSheetName}_${counter}`
-          counter++
-        }
-        existingSheetNames.add(sheetName)
-
-        // Create worksheet with analytics support
-        const worksheet = this.tableDataToWorksheet(table, options.includeHeaders)
-        
-        // Apply analytics styling if available
-        if (table.analytics?.summaryRows) {
-          this.applySummaryRowStyling(worksheet, table, options.includeHeaders || true)
-        }
-
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
-        console.log(`✅ ExportService: Added sheet "${sheetName}" ${table.analytics?.summaryRows ? 'with analytics' : ''}`)
-      })
-
-      // Generate filename
-      const baseFilename = options.combinedFileName || "Combined_Tables"
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
-      const filename = `${baseFilename}_${timestamp}.xlsx`
-
-      // Write workbook
-      const arrayBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-      const base64 = this.arrayBufferToBase64(arrayBuffer)
-      const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`
-
-      console.log(`✅ ExportService: Combined XLSX export completed with analytics`)
-
-      return {
-        success: true,
-        filename,
-        downloadUrl: dataUrl,
-        analyticsApplied: tables.some(t => t.analytics?.summaryRows)
-      }
-    } catch (error) {
-      console.error("Error in combined XLSX export:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred"
-      }
-    }
-  }
-
-  private async exportCombinedCSV(
-    tables: TableData[],
-    options: ExportOptions & { combinedFileName?: string }
-  ): Promise<ExportResult> {
-    try {
-      console.log(`📄 ExportService: Creating combined CSV with ${tables.length} sections`)
-
-      const csvSections: string[] = []
-
-      tables.forEach((table, index) => {
-        // Add section separator (except for first table)
-        if (index > 0) {
-          csvSections.push("") // Empty line separator
-        }
-
-        // Generate section title
-        const sectionTitle = table.chatTitle && 
-          table.chatTitle !== `${table.source}_Chat`
-          ? `Table ${index + 1}: ${table.chatTitle}`
-          : `Table ${index + 1}: ${table.source.charAt(0).toUpperCase() + table.source.slice(1)} Data`
-
-        csvSections.push(`=== ${sectionTitle} ===`)
-        csvSections.push("") // Empty line after title
-
-        // Convert table to CSV data
-        const tableData: string[][] = []
-
-        if (options.includeHeaders && table.headers.length > 0) {
-          tableData.push(table.headers)
-        }
-
-        tableData.push(...table.rows)
-
-        // Add analytics summary rows if available
-        if (table.analytics?.summaryRows && table.analytics.summaryRows.length > 0) {
-          console.log(`📊 ExportService: Adding analytics to CSV section ${index + 1}`)
-          tableData.push([]) // Empty separator row
-          table.analytics.summaryRows.forEach(row => {
-            tableData.push(row.map(cell => `# ${cell}`)) // Add comment prefix for CSV
-          })
-        }
-
-        // Convert to CSV format
-        const csvRows = tableData.map((row) =>
-          row
-            .map((cell) => {
-              const cleanCell = (cell || "").toString().trim()
-              if (
-                cleanCell.includes(",") ||
-                cleanCell.includes('"') ||
-                cleanCell.includes("\n")
-              ) {
-                return `"${cleanCell.replace(/"/g, '""')}"`
-              }
-              return cleanCell
-            })
-            .join(",")
-        )
-
-        csvSections.push(...csvRows)
-      })
-
-      // Join all sections
-      const combinedCSV = csvSections.join("\n")
-
-      // Generate filename
-      const baseFilename = options.combinedFileName || "Combined_Tables"
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
-      const filename = `${baseFilename}_${timestamp}.csv`
-
-      // Create data URL
-      const base64 = btoa(unescape(encodeURIComponent(combinedCSV)))
-      const dataUrl = `data:text/csv;charset=utf-8;base64,${base64}`
-
-      console.log(`✅ ExportService: Combined CSV export completed with analytics`)
-
-      return {
-        success: true,
-        filename,
-        downloadUrl: dataUrl,
-        analyticsApplied: tables.some(t => t.analytics?.summaryRows)
-      }
-    } catch (error) {
-      console.error("Error in combined CSV export:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred"
-      }
-    }
-  }
-
-  private async exportCombinedDOCX(
-    tables: TableData[],
-    options: ExportOptions & { combinedFileName?: string }
-  ): Promise<ExportResult> {
-    try {
-      console.log(`📝 ExportService: Creating combined DOCX with ${tables.length} tables`)
-
-      const documentElements: (Paragraph | Table)[] = []
-
-      // Add main document title
-      const mainTitle = options.combinedFileName || "Combined Tables Report"
-      documentElements.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: mainTitle,
-              bold: true,
-              size: 36,
-              font: "Calibri"
-            })
-          ],
-          spacing: { after: 400 }
-        })
-      )
-
-      // Process each table
-      tables.forEach((table, index) => {
-        // Generate section title
-        const sectionTitle = table.chatTitle && 
-          table.chatTitle !== `${table.source}_Chat`
-          ? `Table ${index + 1}: ${table.chatTitle}`
-          : `Table ${index + 1}: ${table.source.charAt(0).toUpperCase() + table.source.slice(1)} Data`
-
-        // Add section title
-        documentElements.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: sectionTitle,
-                bold: true,
-                size: 28,
-                font: "Calibri"
-              })
-            ],
-            spacing: {
-              before: index === 0 ? 200 : 600,
-              after: 200
-            }
-          })
-        )
-
-        // Prepare table data including analytics
-        const tableRows: string[][] = []
-        
-        if (options.includeHeaders && table.headers.length > 0) {
-          tableRows.push(table.headers)
-        }
-
-        tableRows.push(...table.rows)
-
-        // Add analytics summary rows if available
-        if (table.analytics?.summaryRows && table.analytics.summaryRows.length > 0) {
-          console.log(`📊 ExportService: Adding analytics to DOCX table ${index + 1}`)
-          tableRows.push(new Array(table.headers.length).fill("")) // Separator
-          tableRows.push(...table.analytics.summaryRows)
-        }
-
-        // Create DOCX table
-        const docxRows: TableRow[] = tableRows.map((row, rowIndex) => {
-          const isHeaderRow = options.includeHeaders && rowIndex === 0
-          const isSummaryRow = table.analytics?.summaryRows && 
-            rowIndex >= (options.includeHeaders ? 1 : 0) + table.rows.length + 1
-
-          return new TableRow({
-            children: row.map(cell => new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: cell || "",
-                      bold: isHeaderRow || isSummaryRow,
-                      font: "Calibri",
-                      size: 22
-                    })
-                  ]
-                })
-              ],
-              width: {
-                size: 100 / row.length,
-                type: WidthType.PERCENTAGE
-              }
-            }))
-          })
-        })
-
-        const docxTable = new Table({
-          rows: docxRows,
-          width: {
-            size: 100,
-            type: WidthType.PERCENTAGE
-          },
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-            insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-            insideVertical: { style: BorderStyle.SINGLE, size: 1 }
-          }
-        })
-
-        documentElements.push(docxTable)
-      })
-
-      // Add footer
-      documentElements.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `\nDocument generated at ${new Date().toLocaleString()}`,
-              italics: true,
-              size: 18,
-              color: "666666",
-              font: "Calibri"
-            })
-          ],
-          spacing: { before: 400 }
-        })
-      )
-
-      // Create document
-      const doc = new Document({
-        sections: [{
-          children: documentElements
-        }]
-      })
-
-      // Generate file
-      const buffer = await Packer.toBuffer(doc)
-      const base64 = this.arrayBufferToBase64(buffer)
-      const dataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
-      
-      const baseFilename = options.combinedFileName || "Combined_Tables"
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
-      const filename = `${baseFilename}_${timestamp}.docx`
-
-      console.log(`✅ ExportService: Combined DOCX export completed with analytics`)
-
-      return {
-        success: true,
-        filename,
-        downloadUrl: dataUrl,
-        analyticsApplied: tables.some(t => t.analytics?.summaryRows)
-      }
-    } catch (error) {
-      console.error("Error in combined DOCX export:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred"
-      }
-    }
-  }
-
-  private async exportCombinedPDF(
-    tables: TableData[],
-    options: ExportOptions & { combinedFileName?: string }
-  ): Promise<ExportResult> {
-    try {
-      console.log(`📋 ExportService: Creating combined PDF with ${tables.length} tables`)
-
-      // Create PDF document
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4",
-        compress: true
-      })
-
-      // Helper function for safe text encoding
-      const encodeTextForPDF = (text: string): string => {
-        if (!text) return ""
-        return text
-          .replace(/[\u200B-\u200D\uFEFF]/g, "")
-          .replace(/\u00A0/g, " ")
-          .normalize("NFKC")
-          .trim()
-      }
-
-      const pageHeight = doc.internal.pageSize.getHeight()
-      const pageWidth = doc.internal.pageSize.getWidth()
-      let currentY = 20
-
-      // Add main document title
-      const mainTitle = options.combinedFileName || "Combined Tables Report"
-      doc.setFont("helvetica", "bold")
-      doc.setFontSize(18)
-      doc.setTextColor(40, 40, 40)
-
-      const mainTitleWidth = doc.getTextWidth(encodeTextForPDF(mainTitle))
-      const mainTitleX = (pageWidth - mainTitleWidth) / 2
-
-      doc.text(encodeTextForPDF(mainTitle), mainTitleX, currentY)
-      currentY += 25
-
-      // Process each table
-      tables.forEach((table, index) => {
-        console.log(`📋 ExportService: Processing PDF table ${index + 1}/${tables.length}`)
-
-        // Check if we need a new page
-        if (currentY > pageHeight - 60) {
-          doc.addPage()
-          currentY = 20
-        }
-
-        // Add section title
-        const sectionTitle = table.chatTitle && 
-          table.chatTitle !== `${table.source}_Chat`
-          ? `Table ${index + 1}: ${table.chatTitle}`
-          : `Table ${index + 1}: ${table.source.charAt(0).toUpperCase() + table.source.slice(1)} Data`
-
-        doc.setFont("helvetica", "bold")
-        doc.setFontSize(14)
-        doc.setTextColor(60, 60, 60)
-        doc.text(encodeTextForPDF(sectionTitle), 20, currentY)
-        currentY += 15
-
-        // Prepare table data
-        const tableData_processed: string[][] = []
-        
-        if (options.includeHeaders && table.headers.length > 0) {
-          tableData_processed.push(table.headers.map(encodeTextForPDF))
-        }
-
-        table.rows.forEach(row => {
-          tableData_processed.push(row.map(encodeTextForPDF))
-        })
-
-        // Add analytics summary rows if available
-        let summaryStartIndex = -1
-        if (table.analytics?.summaryRows && table.analytics.summaryRows.length > 0) {
-          console.log(`📊 ExportService: Adding analytics to PDF table ${index + 1}`)
-          summaryStartIndex = tableData_processed.length
-          table.analytics.summaryRows.forEach(row => {
-            tableData_processed.push(row.map(encodeTextForPDF))
-          })
-        }
-
-        // Add table to PDF
-        ;(autoTable as any)(doc, {
-          head: options.includeHeaders && table.headers.length > 0 ? [table.headers.map(encodeTextForPDF)] : [],
-          body: tableData_processed.slice(options.includeHeaders ? 1 : 0),
-          startY: currentY,
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: "bold" },
-          alternateRowStyles: { fillColor: [245, 245, 245] },
-          didParseCell: (data: any) => {
-            // Style summary rows
-            if (summaryStartIndex >= 0 && data.row.index >= summaryStartIndex - (options.includeHeaders ? 1 : 0)) {
-              data.cell.styles.fillColor = [220, 220, 220]
-              data.cell.styles.fontStyle = "bold"
-            }
-          },
-          margin: { left: 20, right: 20 }
-        })
-
-        currentY = (doc as any).lastAutoTable.finalY + 20
-
-        // Add page break between tables (except for last one)
-        if (index < tables.length - 1) {
-          doc.addPage()
-          currentY = 20
-        }
-      })
-
-      // Add footer
-      const pageCount = doc.getNumberOfPages()
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i)
-        doc.setFont("helvetica", "normal")
-        doc.setFontSize(9)
-        doc.setTextColor(100, 100, 100)
-
-        const footerText = `Generated at ${new Date().toLocaleString()} • Page ${i} of ${pageCount} • TabXport`
-        const footerWidth = doc.getTextWidth(encodeTextForPDF(footerText))
-        const footerX = (pageWidth - footerWidth) / 2
-
-        doc.text(encodeTextForPDF(footerText), footerX, pageHeight - 10)
-      }
-
-      // Generate file
-      const pdfArrayBuffer = doc.output("arraybuffer")
-      const base64 = this.arrayBufferToBase64(pdfArrayBuffer)
-      const dataUrl = `data:application/pdf;base64,${base64}`
-
-      const baseFilename = options.combinedFileName || "Combined_Tables"
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
-      const filename = `${baseFilename}_${timestamp}.pdf`
-
-      console.log(`✅ ExportService: Combined PDF export completed with analytics`)
-
-      return {
-        success: true,
-        filename,
-        downloadUrl: dataUrl,
-        analyticsApplied: tables.some(t => t.analytics?.summaryRows)
-      }
-    } catch (error) {
-      console.error("Error in combined PDF export:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred"
-      }
-    }
-  }
-
-  private async exportCombinedGoogleSheets(
-    tables: TableData[],
-    options: ExportOptions & { combinedFileName?: string }
-  ): Promise<ExportResult> {
-    try {
-      console.log(`🟢 ExportService: Creating combined Google Sheets with ${tables.length} sheets`)
-
-      const baseTitle = options.combinedFileName || "Combined_Tables"
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
-      const spreadsheetTitle = `${baseTitle}_${timestamp}`
-
-      // Use Google Sheets service to export multiple tables
-      const result = await googleSheetsService.exportMultipleTables(tables, {
-        spreadsheetTitle: spreadsheetTitle,
-        includeHeaders: options.includeHeaders || true
-      })
-
-      if (result.success) {
-        console.log(`✅ ExportService: Combined Google Sheets export completed with analytics`)
-        return {
-          success: true,
-          filename: spreadsheetTitle,
-          downloadUrl: result.spreadsheetUrl || "",
-          googleSheetsId: result.spreadsheetId,
-          googleSheetsUrl: result.spreadsheetUrl,
-          analyticsApplied: tables.some(t => t.analytics?.summaryRows)
-        }
-      } else {
-        return {
-          success: false,
-          error: result.error || "Failed to export to Google Sheets"
-        }
-      }
-    } catch (error) {
-      console.error("Error in combined Google Sheets export:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error occurred"

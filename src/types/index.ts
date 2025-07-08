@@ -26,6 +26,8 @@ export interface ExportOptions {
     enabled: boolean
     summaryTypes: SummaryType[]
   }
+  // Table merger options (optional)
+  mergeSimilarColumns?: boolean
 }
 
 // Analytics-specific types

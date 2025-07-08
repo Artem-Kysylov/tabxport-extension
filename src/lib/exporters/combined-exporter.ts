@@ -17,6 +17,7 @@ import * as XLSX from "xlsx"
 import type { ExportOptions, ExportResult, TableData } from "../../types"
 import { generateFilename } from "../export"
 import { googleSheetsService } from "../google-sheets-api"
+import { getDefaultCsvSeparator } from "../../services/export/utils"
 
 /**
  * Combined export options interface
@@ -303,6 +304,8 @@ export const exportCombinedCSV = async (
     console.log(`📄 Creating combined CSV with ${tables.length} sections...`)
 
     const csvSections: string[] = []
+    // Определяем разделитель по локали
+    const separator = getDefaultCsvSeparator()
 
     // Process each table
     tables.forEach((table, index) => {
@@ -343,10 +346,10 @@ export const exportCombinedCSV = async (
       const csvRows = tableData.map((row) =>
         row
           .map((cell) => {
-            // Escape cells containing commas, quotes, or newlines
+            // Escape cells containing separator, quotes, or newlines
             const cleanCell = (cell || "").toString().trim()
             if (
-              cleanCell.includes(",") ||
+              cleanCell.includes(separator) ||
               cleanCell.includes('"') ||
               cleanCell.includes("\n")
             ) {
@@ -354,7 +357,7 @@ export const exportCombinedCSV = async (
             }
             return cleanCell
           })
-          .join(",")
+          .join(separator)
       )
 
       csvSections.push(...csvRows)

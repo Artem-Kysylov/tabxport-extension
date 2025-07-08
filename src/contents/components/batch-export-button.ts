@@ -106,7 +106,7 @@ const applyButtonStyles = (button: HTMLElement): void => {
     position: "fixed",
     bottom: "20px",
     right: "20px",
-    background: "linear-gradient(135deg, #1B9358 0%, #16a085 100%)",
+    background: "#1B9358",
     color: "white",
     borderRadius: "12px",
     padding: "16px",
@@ -119,7 +119,7 @@ const applyButtonStyles = (button: HTMLElement): void => {
     transition: "all 0.3s ease",
     backdropFilter: "blur(10px)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
-    minWidth: "280px",
+    minWidth: "220px",
     userSelect: "none"
   })
 

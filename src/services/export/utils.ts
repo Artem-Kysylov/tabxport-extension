@@ -47,3 +47,17 @@ export const generateFilename = (
 
   return `${source}${chatTitle}${tableId}${batchSuffix}_${timestamp}.${format}`
 }
+
+/**
+ * Определяет разделитель для CSV по локали пользователя
+ * Для ru, uk, pl, de и других европейских локалей — точка с запятой
+ * Для остальных — запятая
+ */
+export const getDefaultCsvSeparator = (locale?: string): string => {
+  const loc = (locale || navigator.language || "en").toLowerCase()
+  // Список локалей, где Excel ожидает ; как разделитель
+  const semicolonLocales = [
+    "ru", "uk", "be", "pl", "de", "fr", "it", "es", "pt", "tr", "fi", "sv", "da", "nl", "cs", "sk", "hu", "sl", "hr", "lt", "lv", "et", "bg", "ro", "el"
+  ]
+  return semicolonLocales.some((l) => loc.startsWith(l)) ? ";" : ","
+}

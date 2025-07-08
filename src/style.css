@@ -1,5 +1,12 @@
 /* TableXport Extension Styles */
 
+:root {
+  --color-text-main: #062013;
+  --color-accent: #1B9358;
+  --color-accent-light: #D2F2E2;
+  --color-gray-light: #CDD2D0;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -68,6 +75,27 @@ body {
 }
 .text-emerald-700 {
   color: #047857;
+}
+.text-main {
+  color: var(--color-text-main) !important;
+}
+.text-accent {
+  color: var(--color-accent) !important;
+}
+.text-accent-light {
+  color: var(--color-accent-light) !important;
+}
+.text-gray-light {
+  color: var(--color-gray-light) !important;
+}
+.bg-accent {
+  background-color: var(--color-accent) !important;
+}
+.bg-accent-light {
+  background-color: var(--color-accent-light) !important;
+}
+.bg-gray-light {
+  background-color: var(--color-gray-light) !important;
 }
 
 .p-4 {

@@ -468,7 +468,8 @@ export const handleBatchExport = async (
         combinedFileName:
           modalState.config.combinedFileName || `Combined_Export_${Date.now()}`,
         destination: modalState.config.destination,
-        analytics: modalState.config.analytics
+        analytics: modalState.config.analytics,
+        mergeSimilarColumns: modalState.config.mergeSimilarColumns
       }
 
       const result = await exportService.combineTables(

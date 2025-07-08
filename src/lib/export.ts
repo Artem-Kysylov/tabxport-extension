@@ -5,6 +5,7 @@ import { exportToDOCX } from "./exporters/docx-exporter"
 import { exportToPDF } from "./exporters/pdf-exporter"
 import { googleDriveService } from "./google-drive-api"
 import { googleSheetsService } from "./google-sheets-api"
+import { getDefaultCsvSeparator } from "../services/export/utils"
 
 // Генерация имени файла
 export const generateFilename = (
@@ -200,7 +201,9 @@ export const exportToCSV = async (
 ): Promise<ExportResult> => {
   try {
     const worksheet = tableDataToWorksheet(tableData, options.includeHeaders)
-    const csv = XLSX.utils.sheet_to_csv(worksheet)
+    // Автоопределение разделителя по локали
+    const separator = getDefaultCsvSeparator()
+    const csv = XLSX.utils.sheet_to_csv(worksheet, { FS: separator })
 
     const filename = generateFilename(
       tableData,

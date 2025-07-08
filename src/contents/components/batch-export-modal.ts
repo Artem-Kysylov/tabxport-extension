@@ -36,7 +36,7 @@ let modalState: BatchModalState = {
     combinedFileName: undefined,
     includeHeaders: true,
     zipArchive: false, // Legacy field for backward compatibility - not used in UI
-    destination: "download", // Add destination field
+    destination: "device", // Default to device download
     analytics: {
       enabled: false, // Default to disabled
       summaryTypes: ["sum", "average", "count"] // Default summary types
@@ -189,13 +189,12 @@ const loadUserSettingsForModal = async (): Promise<UserSettings> => {
     // Update modal state with user settings
     modalState.config.format = settings.defaultFormat as ExportFormat
     
-    // Set destination based on authentication and user preferences
-    if (settings.defaultDestination === "google_drive" && !isGoogleDriveAuthenticated) {
-      // If user prefers Google Drive but not authenticated, default to download
-      modalState.config.destination = "download"
-      console.log("📋 Google Drive not authenticated, defaulting to download")
+    // Always set destination to download if not authenticated
+    if (!isGoogleDriveAuthenticated) {
+      modalState.config.destination = "device"
+      console.log("📋 Google Drive not authenticated, defaulting to device download")
     } else {
-      modalState.config.destination = settings.defaultDestination
+      modalState.config.destination = settings.defaultDestination || "device"
     }
     
     // Load analytics settings from user preferences
@@ -223,6 +222,7 @@ const loadUserSettingsForModal = async (): Promise<UserSettings> => {
     
     console.log("📋 Loaded user settings for batch export:", settings)
     console.log("📋 Set destination to:", modalState.config.destination)
+    
     return settings
   } catch (error) {
     console.error("❌ Failed to load user settings for modal:", error)
@@ -230,13 +230,13 @@ const loadUserSettingsForModal = async (): Promise<UserSettings> => {
     // Fallback to defaults
     const defaultSettings: UserSettings = {
       defaultFormat: "xlsx",
-      defaultDestination: "download",
+      defaultDestination: "device",
       autoExport: false,
       theme: "auto"
     }
     
     modalState.config.format = defaultSettings.defaultFormat as ExportFormat
-    modalState.config.destination = defaultSettings.defaultDestination
+    modalState.config.destination = "device" // Always default to device on error
     
     return defaultSettings
   }
@@ -249,27 +249,27 @@ const attachEventListeners = (): void => {
   console.log('🔧 Attaching event listeners...')
   
   // Close button - remove old listeners first
-  const closeBtn = document.getElementById("close-modal-btn")
+  const closeBtn = document.getElementById("close-batch-modal")
   if (closeBtn) {
     closeBtn.replaceWith(closeBtn.cloneNode(true))
-    const newCloseBtn = document.getElementById("close-modal-btn")
+    const newCloseBtn = document.getElementById("close-batch-modal")
     newCloseBtn?.addEventListener("click", hideModal)
   }
 
   // Cancel button - remove old listeners first
-  const cancelBtn = document.getElementById("cancel-btn")
+  const cancelBtn = document.getElementById("cancel-batch-export")
   if (cancelBtn) {
     cancelBtn.replaceWith(cancelBtn.cloneNode(true))
-    const newCancelBtn = document.getElementById("cancel-btn")
+    const newCancelBtn = document.getElementById("cancel-batch-export")
     newCancelBtn?.addEventListener("click", hideModal)
   }
 
   // Export button - remove old listeners first to prevent multiple calls
-  const exportBtn = document.getElementById("export-btn")
+  const exportBtn = document.getElementById("confirm-batch-export")
   if (exportBtn) {
     console.log('🔧 Replacing export button to remove old listeners')
     exportBtn.replaceWith(exportBtn.cloneNode(true))
-    const newExportBtn = document.getElementById("export-btn")
+    const newExportBtn = document.getElementById("confirm-batch-export")
     newExportBtn?.addEventListener("click", () => {
       console.log('🎯 Export button clicked - showing spinner')
       handleExportWithSpinner()
@@ -284,11 +284,11 @@ const attachEventListeners = (): void => {
     modalState.config.format = (e.target as HTMLSelectElement)
       .value as ExportFormat
     
-    // For Google Sheets, only separate mode is allowed
+    // For Google Sheets, only combined mode is allowed
     if (modalState.config.format === 'google_sheets') {
-      if (modalState.config.exportMode !== 'separate') {
-        modalState.config.exportMode = "separate"
-        console.log('🔄 Switched to separate mode for Google Sheets format')
+      if (modalState.config.exportMode !== 'combined') {
+        modalState.config.exportMode = "combined"
+        console.log('🔄 Switched to combined mode for Google Sheets format')
       }
     }
     // Reset to separate mode if format doesn't support combined
@@ -375,7 +375,33 @@ const attachEventListeners = (): void => {
     modalState.config.combinedFileName = target.value.trim() || undefined
   })
 
-  // Destination selector
+  // Format radio buttons
+  const formatRadios = document.querySelectorAll(
+    'input[name="export-format"]'
+  ) as NodeListOf<HTMLInputElement>
+  formatRadios.forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      const target = e.target as HTMLInputElement
+      modalState.config.format = target.value as ExportFormat
+      
+      // For Google Sheets, only combined mode is allowed
+      if (modalState.config.format === 'google_sheets') {
+        modalState.config.exportMode = "combined"
+        console.log('🔄 Switched to combined mode for Google Sheets format')
+      }
+      // Reset to separate mode if format doesn't support combined
+      else if (
+        modalState.config.exportMode === "combined" &&
+        !EXPORT_FORMATS[modalState.config.format].supportsCombined
+      ) {
+        modalState.config.exportMode = "separate"
+      }
+      
+      updateModalContent(modalState, attachEventListeners).catch(console.error)
+    })
+  })
+
+  // Destination radio buttons
   const destinationRadios = document.querySelectorAll(
     'input[name="export-destination"]'
   ) as NodeListOf<HTMLInputElement>
@@ -420,6 +446,12 @@ const attachEventListeners = (): void => {
       }
     }
     modalState.config.analytics.enabled = isEnabled
+    
+    // If disabling analytics, clear all summary types
+    if (!isEnabled) {
+      modalState.config.analytics.summaryTypes = []
+    }
+    
     console.log(`📊 Analytics ${isEnabled ? "enabled" : "disabled"}`)
     updateModalContent(modalState, attachEventListeners).catch(console.error)
   })
@@ -435,18 +467,20 @@ const attachEventListeners = (): void => {
       
       if (!modalState.config.analytics) {
         modalState.config.analytics = {
-          enabled: true,
+          enabled: false,
           summaryTypes: []
         }
       }
       
       if (target.checked) {
+        // Add summary type if not already present
         if (!modalState.config.analytics.summaryTypes.includes(summaryType)) {
           modalState.config.analytics.summaryTypes.push(summaryType)
         }
       } else {
+        // Remove summary type
         modalState.config.analytics.summaryTypes = modalState.config.analytics.summaryTypes.filter(
-          type => type !== summaryType
+          (type) => type !== summaryType
         )
       }
       

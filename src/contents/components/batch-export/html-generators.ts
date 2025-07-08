@@ -3,6 +3,51 @@ import { FormatPreferences } from "./preferences"
 import type { BatchModalState, ExportFormat, ExportMode } from "./types"
 import { EXPORT_FORMATS, EXPORT_MODES } from "./types"
 
+// Импорт SVG-иконок как raw строки
+import {
+  iconExcel,
+  iconCsv,
+  iconWord,
+  iconPdf,
+  iconGoogleSheets,
+  iconDevice,
+  iconGoogleDrive,
+  iconSeparate,
+  iconZip,
+  iconCombined,
+  iconPadlock,
+  iconClose
+} from "./svg-icons"
+
+// Иконка chevron (inline SVG)
+const iconChevron = `<svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_99_136)"><path d="M14.826 5.19474L7.99996 12.0208L1.17395 5.19474" stroke="#062013" stroke-width="2.55975" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="clip0_99_136"><rect width="16" height="16" fill="white" transform="matrix(1 0 0 -1 0 16.6077)"/></clipPath></defs></svg>`
+
+// Маппинг форматов на SVG
+const formatIcons: Record<string, string> = {
+  xlsx: iconExcel,
+  csv: iconCsv,
+  docx: iconWord,
+  pdf: iconPdf,
+  google_sheets: iconGoogleSheets,
+  device: iconDevice,
+  google_drive: iconGoogleDrive,
+  separate: iconSeparate,
+  zip: iconZip,
+  combined: iconCombined,
+  padlock: iconPadlock
+}
+// Маппинг дестинейшнов
+const destinationIcons: Record<string, string> = {
+  download: iconDevice,
+  google_drive: iconGoogleDrive
+}
+// Маппинг режимов экспорта
+const modeIcons: Record<string, string> = {
+  separate: iconSeparate,
+  zip: iconZip,
+  combined: iconCombined
+}
+
 /**
  * Creates format selector HTML
  */
@@ -11,7 +56,7 @@ export const createFormatSelector = (modalState: BatchModalState): string => {
     .map(
       ([key, format]) => `
       <option value="${key}" ${modalState.config.format === key ? "selected" : ""}>
-        ${format.icon} ${format.name}
+        ${formatIcons[key] || ""} ${format.name}
       </option>
     `
     )
@@ -31,16 +76,102 @@ export const createFormatSelector = (modalState: BatchModalState): string => {
             <input type="checkbox" id="remember-format-checkbox" class="remember-format-checkbox" ${modalState.rememberFormat ? "checked" : ""}>
             <span>🧠 Запомнить мой формат</span>
           </label>
-          ${
-            hasPreference
-              ? `
-            <button type="button" id="clear-format-preference" class="clear-preference-btn" title="Очистить сохраненный формат">
-              🗑️
-            </button>
-          `
-              : ""
-          }
+          ${hasPreference ? '<button type="button" id="clear-format-preference" class="clear-preference-btn" title="Очистить сохраненный формат">🗑️</button>' : ''}
         </div>
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Кастомный селектор формата с иконками
+ */
+export const createCustomFormatSelector = (modalState: BatchModalState): string => {
+  const currentKey = modalState.config.format
+  const current = EXPORT_FORMATS[currentKey]
+  const currentIcon = formatIcons[currentKey]
+
+  // Список форматов
+  const options = Object.entries(EXPORT_FORMATS)
+    .map(([key, format]) => `
+      <div class="custom-format-option${key === currentKey ? ' selected' : ''}" data-format="${key}">
+        <span class="format-icon">${formatIcons[key]}</span>
+        <span class="format-name">${format.name}</span>
+      </div>
+    `)
+    .join("")
+
+  return `
+    <div class="custom-format-selector">
+      <div class="custom-format-selected" tabindex="0">
+        <span class="format-icon">${currentIcon}</span>
+        <span class="format-name">${current.name}</span>
+        <span class="chevron-icon">${iconChevron}</span>
+      </div>
+      <div class="custom-format-dropdown">${options}</div>
+    </div>
+  `
+}
+
+/**
+ * Кастомный radio-group для выбора формата с иконками
+ */
+export const createFormatRadioGroup = (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): string => {
+  // По умолчанию выбран Excel, если не выбран другой
+  const currentKey = modalState.config.format || "xlsx"
+  const hasPreference = FormatPreferences.exists()
+  // Короткие тайтлы
+  const shortTitles: Record<string, string> = {
+    xlsx: "Excel",
+    csv: "CSV",
+    docx: "Word",
+    pdf: "PDF",
+    google_sheets: "Google Sheets"
+  }
+
+  // Разделяем форматы на основные (сетка 2x2) и Google Sheets (отдельно)
+  const mainFormats = ['xlsx', 'csv', 'docx', 'pdf']
+  const googleSheetsFormat = 'google_sheets'
+
+  const createFormatOption = (key: string, isGridItem: boolean = false) => {
+    const format = EXPORT_FORMATS[key]
+    const isGoogleSheets = key === 'google_sheets'
+    const isDisabled = isGoogleSheets && !isGoogleDriveAuthenticated
+    const disabledClass = isDisabled ? ' disabled' : ''
+    const gridClass = isGridItem ? ' grid-item' : ' full-width'
+    const disabledAttr = isDisabled ? 'disabled' : ''
+    
+    return `
+      <div class="format-radio-wrapper">
+        <label class="format-radio-option${currentKey === key ? ' selected' : ''}${disabledClass}${gridClass}" style="${currentKey === key ? 'background: #D2F2E2;' : 'border: 1.5px solid #CDD2D0;'}">
+          <input type="radio" name="export-format" value="${key}" ${currentKey === key ? 'checked' : ''} ${disabledAttr} class="format-radio-input">
+          <span class="format-radio-content">
+            <span class="format-icon">${formatIcons[key]}</span>
+            <span class="format-name">${shortTitles[key]}</span>
+          </span>
+        </label>
+        ${isDisabled ? '<div class="format-disabled-notice">Google Sheets format requires Google Drive connection</div>' : ''}
+      </div>
+    `
+  }
+
+  return `
+    <div class="format-radio-group">
+      <label class="format-label">Export format:</label>
+      <div class="format-radio-options">
+        <!-- Основные форматы в сетке 2x2 -->
+        <div class="format-radio-grid">
+          ${mainFormats.map(key => createFormatOption(key, true)).join('')}
+        </div>
+        <!-- Google Sheets отдельно на всю ширину -->
+        ${createFormatOption(googleSheetsFormat, false)}
+      </div>
+      <div class="format-preferences" style="margin-top: 18px;">
+        <label class="remember-format-label">
+          <input type="checkbox" id="remember-format-checkbox" class="remember-format-checkbox" ${modalState.rememberFormat ? "checked" : ""}>
+          <span>Remember my format</span>
+        </label>
+        ${hasPreference ? '<button type="button" id="clear-format-preference" class="clear-preference-btn" title="Clear saved format">🗑️</button>' : ''}
       </div>
     </div>
   `
@@ -61,7 +192,6 @@ export const createAnalyticsOptions = (modalState: BatchModalState): string => {
                  class="analytics-toggle-checkbox" 
                  ${analyticsEnabled ? "checked" : ""}>
           <span class="analytics-toggle-text">
-            <span class="analytics-icon">📊</span>
             <span class="analytics-title">Analytics & Summaries</span>
           </span>
         </label>
@@ -72,35 +202,32 @@ export const createAnalyticsOptions = (modalState: BatchModalState): string => {
       
       <div class="analytics-controls ${analyticsEnabled ? "enabled" : "disabled"}">
         <div class="analytics-types">
-          <label class="analytics-type-label">
+          <label class="analytics-type-label ${analyticsEnabled ? "" : "disabled"}">
             <input type="checkbox" class="analytics-type-checkbox" 
                    value="sum" 
-                   ${summaryTypes.includes("sum") ? "checked" : ""}
+                   ${summaryTypes.includes("sum") && analyticsEnabled ? "checked" : ""}
                    ${analyticsEnabled ? "" : "disabled"}>
             <span class="analytics-type-content">
-              <span class="analytics-type-icon">➕</span>
               <span class="analytics-type-name">Calculate Sums</span>
             </span>
           </label>
           
-          <label class="analytics-type-label">
+          <label class="analytics-type-label ${analyticsEnabled ? "" : "disabled"}">
             <input type="checkbox" class="analytics-type-checkbox" 
                    value="average" 
-                   ${summaryTypes.includes("average") ? "checked" : ""}
+                   ${summaryTypes.includes("average") && analyticsEnabled ? "checked" : ""}
                    ${analyticsEnabled ? "" : "disabled"}>
             <span class="analytics-type-content">
-              <span class="analytics-type-icon">📊</span>
               <span class="analytics-type-name">Calculate Averages</span>
             </span>
           </label>
           
-          <label class="analytics-type-label">
+          <label class="analytics-type-label ${analyticsEnabled ? "" : "disabled"}">
             <input type="checkbox" class="analytics-type-checkbox" 
                    value="count" 
-                   ${summaryTypes.includes("count") ? "checked" : ""}
+                   ${summaryTypes.includes("count") && analyticsEnabled ? "checked" : ""}
                    ${analyticsEnabled ? "" : "disabled"}>
             <span class="analytics-type-content">
-              <span class="analytics-type-icon">🔢</span>
               <span class="analytics-type-name">Count Unique Values</span>
             </span>
           </label>
@@ -108,13 +235,11 @@ export const createAnalyticsOptions = (modalState: BatchModalState): string => {
         
         <div class="analytics-info ${analyticsEnabled ? "visible" : "hidden"}">
           <div class="analytics-info-item">
-            <span class="analytics-info-icon">💡</span>
             <span class="analytics-info-text">
               Summary rows will be added below each table with calculated values
             </span>
           </div>
           <div class="analytics-info-item">
-            <span class="analytics-info-icon">🎯</span>
             <span class="analytics-info-text">
               Works with numeric data, currencies, and percentages
             </span>
@@ -128,48 +253,40 @@ export const createAnalyticsOptions = (modalState: BatchModalState): string => {
 /**
  * Creates export mode selector HTML
  */
-export const createExportModeSelector = (
-  modalState: BatchModalState
-): string => {
-  const currentFormat = modalState.config.format
-  const formatSupportsCombin = EXPORT_FORMATS[currentFormat].supportsCombined
-  const isGoogleSheets = currentFormat === 'google_sheets'
-
-  const modeOptions = Object.entries(EXPORT_MODES)
-    .map(([key, mode]) => {
-      // For Google Sheets, only allow 'separate' mode
-      const isDisabled = (key === "combined" && !formatSupportsCombin) || 
-                         (isGoogleSheets && (key === "combined" || key === "zip"))
-      const isSelected = modalState.config.exportMode === key
-
-      // Add explanatory text for disabled Google Sheets options
-      const modeDescription = isGoogleSheets && (key === "combined" || key === "zip")
-        ? "Not available for Google Sheets (cloud-native format)"
-        : mode.description
-
-      return `
-        <label class="mode-option ${isSelected ? "selected" : ""} ${isDisabled ? "disabled" : ""}">
-          <input type="radio" name="export-mode" value="${key}" 
-                 ${isSelected ? "checked" : ""} 
-                 ${isDisabled ? "disabled" : ""}
-                 class="mode-radio">
-          <div class="mode-content">
-            <div class="mode-header">
-              <span class="mode-icon">${mode.icon}</span>
-              <span class="mode-name">${mode.name}</span>
-            </div>
-            <div class="mode-description">${modeDescription}</div>
-          </div>
-        </label>
-      `
-    })
-    .join("")
-
+export const createExportModeSelector = (modalState: BatchModalState): string => {
+  const currentMode = modalState.config.exportMode || "separate"
+  const isGoogleSheets = modalState.config.format === 'google_sheets'
+  
+  // For Google Sheets, force combined mode as default
+  const effectiveMode = isGoogleSheets ? 'combined' : currentMode
+  
   return `
-    <div class="export-mode-selector">
-      <label class="section-label">Export Mode:</label>
-      <div class="mode-options">
-        ${modeOptions}
+    <div class="mode-radio-group">
+      <h3 class="section-heading">Export mode:</h3>
+      <div class="mode-radio-options">
+        ${Object.entries(EXPORT_MODES)
+          .map(
+            ([key, mode]) => {
+              // For Google Sheets, only allow combined mode
+              const isDisabled = isGoogleSheets && key !== 'combined'
+              const disabledClass = isDisabled ? ' disabled' : ''
+              const disabledAttr = isDisabled ? 'disabled' : ''
+              
+              return `
+                <label class="mode-radio-option${effectiveMode === key ? ' selected' : ''}${disabledClass}">
+                  <input type="radio" name="export-mode" value="${key}" ${effectiveMode === key ? 'checked' : ''} ${disabledAttr} class="mode-radio-input">
+                  <div class="mode-radio-content">
+                    <div class="mode-icon">${modeIcons[key]}</div>
+                    <div class="mode-text">
+                      <div class="mode-name">${mode.name}</div>
+                      <div class="mode-desc">${mode.description}</div>
+                    </div>
+                  </div>
+                </label>
+              `
+            }
+          )
+          .join("")}
       </div>
     </div>
   `
@@ -202,13 +319,9 @@ export const createCombinedFilenameInput = (
       <div class="combined-info">
         <div class="table-count-info ${isOverLimit ? "warning" : ""}">
           📊 Tables to combine: <strong>${selectedCount}/${COMBINED_EXPORT_LIMITS.maxTables}</strong>
-          ${isOverLimit ? `<span class="warning-text">⚠️ Too many tables! Maximum ${COMBINED_EXPORT_LIMITS.maxTables} allowed.</span>` : ""}
+          ${isOverLimit ? '<span class="warning-text">⚠️ Too many tables! Maximum ' + COMBINED_EXPORT_LIMITS.maxTables + ' allowed.</span>' : ''}
         </div>
-        ${
-          modalState.config.format === "xlsx"
-            ? '<div class="format-info">📋 Each table will be on a separate sheet</div>'
-            : '<div class="format-info">📄 All tables will be combined sequentially</div>'
-        }
+        ${modalState.config.format === "xlsx" ? '<div class="format-info">📋 Each table will be on a separate sheet</div>' : '<div class="format-info">📄 All tables will be combined sequentially</div>'}
       </div>
     </div>
   `
@@ -277,24 +390,12 @@ export const createProgressIndicator = (
   return `
     <div class="progress-container ${modalState.isExporting ? "visible" : "hidden"}">
       <div class="progress-label" id="progress-label">
-        ${
-          modalState.isExporting &&
-          current === total &&
-          modalState.config.zipArchive
-            ? "📦 Creating ZIP archive..."
-            : `Exporting tables... (${current}/${total})`
-        }
+        ${(modalState.isExporting && current === total && modalState.config.zipArchive) ? '📦 Creating ZIP archive...' : 'Exporting tables... (' + current + '/' + total + ')'}
       </div>
       <div class="progress-bar">
         <div class="progress-fill" style="width: ${percentage}%"></div>
       </div>
-      ${
-        modalState.isExporting &&
-        current === total &&
-        modalState.config.zipArchive
-          ? '<div class="zip-spinner">🔄</div>'
-          : ""
-      }
+      ${modalState.isExporting && current === total && modalState.config.zipArchive ? '<div class="zip-spinner">🔄</div>' : ''}
     </div>
   `
 }
@@ -303,38 +404,31 @@ export const createProgressIndicator = (
  * Creates destination selector HTML
  */
 export const createDestinationSelector = (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): string => {
+  const currentDestination = modalState.config.destination || "device"
+  
   return `
-    <div class="destination-selector">
-      <label class="section-label">Export Destination:</label>
-      <div class="destination-options">
-        <label class="destination-option ${modalState.config.destination === "download" ? "selected" : ""}">
-          <input type="radio" name="export-destination" value="download" 
-                 ${modalState.config.destination === "download" ? "checked" : ""} 
-                 class="destination-radio">
-          <div class="destination-content">
-            <div class="destination-header">
-              <span class="destination-icon">💾</span>
-              <span class="destination-name">Download to Device</span>
+    <div class="destination-radio-group">
+      <h3 class="section-heading">Export destination:</h3>
+      <div class="destination-radio-options">
+        <label class="destination-radio-option${currentDestination === 'device' ? ' selected' : ''}">
+          <input type="radio" name="export-destination" value="device" ${currentDestination === 'device' ? 'checked' : ''} class="destination-radio-input">
+          <div class="destination-radio-content">
+            <div class="destination-icon">${destinationIcons.download}</div>
+            <div class="destination-text">
+              <div class="destination-name">Download to Device</div>
+              <div class="destination-desc">Save files directly to your computer</div>
             </div>
-            <div class="destination-description">Save files directly to your computer</div>
           </div>
         </label>
-        
-        <label class="destination-option ${modalState.config.destination === "google_drive" ? "selected" : ""} ${!isGoogleDriveAuthenticated ? "disabled" : ""}">
-          <input type="radio" name="export-destination" value="google_drive" 
-                 ${modalState.config.destination === "google_drive" ? "checked" : ""} 
-                 ${!isGoogleDriveAuthenticated ? "disabled" : ""}
-                 class="destination-radio">
-          <div class="destination-content">
-            <div class="destination-header">
-              <span class="destination-icon">☁️</span>
-              <span class="destination-name">Google Drive</span>
-              ${!isGoogleDriveAuthenticated ? '<span class="auth-required">🔒 Login Required</span>' : ''}
-            </div>
-            <div class="destination-description">
-              ${isGoogleDriveAuthenticated 
-                ? "Upload files directly to your Google Drive" 
-                : "Sign in to your Google account to enable this option"}
+
+        <label class="destination-radio-option${currentDestination === 'google_drive' ? ' selected' : ''}${!isGoogleDriveAuthenticated ? ' disabled' : ''}">
+          <input type="radio" name="export-destination" value="google_drive" ${currentDestination === 'google_drive' ? 'checked' : ''} ${!isGoogleDriveAuthenticated ? 'disabled' : ''} class="destination-radio-input">
+          <div class="destination-radio-content">
+            <div class="destination-icon">${destinationIcons.google_drive}</div>
+            <div class="destination-text">
+              <div class="destination-name">Google Drive</div>
+              <div class="destination-desc">Sign in to your Google account to enable this option</div>
+              ${!isGoogleDriveAuthenticated ? '<div class="destination-login-required"><span class="login-required-icon">' + formatIcons.padlock + '</span><span class="login-required-text">Login Required</span></div>' : ''}
             </div>
           </div>
         </label>
@@ -370,34 +464,24 @@ export const createModalContent = (modalState: BatchModalState, isGoogleDriveAut
   }
 
   return `
-    <div class="modal-header">
-      <h2 class="modal-title">📊 Export All Tables</h2>
-      <button class="close-button" id="close-modal-btn">×</button>
-    </div>
-    
-    <div class="modal-body">
-      ${createFormatSelector(modalState)}
-      
-      <div class="options-row">
-        <label class="option-label">
-          <input type="checkbox" id="include-headers-checkbox" ${modalState.config.includeHeaders ? "checked" : ""}>
-          Include Headers
-        </label>
+    <div id="tablexport-batch-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Export All Tables</h2>
+        <button class="close-button" id="close-batch-modal" title="Close">${iconClose}</button>
       </div>
-      
-      ${createAnalyticsOptions(modalState)}
-      ${createDestinationSelector(modalState, isGoogleDriveAuthenticated)}
-      ${createExportModeSelector(modalState)}
-      ${createCombinedFilenameInput(modalState)}
-      ${createTableList(modalState)}
-      ${createProgressIndicator(modalState)}
-    </div>
-    
-    <div class="modal-footer">
-      <button class="cancel-button" id="cancel-btn">Cancel</button>
-      <button class="export-button" id="export-btn" ${selectedCount === 0 || isOverLimit ? "disabled" : ""}>
-        ${buttonText}
-      </button>
+      <div class="modal-body">
+        ${createFormatRadioGroup(modalState, isGoogleDriveAuthenticated)}
+        ${createExportModeSelector(modalState)}
+        ${createCombinedFilenameInput(modalState)}
+        ${createTableList(modalState)}
+        ${createDestinationSelector(modalState, isGoogleDriveAuthenticated)}
+        ${createAnalyticsOptions(modalState)}
+        ${createProgressIndicator(modalState)}
+      </div>
+      <div class="modal-footer">
+        <button class="cancel-button" id="cancel-batch-export">Cancel</button>
+        <button class="export-button" id="confirm-batch-export">${buttonText}</button>
+      </div>
     </div>
   `
 }

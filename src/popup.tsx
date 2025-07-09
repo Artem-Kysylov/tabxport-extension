@@ -6,9 +6,9 @@ import "./style.css"
 import { Footer } from "./components/popup/common/Footer"
 import { Header } from "./components/popup/common/Header"
 import { TabId, TabNavigation } from "./components/popup/common/TabNavigation"
-import { ActionsTab } from "./components/popup/tabs/ActionsTab"
+import { HelpTab } from "./components/popup/tabs/HelpTab"
+import { ProPlanTab } from "./components/popup/tabs/ProPlanTab"
 import { SettingsTab } from "./components/popup/tabs/SettingsTab"
-import { SubscriptionTab } from "./components/popup/tabs/SubscriptionTab"
 import type { UserSettings } from "./types"
 
 const Popup: React.FC = () => {
@@ -65,11 +65,11 @@ const Popup: React.FC = () => {
         <SettingsTab onSettingsChange={handleSettingsChange} />
       )}
 
-      {activeTab === "subscription" && (
-        <SubscriptionTab onUpgradeClick={handleUpgradeClick} />
+      {activeTab === "proPlan" && (
+        <ProPlanTab onUpgradeClick={handleUpgradeClick} />
       )}
 
-      {activeTab === "actions" && <ActionsTab />}
+      {activeTab === "help" && <HelpTab />}
 
       <Footer />
     </div>

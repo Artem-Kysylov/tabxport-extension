@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 
 import { getUserSettings, saveUserSettings } from "../lib/storage"
 import type { UserSettings, AnalyticsSettings } from "../types"
+import { iconExcel, iconCsv, iconWord, iconPdf, iconGoogleSheets, iconDevice, iconGoogleDrive, iconPadlock } from "../contents/components/batch-export/svg-icons"
 
 interface SettingsFormProps {
   onSettingsChange?: (settings: UserSettings) => void
@@ -79,7 +80,60 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
       }
     }
 
+    // Add checkbox styles for checked state
+    const addCheckboxStyles = () => {
+      const styleId = "settings-checkbox-styles"
+      
+      // Remove existing styles if present
+      const existingStyles = document.getElementById(styleId)
+      if (existingStyles) {
+        existingStyles.remove()
+      }
+      
+      // Create style element
+      const style = document.createElement("style")
+      style.id = styleId
+      style.textContent = `
+        /* Checkbox styles for all checkboxes */
+        input[type="checkbox"] {
+          appearance: none;
+          -webkit-appearance: none;
+        }
+        
+        input[type="checkbox"]:checked::after {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 14px;
+          height: 14px;
+          background-image: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.01208 7.28515L5.00408 11.2771L12.9881 2.72287" stroke="white" stroke-width="1.71424" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+          background-repeat: no-repeat;
+          background-position: center;
+        }
+        
+        input[type="checkbox"]:hover:not(:disabled) {
+          opacity: 0.5;
+        }
+        
+        /* Analytics specific checkbox styles */
+        div[style*="Analytics"] input[type="checkbox"] {
+          position: relative;
+        }
+        
+        /* Labels for analytics checkboxes */
+        label[style*="8px 12px"] {
+          transition: all 0.2s ease;
+        }
+      `
+      
+      // Add to document head
+      document.head.appendChild(style)
+    }
+
     loadSettings()
+    addCheckboxStyles()
 
     // Listen for auth state changes
     const handleMessage = (message: any) => {
@@ -95,6 +149,12 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
     // Cleanup
     return () => {
       chrome.runtime.onMessage.removeListener(handleMessage)
+      
+      // Remove checkbox styles on cleanup
+      const existingStyles = document.getElementById("settings-checkbox-styles")
+      if (existingStyles) {
+        existingStyles.remove()
+      }
     }
   }, [])
 
@@ -198,25 +258,36 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
     } else {
       // Clear saved format when disabling
       localStorage.removeItem("tablexport-preferred-format")
-      console.log("🗑️ Disabled format memory and cleared saved format")
+      console.log("🧠 Disabled format memory and cleared saved preference")
     }
   }
 
-  // Handle analytics settings changes
+  // Handle analytics setting changes
   const handleAnalyticsSettingChange = async (key: keyof AnalyticsSettings, value: any) => {
-    const newAnalyticsSettings = { 
-      ...settings.analytics!, 
-      [key]: value 
+    setIsSaving(true)
+
+    try {
+      const newAnalyticsSettings = { ...settings.analytics, [key]: value }
+      const newSettings = { ...settings, analytics: newAnalyticsSettings }
+      
+      setSettings(newSettings)
+      await saveUserSettings(newSettings)
+      
+      // Notify parent component
+      onSettingsChange?.(newSettings)
+      
+      console.log(`📊 Analytics setting changed: ${key} = ${value}`)
+    } catch (error) {
+      console.error("Failed to save analytics settings:", error)
+    } finally {
+      setIsSaving(false)
     }
-    
-    console.log(`📊 Analytics setting changed: ${key} = ${value}`)
-    await handleSettingChange("analytics", newAnalyticsSettings)
   }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-6">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500 mr-3"></div>
         <span className="ml-2 text-sm text-gray-600">Loading settings...</span>
       </div>
     )
@@ -227,408 +298,613 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
       {/* Default Format Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-semibold text-gray-800">
-            📄 Default Export Format
+          <label style={{
+            fontSize: "14px",
+            fontWeight: 600,
+            color: "#062013",
+            marginBottom: "0"
+          }}>
+            Default Export Format
           </label>
           {rememberFormat && (
             <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-              🧠 Memory ON
+              Memory ON
             </span>
           )}
         </div>
 
-        <div className={`grid gap-3 ${isGoogleDriveAuthenticated ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        {/* Main formats in 2x2 grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "8px",
+          marginBottom: "8px"
+        }}>
           {(() => {
             const formats = [
-              { key: "xlsx", icon: "📊", name: "Excel", ext: ".xlsx", cloudNative: false },
-              { key: "csv", icon: "📄", name: "CSV", ext: "", cloudNative: false },
-              { key: "docx", icon: "📝", name: "Word", ext: ".docx", cloudNative: false },
-              { key: "pdf", icon: "📋", name: "PDF", ext: "", cloudNative: false },
-              // Google Sheets - only show if authenticated
-              ...(isGoogleDriveAuthenticated ? [{ key: "google_sheets", icon: "📊", name: "Google Sheets", ext: "☁️", cloudNative: true }] : [])
+              { key: "xlsx", icon: iconExcel, name: "Excel", ext: ".xlsx", cloudNative: false },
+              { key: "csv", icon: iconCsv, name: "CSV", ext: "", cloudNative: false },
+              { key: "docx", icon: iconWord, name: "Word", ext: ".docx", cloudNative: false },
+              { key: "pdf", icon: iconPdf, name: "PDF", ext: "", cloudNative: false }
             ] as Array<{ key: string; icon: string; name: string; ext: string; cloudNative: boolean }>
-            
-            console.log("🔍 [SettingsForm] Rendering formats:", {
-              isGoogleDriveAuthenticated,
-              totalFormats: formats.length,
-              formats: formats.map(f => f.key)
-            })
             
             return formats
           })().map((format) => (
             <button
               key={format.key}
               onClick={() => handleSettingChange("defaultFormat", format.key)}
-              className={`group relative px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 ${
-                settings.defaultFormat === format.key
-                  ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-emerald-500 shadow-lg scale-105"
-                  : "bg-white text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50"
-              }`}
-              disabled={isSaving}>
-              <div className="flex flex-col items-center space-y-1">
-                <span className="text-lg">{format.icon}</span>
-                <span className="font-medium">{format.name}</span>
-                {format.ext && !format.cloudNative && (
-                  <span className="text-xs opacity-70">{format.ext}</span>
-                )}
-                {format.cloudNative && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                    {format.ext} Cloud Native
-                  </span>
-                )}
-              </div>
-              {settings.defaultFormat === format.key && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                </div>
-              )}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "12px 16px",
+                backgroundColor: settings.defaultFormat === format.key ? "#D2F2E2" : "white",
+                border: settings.defaultFormat === format.key ? "none" : "1.5px solid #CDD2D0",
+                borderRadius: "8px",
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#062013",
+                width: "100%",
+                boxSizing: "border-box",
+                gap: "12px",
+                userSelect: "none"
+              }}
+              onMouseEnter={(e) => {
+                if (settings.defaultFormat !== format.key) {
+                  e.currentTarget.style.opacity = "0.5"
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1"
+              }}
+              disabled={isSaving}
+            >
+              <span 
+                style={{ 
+                  width: "16px", 
+                  height: "16px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center" 
+                }}
+                dangerouslySetInnerHTML={{ __html: format.icon }}
+              />
+              <span>{format.name}</span>
             </button>
           ))}
         </div>
 
-        {/* Google Sheets Info */}
-        {settings.defaultFormat === "google_sheets" && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-700 flex items-center">
-              <span className="mr-2">☁️</span>
-              Google Sheets creates native cloud spreadsheets with real-time collaboration
-            </p>
-          </div>
-        )}
-
-        {/* Google Sheets Not Available Info */}
-        {!isGoogleDriveAuthenticated && (
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-xs text-amber-700 flex items-center">
-              <span className="mr-2">📊</span>
-              Google Sheets format requires Google Drive connection
-            </p>
-            <p className="text-xs text-amber-600 mt-1">
+        {/* Google Sheets option - full width, always visible */}
+        <div style={{ width: "100%", marginBottom: "8px" }}>
+          <button
+            onClick={() => {
+              if (isGoogleDriveAuthenticated) {
+                handleSettingChange("defaultFormat", "google_sheets")
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "12px 16px",
+              backgroundColor: settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white",
+              border: settings.defaultFormat === "google_sheets" ? "none" : "1.5px solid #CDD2D0",
+              borderRadius: "8px",
+              cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              fontSize: "14px",
+              fontWeight: 500,
+              color: "#062013",
+              width: "100%",
+              boxSizing: "border-box",
+              gap: "12px",
+              userSelect: "none",
+              opacity: isGoogleDriveAuthenticated ? 1 : 0.5,
+              backgroundColor: !isGoogleDriveAuthenticated 
+                ? "#f8f9fa" 
+                : (settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white")
+            }}
+            onMouseEnter={(e) => {
+              if (isGoogleDriveAuthenticated && settings.defaultFormat !== "google_sheets") {
+                e.currentTarget.style.opacity = "0.5"
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (isGoogleDriveAuthenticated) {
+                e.currentTarget.style.opacity = "1"
+              }
+            }}
+            disabled={isSaving || !isGoogleDriveAuthenticated}
+          >
+            <span 
+              style={{ 
+                width: "16px", 
+                height: "16px", 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center" 
+              }}
+              dangerouslySetInnerHTML={{ __html: iconGoogleSheets }}
+            />
+            <span>Google Sheets</span>
+          </button>
+          
+          {/* Info text under Google Sheets button */}
+          {!isGoogleDriveAuthenticated && (
+            <div style={{
+              fontSize: "12px",
+              fontWeight: "normal",
+              color: "#062013",
+              marginTop: "4px",
+              lineHeight: "1.4"
+            }}>
+              Google Sheets format requires Google Drive connection<br/>
               Connect your Google account below to unlock Google Sheets export
-            </p>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+
+
 
         {/* Format Memory Toggle */}
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-gray-700">
-                🧠 Remember My Format
-              </span>
-              <div className="group relative">
-                <span className="text-xs text-gray-500 cursor-help">ⓘ</span>
-                <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap">
-                  Auto-saves your preferred format
+        <div style={{ marginTop: "18px" }}>
+          <label 
+            onClick={() => handleRememberFormatChange(!rememberFormat)}
+            style={{
+              fontSize: "14px",
+              fontWeight: 400,
+              color: "#062013",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              cursor: "pointer",
+              userSelect: "none"
+            }}
+          >
+            <input 
+              type="checkbox" 
+              checked={rememberFormat}
+              onChange={() => {}} // Handled by label onClick
+              style={{
+                appearance: "none",
+                WebkitAppearance: "none",
+                width: "20px",
+                height: "20px",
+                border: "1px solid #1B9358",
+                borderRadius: "2px",
+                margin: "0",
+                cursor: "pointer",
+                position: "relative",
+                transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                background: rememberFormat ? "#1B9358" : "white"
+              }}
+            />
+            <span>Remember my format</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Export Destination */}
+      <div style={{ marginTop: "24px" }}>
+        <h3 style={{
+          fontSize: "16px",
+          fontWeight: "600",
+          color: "#062013",
+          margin: "0 0 16px 0"
+        }}>
+          Export Destination
+        </h3>
+        
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px"
+        }}>
+          {/* Download to Device */}
+          <label 
+            style={{
+              display: "flex",
+              padding: "16px",
+              borderRadius: "8px",
+              border: settings.defaultDestination === "download" ? "none" : "1px solid #CDD2D0",
+              background: settings.defaultDestination === "download" ? "#D2F2E2" : "white",
+              cursor: "pointer",
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              fontSize: "14px",
+              fontWeight: "400",
+              color: "#062013",
+              margin: "0",
+              userSelect: "none"
+            }}
+            onMouseEnter={(e) => {
+              if (settings.defaultDestination !== "download") {
+                e.currentTarget.style.opacity = "0.5"
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = "1"
+            }}
+          >
+            <input
+              type="radio"
+              name="destination"
+              value="download"
+              checked={settings.defaultDestination === "download"}
+              onChange={() => handleSettingChange("defaultDestination", "download")}
+              style={{ display: "none" }}
+            />
+            <div style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "12px",
+              width: "100%"
+            }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "24px",
+                height: "24px",
+                marginTop: "2px"
+              }}>
+                <span dangerouslySetInnerHTML={{ __html: iconDevice }} />
+              </div>
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px"
+              }}>
+                <div style={{
+                  fontSize: "14px",
+                  fontWeight: "400",
+                  color: "#062013",
+                  lineHeight: "20px"
+                }}>
+                  Download to Device
+                </div>
+                <div style={{
+                  fontSize: "12px",
+                  fontWeight: "400",
+                  color: "#062013",
+                  lineHeight: "16px",
+                  opacity: "0.6"
+                }}>
+                  Save files directly to your computer
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => handleRememberFormatChange(!rememberFormat)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
-                rememberFormat ? "bg-emerald-500" : "bg-gray-300"
-              }`}>
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  rememberFormat ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-          {rememberFormat && (
-            <p className="text-xs text-emerald-600 mt-2">
-              ✅ Format will be automatically saved for future exports
-            </p>
-          )}
-        </div>
-      </div>
+          </label>
 
-      {/* Default Destination Section */}
-      <div className="space-y-3">
-        <label className="block text-sm font-semibold text-gray-800">
-          📁 Default Destination
-        </label>
-        <div className="grid grid-cols-1 gap-3">
-          <button
-            onClick={() =>
-              settings.defaultFormat !== "google_sheets" && handleSettingChange("defaultDestination", "download")
-            }
-            className={`group px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 ${
-              settings.defaultDestination === "download"
-                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-lg"
-                : settings.defaultFormat === "google_sheets"
-                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                : "bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
-            }`}
-            disabled={isSaving || settings.defaultFormat === "google_sheets"}>
-            <div className="flex items-center justify-center space-x-2">
-              <span className="text-lg">💾</span>
-              <span className="font-medium">Download to Device</span>
-              {settings.defaultFormat === "google_sheets" && (
-                <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
-                  ❌ N/A for Sheets
-                </span>
-              )}
+          {/* Google Drive */}
+          <label 
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              padding: "16px",
+              borderRadius: "8px",
+              border: settings.defaultDestination === "google_drive" ? "none" : "1px solid #CDD2D0",
+              background: settings.defaultDestination === "google_drive" ? "#D2F2E2" : 
+                        !isGoogleDriveAuthenticated ? "#F3F4F3" : "white",
+              cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              fontSize: "14px",
+              fontWeight: "400",
+              color: "#062013",
+              margin: "0",
+              opacity: !isGoogleDriveAuthenticated ? "0.7" : "1",
+              userSelect: "none"
+            }}
+            onMouseEnter={(e) => {
+              if (isGoogleDriveAuthenticated && settings.defaultDestination !== "google_drive") {
+                e.currentTarget.style.opacity = "0.5"
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = !isGoogleDriveAuthenticated ? "0.7" : "1"
+            }}
+          >
+            <input
+              type="radio"
+              name="destination"
+              value="google_drive"
+              checked={settings.defaultDestination === "google_drive"}
+              onChange={() => handleSettingChange("defaultDestination", "google_drive")}
+              disabled={!isGoogleDriveAuthenticated}
+              style={{ display: "none" }}
+            />
+            <div style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "12px",
+              width: "100%"
+            }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "24px",
+                height: "24px",
+                marginTop: "2px"
+              }}>
+                <span dangerouslySetInnerHTML={{ __html: iconGoogleDrive }} />
+              </div>
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px"
+              }}>
+                <div style={{
+                  fontSize: "14px",
+                  fontWeight: "400",
+                  color: "#062013",
+                  lineHeight: "20px"
+                }}>
+                  Google Drive
+                </div>
+                <div style={{
+                  fontSize: "12px",
+                  fontWeight: "400",
+                  color: "#062013",
+                  lineHeight: "16px",
+                  opacity: "0.6"
+                }}>
+                  Sign in to your Google account to enable this option
+                </div>
+              </div>
             </div>
-          </button>
-
-          <button
-            onClick={() =>
-              isGoogleDriveAuthenticated && handleSettingChange("defaultDestination", "google_drive")
-            }
-            className={`group px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 relative ${
-              settings.defaultDestination === "google_drive"
-                ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white border-orange-500 shadow-lg"
-                : isGoogleDriveAuthenticated
-                ? "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:bg-orange-50"
-                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-            }`}
-            disabled={isSaving || !isGoogleDriveAuthenticated}>
-            <div className="flex items-center justify-center space-x-2">
-              <span className="text-lg">☁️</span>
-              <span className="font-medium">Google Drive</span>
-              {!isGoogleDriveAuthenticated && (
-                <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">
-                  🔒 Login Required
-                </span>
-              )}
-              {isGoogleDriveAuthenticated && (
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                  ✅ Connected
-                </span>
-              )}
-            </div>
-          </button>
-        </div>
-
-        {settings.defaultDestination === "google_drive" && (
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-xs text-amber-700 flex items-center">
-              <span className="mr-2">⚡</span>
-              Google Drive integration is available in Pro version
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Auto Export Section */}
-      <div className="space-y-3">
-        <label className="block text-sm font-semibold text-gray-800">
-          🚀 Auto Export
-        </label>
-        <div className="p-4 bg-gray-50 rounded-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Auto-export when table detected
-                </span>
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                  BETA
+            {!isGoogleDriveAuthenticated && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                marginTop: "8px",
+                marginLeft: "0px"
+              }}>
+                <span 
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    width: "14px",
+                    height: "14px"
+                  }}
+                  dangerouslySetInnerHTML={{ __html: iconPadlock }}
+                />
+                <span style={{
+                  fontSize: "12px",
+                  fontWeight: "400",
+                  color: "#829089"
+                }}>
+                  Login Required
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Automatically exports tables as soon as they're found
-              </p>
-            </div>
-            <button
-              onClick={() =>
-                handleSettingChange("autoExport", !settings.autoExport)
-              }
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                settings.autoExport ? "bg-purple-500" : "bg-gray-300"
-              }`}
-              disabled={isSaving}>
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  settings.autoExport ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
+            )}
+          </label>
         </div>
-      </div>
-
-      {/* Theme Section */}
-      <div className="space-y-3">
-        <label className="block text-sm font-semibold text-gray-800">
-          🎨 Theme
-        </label>
-        <select
-          value={settings.theme}
-          onChange={(e) =>
-            handleSettingChange(
-              "theme",
-              e.target.value as "light" | "dark" | "auto"
-            )
-          }
-          className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-          disabled={isSaving}>
-          <option value="auto">🔄 Auto (System)</option>
-          <option value="light">☀️ Light Mode</option>
-          <option value="dark">🌙 Dark Mode</option>
-        </select>
       </div>
 
       {/* Analytics Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-semibold text-gray-800">
-            📊 Analytics & Summarization
-          </label>
-          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
-            ⚡ NEW
-          </span>
-        </div>
-        
-        {/* Main Analytics Toggle */}
-        <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Enable Table Analytics
-                </span>
-                <div className="group relative">
-                  <span className="text-xs text-gray-500 cursor-help">ⓘ</span>
-                  <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-800 rounded whitespace-nowrap max-w-xs">
-                    Add automatic calculations to your exported tables
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Automatically add summary rows with calculations to your exports
-              </p>
-            </div>
-            <button
-              onClick={() =>
-                handleAnalyticsSettingChange("enabled", !settings.analytics?.enabled)
-              }
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                settings.analytics?.enabled ? "bg-indigo-500" : "bg-gray-300"
-              }`}
-              disabled={isSaving}>
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  settings.analytics?.enabled ? "translate-x-6" : "translate-x-1"
-                }`}
+      <div style={{ marginTop: "24px" }}>
+        <div style={{
+          padding: "20px",
+          border: "1px solid #CDD2D0",
+          borderRadius: "10px",
+          marginBottom: "20px"
+        }}>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              cursor: "pointer",
+              userSelect: "none"
+            }}>
+              <input
+                type="checkbox"
+                checked={settings.analytics?.enabled || false}
+                onChange={(e) => handleAnalyticsSettingChange("enabled", e.target.checked)}
+                style={{
+                  appearance: "none",
+                  WebkitAppearance: "none",
+                  width: "20px",
+                  height: "20px",
+                  border: "1px solid #1B9358",
+                  borderRadius: "2px",
+                  margin: "0",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                  background: settings.analytics?.enabled ? "#1B9358" : "white"
+                }}
               />
-            </button>
+              <span style={{
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#062013"
+              }}>
+                Analytics & Summaries
+              </span>
+            </label>
+            <div style={{
+              fontSize: "12px",
+              color: "#062013",
+              lineHeight: "1.4",
+              marginTop: "4px",
+              marginBottom: "16px"
+            }}>
+              Add automatic calculations (sums, averages, counts) to exported tables
+            </div>
           </div>
-        </div>
-
-        {/* Analytics Options - Only show when enabled */}
-        {settings.analytics?.enabled && (
-          <div className="space-y-3 p-4 bg-white border border-indigo-200 rounded-xl">
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="text-sm font-medium text-gray-700">
-                🔢 Calculation Types
-              </span>
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                Choose what to calculate
-              </span>
+          
+          <div style={{
+            transition: "all 0.3s ease",
+            opacity: settings.analytics?.enabled ? "1" : "0.5",
+            pointerEvents: settings.analytics?.enabled ? "auto" : "none"
+          }}>
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              marginBottom: "12px"
+            }}>
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 12px",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                background: "white",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                userSelect: "none"
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.analytics?.calculateSums || false}
+                  onChange={(e) => handleAnalyticsSettingChange("calculateSums", e.target.checked)}
+                  disabled={!settings.analytics?.enabled}
+                  style={{
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    width: "20px",
+                    height: "20px",
+                    border: "1px solid #1B9358",
+                    borderRadius: "2px",
+                    margin: "0",
+                    cursor: "pointer",
+                    position: "relative",
+                    transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                    background: settings.analytics?.calculateSums ? "#1B9358" : "white"
+                  }}
+                />
+                <span style={{
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  color: "#062013"
+                }}>
+                  Calculate Sums
+                </span>
+              </label>
+              
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 12px",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                background: "white",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                userSelect: "none"
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.analytics?.calculateAverages || false}
+                  onChange={(e) => handleAnalyticsSettingChange("calculateAverages", e.target.checked)}
+                  disabled={!settings.analytics?.enabled}
+                  style={{
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    width: "20px",
+                    height: "20px",
+                    border: "1px solid #1B9358",
+                    borderRadius: "2px",
+                    margin: "0",
+                    cursor: "pointer",
+                    position: "relative",
+                    transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                    background: settings.analytics?.calculateAverages ? "#1B9358" : "white"
+                  }}
+                />
+                <span style={{
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  color: "#062013"
+                }}>
+                  Calculate Averages
+                </span>
+              </label>
+              
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 12px",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                background: "white",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                userSelect: "none"
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.analytics?.countUnique || false}
+                  onChange={(e) => handleAnalyticsSettingChange("countUnique", e.target.checked)}
+                  disabled={!settings.analytics?.enabled}
+                  style={{
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    width: "20px",
+                    height: "20px",
+                    border: "1px solid #1B9358",
+                    borderRadius: "2px",
+                    margin: "0",
+                    cursor: "pointer",
+                    position: "relative",
+                    transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                    background: settings.analytics?.countUnique ? "#1B9358" : "white"
+                  }}
+                />
+                <span style={{
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  color: "#062013"
+                }}>
+                  Count Unique Values
+                </span>
+              </label>
             </div>
             
-            {/* Individual calculation toggles */}
-            <div className="space-y-3">
-              {/* Sum calculation */}
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">➕</span>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Calculate Sums</span>
-                    <p className="text-xs text-gray-500">Add totals for numeric columns</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() =>
-                    handleAnalyticsSettingChange("calculateSums", !settings.analytics?.calculateSums)
-                  }
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    settings.analytics?.calculateSums ? "bg-green-500" : "bg-gray-300"
-                  }`}
-                  disabled={isSaving}>
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      settings.analytics?.calculateSums ? "translate-x-5" : "translate-x-1"
-                    }`}
-                  />
-                </button>
+            <div style={{
+              padding: "12px",
+              background: "#f8fdf9",
+              border: "1px solid #d1e7dd",
+              borderRadius: "6px",
+              transition: "all 0.3s ease",
+              display: settings.analytics?.enabled ? "block" : "none"
+            }}>
+              <div style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "8px",
+                marginBottom: "8px"
+              }}>
+                <span style={{
+                  fontSize: "12px",
+                  color: "#062013",
+                  lineHeight: "1.4"
+                }}>
+                  Summary rows will be added below each table with calculated values
+                </span>
               </div>
-
-              {/* Average calculation */}
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">📊</span>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Calculate Averages</span>
-                    <p className="text-xs text-gray-500">Add average values for numeric columns</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() =>
-                    handleAnalyticsSettingChange("calculateAverages", !settings.analytics?.calculateAverages)
-                  }
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    settings.analytics?.calculateAverages ? "bg-blue-500" : "bg-gray-300"
-                  }`}
-                  disabled={isSaving}>
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      settings.analytics?.calculateAverages ? "translate-x-5" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Count unique calculation */}
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">🔢</span>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">Count Unique Values</span>
-                    <p className="text-xs text-gray-500">Count distinct values in text columns</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() =>
-                    handleAnalyticsSettingChange("countUnique", !settings.analytics?.countUnique)
-                  }
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    settings.analytics?.countUnique ? "bg-purple-500" : "bg-gray-300"
-                  }`}
-                  disabled={isSaving}>
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      settings.analytics?.countUnique ? "translate-x-5" : "translate-x-1"
-                    }`}
-                  />
-                </button>
+              <div style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "8px"
+              }}>
+                <span style={{
+                  fontSize: "12px",
+                  color: "#062013",
+                  lineHeight: "1.4"
+                }}>
+                  Works with numeric data, currencies, and percentages
+                </span>
               </div>
             </div>
-
-            {/* Analytics Info */}
-            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg mt-3">
-              <p className="text-xs text-indigo-700 flex items-center">
-                <span className="mr-2">💡</span>
-                Analytics add summary rows to both single table and batch exports
-              </p>
-              <p className="text-xs text-indigo-600 mt-1">
-                Summary rows are clearly marked and styled for easy identification
-              </p>
-            </div>
           </div>
-        )}
-
-        {/* Analytics Disabled State */}
-        {!settings.analytics?.enabled && (
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-            <p className="text-xs text-gray-600 flex items-center">
-              <span className="mr-2">💤</span>
-              Analytics are currently disabled. Enable above to add automatic calculations to your exports.
-            </p>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Save Indicator */}

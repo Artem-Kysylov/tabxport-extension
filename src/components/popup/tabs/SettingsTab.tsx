@@ -13,8 +13,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 }) => {
   return (
     <div className="p-4">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        Export Settings
+      <h2 style={{
+        fontSize: "16px",
+        fontWeight: 600,
+        color: "#062013",
+        marginBottom: "16px"
+      }}>
+        Settings
       </h2>
       
       {/* Google Drive Authentication */}

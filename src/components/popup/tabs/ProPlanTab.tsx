@@ -10,11 +10,11 @@ interface AuthState {
   hasGoogleAccess: boolean
 }
 
-interface SubscriptionTabProps {
+interface ProPlanTabProps {
   onUpgradeClick: () => void
 }
 
-export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({
+export const ProPlanTab: React.FC<ProPlanTabProps> = ({
   onUpgradeClick
 }) => {
   const [authState, setAuthState] = useState<AuthState>({
@@ -37,7 +37,7 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Account</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Pro Plan</h2>
       
       {/* Authentication Status */}
       <AuthStatus onAuthChange={handleAuthChange} />
@@ -75,4 +75,4 @@ export const SubscriptionTab: React.FC<SubscriptionTabProps> = ({
       )}
     </div>
   )
-}
+} 

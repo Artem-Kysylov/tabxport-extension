@@ -3,6 +3,8 @@ import {
   setupMutationObserver
 } from "./components/dom-observer"
 import { addSpinnerCSS } from "./components/export-button"
+import { initSurveyEventListener } from "../utils/survey-integration"
+import { initContentSurveyManager } from "./survey-manager"
 
 // Функция для проверки поддерживаемых платформ
 const isSupportedPlatform = (): boolean => {
@@ -296,6 +298,10 @@ export const init = async (): Promise<void> => {
   } else {
     console.log("TabXport: No periodic scanning setup - platform not AI")
   }
+
+  // Инициализация Survey Manager
+  initContentSurveyManager()
+  initSurveyEventListener()
 
   console.log("TabXport: Content script initialization complete")
 }

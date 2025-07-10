@@ -507,6 +507,18 @@ export const handleBatchExport = async (
             setTimeout(() => {
               showNotification("Combined file exported to Google Drive successfully!", "success")
               hideModalFn()
+              
+              // Trigger post-export survey
+              import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
+                const exportContext = createExportContext(
+                  modalState.config.format,
+                  modalState.config.selectedTables.size,
+                  'google_drive',
+                  'batch',
+                  window.location.hostname
+                )
+                triggerPostExportSurvey(exportContext)
+              }).catch(console.error)
             }, 1500)
           } else {
             updateProgressWithMessage(
@@ -536,6 +548,18 @@ export const handleBatchExport = async (
           setTimeout(() => {
             showNotification("Combined file downloaded successfully!", "success")
             hideModalFn()
+            
+            // Trigger post-export survey
+            import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
+              const exportContext = createExportContext(
+                modalState.config.format,
+                modalState.config.selectedTables.size,
+                'download',
+                'batch',
+                window.location.hostname
+              )
+              triggerPostExportSurvey(exportContext)
+            }).catch(console.error)
           }, 1500)
         }
 
@@ -839,6 +863,18 @@ export const handleBatchExport = async (
           setTimeout(() => {
             showNotification("ZIP archive exported to Google Drive successfully!", "success")
             hideModalFn()
+            
+            // Trigger post-export survey
+            import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
+              const exportContext = createExportContext(
+                modalState.config.format,
+                selectedTables.length,
+                'google_drive',
+                'batch',
+                window.location.hostname
+              )
+              triggerPostExportSurvey(exportContext)
+            }).catch(console.error)
           }, 1500)
           
           // Save format preference if remember checkbox is checked
@@ -880,6 +916,18 @@ export const handleBatchExport = async (
         setTimeout(() => {
           showNotification("ZIP archive downloaded successfully!", "success")
           hideModalFn()
+          
+          // Trigger post-export survey
+          import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
+            const exportContext = createExportContext(
+              modalState.config.format,
+              selectedTables.length,
+              'download',
+              'batch',
+              window.location.hostname
+            )
+            triggerPostExportSurvey(exportContext)
+          }).catch(console.error)
         }, 1500)
         
         // Save format preference if remember checkbox is checked
@@ -925,6 +973,18 @@ export const handleBatchExport = async (
       setTimeout(() => {
         showNotification(message, "success")
         hideModalFn()
+        
+        // Trigger post-export survey
+        import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
+          const exportContext = createExportContext(
+            modalState.config.format,
+            exportedCount,
+            modalState.config.destination,
+            'batch',
+            window.location.hostname
+          )
+          triggerPostExportSurvey(exportContext)
+        }).catch(console.error)
       }, 1500)
     } else {
       // Show error message if no files were exported

@@ -321,9 +321,33 @@ const handleExport = async (
         console.log("✅ TabXport: Google Drive export successful!")
         console.log("🔗 TabXport: Google Drive link:", result.googleDriveLink)
         showNotification("Table exported to Google Drive successfully!", "success")
+        
+        // Trigger post-export survey
+        import("../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
+          const exportContext = createExportContext(
+            settings.defaultFormat,
+            1,
+            'google_drive',
+            'single',
+            window.location.hostname
+          )
+          triggerPostExportSurvey(exportContext)
+        }).catch(console.error)
       } else {
         console.log("📥 TabXport: Download export successful!")
         showNotification("Table exported successfully!", "success")
+        
+        // Trigger post-export survey
+        import("../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
+          const exportContext = createExportContext(
+            settings.defaultFormat,
+            1,
+            'download',
+            'single',
+            window.location.hostname
+          )
+          triggerPostExportSurvey(exportContext)
+        }).catch(console.error)
       }
     } else {
       console.error("❌ TabXport: Export failed:", result)

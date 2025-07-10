@@ -930,10 +930,12 @@ const SPINNER_STYLES = `
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10001;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 .spinner-container {
@@ -950,8 +952,12 @@ const SPINNER_STYLES = `
   padding: 40px 48px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   text-align: center;
-  max-width: 320px;
+  max-width: 380px;
   width: 90vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .spinner-icon {
@@ -973,15 +979,20 @@ const SPINNER_STYLES = `
 .spinner-text {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: #062013;
   margin-bottom: 8px;
   line-height: 1.4;
+  text-align: center;
+  width: 100%;
 }
 
 .spinner-subtext {
   font-size: 14px;
-  color: #6b7280;
+  color: #829089;
   line-height: 1.4;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
 }
 `
 

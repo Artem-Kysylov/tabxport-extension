@@ -458,8 +458,8 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
       </h2>
       
       {renderCurrentPlan()}
-      {renderComparisonTable()}
       {renderUpgradeCTA()}
+      {renderComparisonTable()}
       {renderSupport()}
     </div>
   )

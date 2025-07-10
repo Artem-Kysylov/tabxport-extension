@@ -428,7 +428,7 @@ const attachEventListeners = (): void => {
   const rememberFormatToggle = document.getElementById("remember-format-toggle")
   const rememberFormatLabel = document.querySelector(".remember-format-label")
   
-  const handleToggleClick = () => {
+  const handleToggleClick = (e?: Event) => {
     const newState = !modalState.rememberFormat
     modalState.rememberFormat = newState
     
@@ -484,8 +484,18 @@ const attachEventListeners = (): void => {
     console.log(`📝 Remember format toggle ${newState ? "enabled" : "disabled"}`)
   }
   
-  rememberFormatToggle?.addEventListener("click", handleToggleClick)
-  rememberFormatLabel?.addEventListener("click", handleToggleClick)
+  // Add click handlers to both toggle and label
+  rememberFormatToggle?.addEventListener("click", (e) => {
+    e.stopPropagation() // Prevent event bubbling to label
+    handleToggleClick(e)
+  })
+  
+  rememberFormatLabel?.addEventListener("click", (e) => {
+    // Only handle click if it's on the label text, not the toggle div
+    if (e.target !== rememberFormatToggle && !rememberFormatToggle?.contains(e.target as Node)) {
+      handleToggleClick(e)
+    }
+  })
 
   // Clear format preference button
   const clearPreferenceBtn = document.getElementById("clear-format-preference")

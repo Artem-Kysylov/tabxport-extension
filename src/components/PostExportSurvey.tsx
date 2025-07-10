@@ -87,12 +87,12 @@ export const PostExportSurvey: React.FC<PostExportSurveyProps> = ({
           <>
             <div className="tablexport-survey-header">
               <h3 className="tablexport-survey-title">
-                Какая функция важнее для вас?
+                Which feature matters most to you?
               </h3>
               <button 
                 className="tablexport-survey-close"
                 onClick={onClose}
-                title="Закрыть"
+                title="Close"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M18 6L6 18M6 6L18 18" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -126,10 +126,10 @@ export const PostExportSurvey: React.FC<PostExportSurveyProps> = ({
           <div className="tablexport-survey-thank-you">
             <div className="tablexport-survey-celebration">🎉</div>
             <h3 className="tablexport-survey-thank-title">
-              Спасибо за отзыв!
+              Thank you for your feedback!
             </h3>
             <p className="tablexport-survey-thank-subtitle">
-              Вы помогаете нам делать TableXport лучше
+              You're helping us make TableXport better
             </p>
           </div>
         )}

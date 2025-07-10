@@ -29,17 +29,17 @@ export const SURVEY_OPTIONS: SurveyOption[] = [
   {
     id: 'ai-analysis',
     emoji: '🤖',
-    text: 'AI-анализ (суммы, тренды, аномалии)'
+    text: 'AI Analysis (sums, trends, anomalies)'
   },
   {
     id: 'notion-sync',
     emoji: '📌',
-    text: 'Синхронизация с Notion'
+    text: 'Notion Synchronization'
   },
   {
     id: 'satisfied',
     emoji: '✋',
-    text: 'Меня всё устраивает'
+    text: 'I\'m satisfied with current features'
   }
 ]
 

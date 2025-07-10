@@ -102,11 +102,7 @@ const createExportSpinner = (modalState: BatchModalState): HTMLElement => {
     <div class="spinner-container">
       <div class="spinner-content">
         <div class="spinner-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#1B9358" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="60 20" class="spinner-circle">
-              <animateTransform attributeName="transform" type="rotate" dur="1s" values="0 12 12;360 12 12" repeatCount="indefinite"/>
-            </circle>
-          </svg>
+          <div class="spinner-circle"></div>
         </div>
         <div class="spinner-text">${mainText}</div>
         <div class="spinner-subtext">${subText}</div>

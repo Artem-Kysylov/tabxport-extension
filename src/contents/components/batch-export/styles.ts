@@ -968,12 +968,26 @@ const SPINNER_STYLES = `
 }
 
 .spinner-circle {
-  animation: spin 1s linear infinite;
+  width: 48px;
+  height: 48px;
+  background: #1B9358;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes pulse {
+  0% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .spinner-text {

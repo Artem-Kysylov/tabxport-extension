@@ -475,8 +475,8 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                 <div
                   style={{
                     position: "absolute",
-                    top: "2px",
-                    left: rememberFormat ? "22px" : "2px",
+                    top: "1px",
+                    left: rememberFormat ? "21px" : "1px",
                     width: "20px",
                     height: "20px",
                     backgroundColor: rememberFormat ? "white" : "#1B9358",

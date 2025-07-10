@@ -448,14 +448,14 @@ const attachEventListeners = (): void => {
       if (newState) {
         toggleContainer.style.backgroundColor = '#1B9358'
         toggleContainer.style.border = '1px solid #1B9358'
-        toggleCircle.style.left = '22px'
-        toggleCircle.style.top = '2px'
+        toggleCircle.style.left = '21px'
+        toggleCircle.style.top = '1px'
         toggleCircle.style.backgroundColor = 'white'
       } else {
         toggleContainer.style.backgroundColor = 'transparent'
         toggleContainer.style.border = '1px solid #d1d5db'
-        toggleCircle.style.left = '2px'
-        toggleCircle.style.top = '2px'
+        toggleCircle.style.left = '1px'
+        toggleCircle.style.top = '1px'
         toggleCircle.style.backgroundColor = '#1B9358'
       }
     }

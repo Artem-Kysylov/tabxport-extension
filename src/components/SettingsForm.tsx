@@ -6,9 +6,10 @@ import { iconExcel, iconCsv, iconWord, iconPdf, iconGoogleSheets, iconDevice, ic
 
 interface SettingsFormProps {
   onSettingsChange?: (settings: UserSettings) => void
+  authBlock?: React.ReactNode
 }
 
-const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
+const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock }) => {
   const [settings, setSettings] = useState<UserSettings>({
     defaultFormat: "xlsx",
     defaultDestination: "download",
@@ -438,56 +439,72 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
               marginTop: "4px",
               lineHeight: "1.4"
             }}>
-              Google Sheets format requires Google Drive connection<br/>
-              Connect your Google account below to unlock Google Sheets export
+              Google Sheets format requires Google Drive connection
             </div>
           )}
-        </div>
-
-
-
-        {/* Format Memory Toggle */}
-        <div style={{ marginTop: "18px" }}>
-          <label 
-            onClick={() => handleRememberFormatChange(!rememberFormat)}
-            style={{
-              fontSize: "14px",
-              fontWeight: 400,
-              color: "#062013",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-              userSelect: "none"
-            }}
-          >
-            <input 
-              type="checkbox" 
-              checked={rememberFormat}
-              onChange={() => {}} // Handled by label onClick
+          
+          {/* Format Memory Toggle - moved up */}
+          <div style={{ marginTop: !isGoogleDriveAuthenticated ? "8px" : "4px" }}>
+            <label 
+              onClick={() => handleRememberFormatChange(!rememberFormat)}
               style={{
-                appearance: "none",
-                WebkitAppearance: "none",
-                width: "20px",
-                height: "20px",
-                border: "1px solid #1B9358",
-                borderRadius: "2px",
-                margin: "0",
+                fontSize: "14px",
+                fontWeight: 400,
+                color: "#062013",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
                 cursor: "pointer",
-                position: "relative",
-                transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
-                background: rememberFormat ? "#1B9358" : "white"
+                userSelect: "none"
               }}
-            />
-            <span>Remember my format</span>
-          </label>
+            >
+              <div 
+                style={{
+                  position: "relative",
+                  width: "44px",
+                  height: "24px",
+                  backgroundColor: rememberFormat ? "#1B9358" : "transparent",
+                  border: rememberFormat ? "none" : "2px solid #d1d5db",
+                  borderRadius: "12px",
+                  cursor: "pointer",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  margin: "0",
+                  boxSizing: "border-box"
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "2px",
+                    left: rememberFormat ? "22px" : "2px",
+                    width: "20px",
+                    height: "20px",
+                    backgroundColor: rememberFormat ? "white" : "#1B9358",
+                    borderRadius: "50%",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+                  }}
+                />
+              </div>
+              <span>Remember my format</span>
+            </label>
+          </div>
         </div>
+
+        {/* Google Drive Authentication - moved here from top */}
+        {authBlock && (
+          <div style={{ marginTop: "18px", marginBottom: "6px" }}>
+            {authBlock}
+          </div>
+        )}
+
+
       </div>
 
       {/* Export Destination */}
       <div style={{ marginTop: "24px" }}>
         <h3 style={{
-          fontSize: "16px",
+          fontSize: "14px",
           fontWeight: "600",
           color: "#062013",
           margin: "0 0 16px 0"
@@ -717,7 +734,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
                 }}
               />
               <span style={{
-                fontSize: "16px",
+                fontSize: "14px",
                 fontWeight: "600",
                 color: "#062013"
               }}>

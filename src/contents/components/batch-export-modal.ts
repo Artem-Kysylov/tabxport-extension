@@ -197,6 +197,16 @@ const loadUserSettingsForModal = async (): Promise<UserSettings> => {
       modalState.config.destination = settings.defaultDestination || "device"
     }
     
+    // Load rememberFormat setting from localStorage
+    try {
+      const savedRememberFormat = localStorage.getItem("rememberFormat")
+      modalState.rememberFormat = savedRememberFormat === "true"
+      console.log("🧠 Loaded rememberFormat setting:", modalState.rememberFormat)
+    } catch (error) {
+      console.warn("⚠️ Failed to load rememberFormat setting:", error)
+      modalState.rememberFormat = false
+    }
+    
     // Load analytics settings from user preferences
     if (settings.analytics) {
       modalState.config.analytics = {
@@ -414,17 +424,68 @@ const attachEventListeners = (): void => {
     })
   })
 
-  // Remember format checkbox
-  const rememberFormatCheckbox = document.getElementById(
-    "remember-format-checkbox"
-  ) as HTMLInputElement
-  rememberFormatCheckbox?.addEventListener("change", (e) => {
-    const isChecked = (e.target as HTMLInputElement).checked
-    modalState.rememberFormat = isChecked
-    console.log(
-      `📝 Remember format checkbox ${isChecked ? "checked" : "unchecked"}`
-    )
-  })
+  // Remember format toggle
+  const rememberFormatToggle = document.getElementById("remember-format-toggle")
+  const rememberFormatLabel = document.querySelector(".remember-format-label")
+  
+  const handleToggleClick = () => {
+    const newState = !modalState.rememberFormat
+    modalState.rememberFormat = newState
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem("rememberFormat", newState.toString())
+      console.log("🧠 Saved rememberFormat to localStorage:", newState)
+    } catch (error) {
+      console.warn("⚠️ Failed to save rememberFormat to localStorage:", error)
+    }
+    
+    // Update toggle visual state
+    if (rememberFormatToggle) {
+      const toggleContainer = rememberFormatToggle
+      const toggleCircle = toggleContainer.firstElementChild as HTMLElement
+      
+      if (newState) {
+        toggleContainer.style.backgroundColor = '#1B9358'
+        toggleContainer.style.border = 'none'
+        toggleCircle.style.left = '22px'
+        toggleCircle.style.top = '2px'
+        toggleCircle.style.backgroundColor = 'white'
+      } else {
+        toggleContainer.style.backgroundColor = 'transparent'
+        toggleContainer.style.border = '2px solid #d1d5db'
+        toggleCircle.style.left = '2px'
+        toggleCircle.style.top = '2px'
+        toggleCircle.style.backgroundColor = '#1B9358'
+      }
+    }
+    
+    // Update Memory ON tag visibility
+    const memoryTag = document.querySelector('.memory-tag') as HTMLElement
+    if (newState) {
+      // Show Memory ON tag if it doesn't exist
+      if (!memoryTag) {
+        const formatPreferences = document.querySelector('.format-preferences > div') as HTMLElement
+        if (formatPreferences) {
+          const newTag = document.createElement('span')
+          newTag.className = 'memory-tag'
+          newTag.style.cssText = 'font-size: 12px; background-color: #d1fae5; color: #047857; padding: 4px 8px; border-radius: 9999px;'
+          newTag.textContent = 'Memory ON'
+          formatPreferences.appendChild(newTag)
+        }
+      }
+    } else {
+      // Hide Memory ON tag
+      if (memoryTag) {
+        memoryTag.remove()
+      }
+    }
+    
+    console.log(`📝 Remember format toggle ${newState ? "enabled" : "disabled"}`)
+  }
+  
+  rememberFormatToggle?.addEventListener("click", handleToggleClick)
+  rememberFormatLabel?.addEventListener("click", handleToggleClick)
 
   // Clear format preference button
   const clearPreferenceBtn = document.getElementById("clear-format-preference")

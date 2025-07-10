@@ -49,7 +49,7 @@ export const HelpTab: React.FC = () => {
             background: 'white',
             border: '1.5px solid #CDD2D0',
             color: '#062013',
-            padding: '20px',
+            padding: '16px',
             borderRadius: '8px',
             fontSize: '12px',
             fontWeight: '600',

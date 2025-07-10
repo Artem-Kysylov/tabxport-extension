@@ -22,10 +22,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         Settings
       </h2>
       
-      {/* Google Drive Authentication */}
-      <AuthStatus />
-      
-      <SettingsForm onSettingsChange={onSettingsChange} />
+      <SettingsForm onSettingsChange={onSettingsChange} authBlock={<AuthStatus />} />
     </div>
   )
 }

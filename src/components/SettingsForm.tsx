@@ -464,7 +464,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                   width: "44px",
                   height: "24px",
                   backgroundColor: rememberFormat ? "#1B9358" : "transparent",
-                  border: rememberFormat ? "none" : "2px solid #d1d5db",
+                  border: rememberFormat ? "1px solid #1B9358" : "1px solid #d1d5db",
                   borderRadius: "12px",
                   cursor: "pointer",
                   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",

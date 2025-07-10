@@ -169,7 +169,7 @@ export const createFormatRadioGroup = (modalState: BatchModalState, isGoogleDriv
       <div class="format-preferences" style="margin-top: 18px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
           <label class="remember-format-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <div id="remember-format-toggle" style="position: relative; width: 44px; height: 24px; background-color: ${modalState.rememberFormat ? '#1B9358' : 'transparent'}; border: ${modalState.rememberFormat ? 'none' : '2px solid #d1d5db'}; border-radius: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin: 0; box-sizing: border-box;">
+            <div id="remember-format-toggle" style="position: relative; width: 44px; height: 24px; background-color: ${modalState.rememberFormat ? '#1B9358' : 'transparent'}; border: ${modalState.rememberFormat ? '1px solid #1B9358' : '1px solid #d1d5db'}; border-radius: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin: 0; box-sizing: border-box;">
               <div style="position: absolute; top: 2px; left: ${modalState.rememberFormat ? '22px' : '2px'}; width: 20px; height: 20px; background-color: ${modalState.rememberFormat ? 'white' : '#1B9358'}; border-radius: 50%; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);"></div>
             </div>
             <span>Remember my format</span>

@@ -172,8 +172,8 @@ export const createFormatRadioGroup = (modalState: BatchModalState, isGoogleDriv
             <div id="remember-format-toggle" style="position: relative; width: 44px; height: 24px; background-color: ${modalState.rememberFormat ? '#1B9358' : 'transparent'}; border: ${modalState.rememberFormat ? '1px solid #1B9358' : '1px solid #d1d5db'}; border-radius: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin: 0; box-sizing: border-box;">
               <div style="position: absolute; top: 1px; left: ${modalState.rememberFormat ? '21px' : '1px'}; width: 20px; height: 20px; background-color: ${modalState.rememberFormat ? 'white' : '#1B9358'}; border-radius: 50%; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);"></div>
             </div>
-            <span>Remember my format</span>
-          </label>
+          <span>Remember my format</span>
+        </label>
           ${modalState.rememberFormat ? '<span class="memory-tag" style="font-size: 12px; background-color: #d1fae5; color: #047857; padding: 4px 8px; border-radius: 9999px;">Memory ON</span>' : ''}
         </div>
         ${hasPreference ? '<button type="button" id="clear-format-preference" class="clear-preference-btn" title="Clear saved format">🗑️</button>' : ''}

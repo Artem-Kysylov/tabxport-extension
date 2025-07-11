@@ -6,7 +6,9 @@ import type {
   UsageQuota,
   UserProfile,
   UserProfileInsert,
-  UserProfileUpdate
+  UserProfileUpdate,
+  ExportLimitCheck,
+  DailyUsageStats
 } from "./types"
 
 export interface UserData {
@@ -15,13 +17,7 @@ export interface UserData {
   quota: UsageQuota
 }
 
-export interface ExportLimitCheck {
-  canExport: boolean
-  canExportToGoogleDrive: boolean
-  remainingExports: number
-  remainingGoogleDriveExports: number
-  limitMessage?: string
-}
+// ExportLimitCheck теперь импортируется из types.ts
 
 class UserService {
   /**
@@ -129,41 +125,8 @@ class UserService {
     userId: string,
     destination: ExportDestination = "download"
   ): Promise<ExportLimitCheck> {
-    // TESTING MODE: Always return unlimited access
-    console.log("🧪 TESTING MODE: Bypassing all export limits for user:", userId)
-    
-    return {
-      canExport: true,
-      canExportToGoogleDrive: true,
-      remainingExports: -1, // Unlimited
-      remainingGoogleDriveExports: -1, // Unlimited
-      limitMessage: undefined
-    }
-
-    // Original limit checking code commented out for testing
-    /*
     try {
-      // Используем RPC функцию для проверки лимитов
-      const { data: canExport, error } = await supabase.rpc(
-        "check_export_limit",
-        {
-          user_uuid: userId,
-          export_destination: destination
-        }
-      )
-
-      if (error) {
-        console.error("Error checking export limits:", error)
-        return {
-          canExport: false,
-          canExportToGoogleDrive: false,
-          remainingExports: 0,
-          remainingGoogleDriveExports: 0,
-          limitMessage: "Error checking limits"
-        }
-      }
-
-      // Получаем текущие квоты для подробной информации
+      // Получаем данные пользователя
       const userData = await this.getUserData(userId)
       if (!userData) {
         return {
@@ -177,47 +140,50 @@ class UserService {
 
       const { quota, subscription } = userData
 
+      // Проверяем, нужно ли сбросить дневные лимиты
+      const today = new Date().toDateString()
+      const lastResetDate = quota.last_reset_date ? new Date(quota.last_reset_date).toDateString() : null
+      
+      if (lastResetDate !== today) {
+        // Сбрасываем дневные счетчики
+        await this.resetDailyLimits(userId)
+        quota.exports_today = 0
+        quota.last_reset_date = new Date().toISOString()
+      }
+
+      // Устанавливаем лимиты в зависимости от плана
+      const dailyExportLimit = subscription.plan_type === 'free' ? 5 : -1 // Free: 5 в день, Pro: unlimited
+      const googleDriveAccess = subscription.plan_type !== 'free' // Только для Pro+
+
+      // Проверяем дневной лимит экспортов
+      const canExport = dailyExportLimit === -1 || quota.exports_today < dailyExportLimit
+      
+      // Проверяем доступ к Google Drive
+      const canExportToGoogleDrive = googleDriveAccess && (destination !== "google_drive" || canExport)
+
       // Вычисляем оставшиеся экспорты
-      const remainingExports =
-        quota.exports_limit === -1
+      const remainingExports = dailyExportLimit === -1 
           ? -1 // Unlimited
-          : Math.max(0, quota.exports_limit - quota.exports_this_month)
+        : Math.max(0, dailyExportLimit - quota.exports_today)
 
-      const remainingGoogleDriveExports =
-        quota.google_drive_limit === -1
-          ? -1 // Unlimited
-          : Math.max(
-              0,
-              quota.google_drive_limit - quota.google_drive_exports_this_month
-            )
+      const remainingGoogleDriveExports = googleDriveAccess 
+        ? remainingExports 
+        : 0
 
-      // Определяем сообщения о лимитах
+      // Формируем сообщения о лимитах
       let limitMessage: string | undefined
 
       if (!canExport) {
-        if (
-          subscription.plan_type === "free" &&
-          quota.exports_this_month >= quota.exports_limit
-        ) {
-          limitMessage = `Вы достигли лимита ${quota.exports_limit} экспортов в месяц. Обновитесь до Pro плана для неограниченных экспортов.`
-        } else if (
-          destination === "google_drive" &&
-          quota.google_drive_limit === 0
-        ) {
-          limitMessage =
-            "Google Drive экспорт доступен только для Pro подписчиков."
-        } else if (
-          destination === "google_drive" &&
-          quota.google_drive_exports_this_month >= quota.google_drive_limit
-        ) {
-          limitMessage =
-            "Вы достигли лимита Google Drive экспортов в этом месяце."
+        if (subscription.plan_type === "free" && quota.exports_today >= dailyExportLimit) {
+          limitMessage = `You've reached your daily limit of ${dailyExportLimit} exports. Upgrade to Pro for unlimited exports or wait until tomorrow.`
         }
+      } else if (destination === "google_drive" && !googleDriveAccess) {
+        limitMessage = "Google Drive export is available only for Pro subscribers."
       }
 
       return {
-        canExport: !!canExport,
-        canExportToGoogleDrive: quota.google_drive_limit !== 0,
+        canExport,
+        canExportToGoogleDrive,
         remainingExports,
         remainingGoogleDriveExports,
         limitMessage
@@ -232,31 +198,43 @@ class UserService {
         limitMessage: "Error checking limits"
       }
     }
-    */
   }
 
   /**
-   * Увеличение счетчика использования после экспорта
+   * Сброс дневных лимитов
    */
-  async incrementUsage(
-    userId: string,
-    destination: ExportDestination = "download"
-  ): Promise<boolean> {
+  private async resetDailyLimits(userId: string): Promise<void> {
     try {
-      const { error } = await supabase.rpc("increment_export_usage", {
-        user_uuid: userId,
-        export_destination: destination
+      const { error } = await supabase
+        .from('usage_quotas')
+        .update({
+          exports_today: 0,
+          last_reset_date: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error("Error resetting daily limits:", error)
+      }
+    } catch (error) {
+      console.error("Error resetting daily limits:", error)
+    }
+  }
+
+  /**
+   * Увеличение счетчика экспортов
+   */
+  async incrementExportCount(userId: string): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('increment_daily_exports', {
+        user_uuid: userId
       })
 
       if (error) {
-        console.error("Error incrementing usage:", error)
-        return false
+        console.error("Error incrementing export count:", error)
       }
-
-      return true
     } catch (error) {
-      console.error("Error incrementing usage:", error)
-      return false
+      console.error("Error incrementing export count:", error)
     }
   }
 

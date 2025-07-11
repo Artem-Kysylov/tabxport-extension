@@ -351,7 +351,16 @@ const handleExport = async (
       }
     } else {
       console.error("❌ TabXport: Export failed:", result)
+      
+      // Проверяем, если это ошибка лимита
+      if (result?.limitExceeded || result?.error?.includes('daily limit') || result?.error?.includes('Daily export')) {
+        // Показываем специальное предупреждение о лимите
+        import("./limit-warning").then(({ showLimitExceededWarning }) => {
+          showLimitExceededWarning()
+        }).catch(console.error)
+      } else {
       showNotification(result?.error || "Export failed", "error")
+      }
     }
   } catch (error) {
     console.error("❌ TabXport: Export error:", error)

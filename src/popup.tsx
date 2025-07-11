@@ -57,7 +57,7 @@ const Popup: React.FC = () => {
 
   return (
     <div className="w-80 bg-white">
-      <Header isSupported={isSupported} />
+      <Header isSupported={isSupported} onUpgradeClick={handleUpgradeClick} />
 
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 

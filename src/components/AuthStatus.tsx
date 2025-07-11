@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react"
 
+import AuthDetails from "./AuthDetails"
+import SubscriptionStatus from "./SubscriptionStatus"
+
 interface AuthUser {
   id: string
   email: string
@@ -161,7 +164,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
     )
   }
 
-  if (!authState.isAuthenticated) {
+  if (!authState.isAuthenticated || !authState.user) {
     return (
       <div 
         style={{
@@ -223,44 +226,97 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
               e.currentTarget.style.opacity = '1'
             }}
           >
-            <div 
-              style={{ width: '16px', height: '16px' }}
-              dangerouslySetInnerHTML={{
-                __html: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g clip-path="url(#clip0_192_42)">
-<mask id="mask0_192_42" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-<path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
-</mask>
-<g mask="url(#mask0_192_42)">
-<path d="M-0.354736 18.8343V5.16528L8.5827 11.9998L-0.354736 18.8343Z" fill="#FBBC05"/>
-</g>
-<mask id="mask1_192_42" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-<path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
-</mask>
-<g mask="url(#mask1_192_42)">
-<path d="M-0.354736 5.16537L8.5827 11.9999L12.2628 8.79293L24.8804 6.74256V-0.617676H-0.354736V5.16537Z" fill="#EA4335"/>
-</g>
-<mask id="mask2_192_42" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-<path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
-</mask>
-<g mask="url(#mask2_192_42)">
-<path d="M-0.354736 18.8344L15.4172 6.74256L19.5705 7.26829L24.8804 -0.617676V24.6174H-0.354736V18.8344Z" fill="#34A853"/>
-</g>
-<mask id="mask3_192_42" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-<path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
-</mask>
-<g mask="url(#mask3_192_42)">
-<path d="M24.8806 24.6173L8.58291 11.9998L6.47998 10.4226L24.8806 5.16528V24.6173Z" fill="#4285F4"/>
-</g>
-</g>
-<defs>
-<clipPath id="clip0_192_42">
-<rect width="24" height="24" fill="white"/>
-</clipPath>
-</defs>
-</svg>`
-              }}
-            />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ width: "16px", height: "16px" }}>
+              <g clipPath="url(#clip0_192_42)">
+                <mask
+                  id="mask0_192_42"
+                  style={{ maskType: "luminance" }}
+                  maskUnits="userSpaceOnUse"
+                  x="0"
+                  y="0"
+                  width="24"
+                  height="24">
+                  <path
+                    d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z"
+                    fill="white"
+                  />
+                </mask>
+                <g mask="url(#mask0_192_42)">
+                  <path
+                    d="M-0.354736 18.8343V5.16528L8.5827 11.9998L-0.354736 18.8343Z"
+                    fill="#FBBC05"
+                  />
+                </g>
+                <mask
+                  id="mask1_192_42"
+                  style={{ maskType: "luminance" }}
+                  maskUnits="userSpaceOnUse"
+                  x="0"
+                  y="0"
+                  width="24"
+                  height="24">
+                  <path
+                    d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z"
+                    fill="white"
+                  />
+                </mask>
+                <g mask="url(#mask1_192_42)">
+                  <path
+                    d="M-0.354736 5.16537L8.5827 11.9999L12.2628 8.79293L24.8804 6.74256V-0.617676H-0.354736V5.16537Z"
+                    fill="#EA4335"
+                  />
+                </g>
+                <mask
+                  id="mask2_192_42"
+                  style={{ maskType: "luminance" }}
+                  maskUnits="userSpaceOnUse"
+                  x="0"
+                  y="0"
+                  width="24"
+                  height="24">
+                  <path
+                    d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z"
+                    fill="white"
+                  />
+                </mask>
+                <g mask="url(#mask2_192_42)">
+                  <path
+                    d="M-0.354736 18.8344L15.4172 6.74256L19.5705 7.26829L24.8804 -0.617676V24.6174H-0.354736V18.8344Z"
+                    fill="#34A853"
+                  />
+                </g>
+                <mask
+                  id="mask3_192_42"
+                  style={{ maskType: "luminance" }}
+                  maskUnits="userSpaceOnUse"
+                  x="0"
+                  y="0"
+                  width="24"
+                  height="24">
+                  <path
+                    d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z"
+                    fill="white"
+                  />
+                </mask>
+                <g mask="url(#mask3_192_42)">
+                  <path
+                    d="M24.8806 24.6173L8.58291 11.9998L6.47998 10.4226L24.8806 5.16528V24.6173Z"
+                    fill="#4285F4"
+                  />
+                </g>
+              </g>
+              <defs>
+                <clipPath id="clip0_192_42">
+                  <rect width="24" height="24" fill="white" />
+                </clipPath>
+              </defs>
+            </svg>
             <span>Sign in with Google</span>
           </button>
           
@@ -275,45 +331,9 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
           </p>
         </div>
       </div>
-    )
+    );
   }
 
-  return (
-    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-medium text-sm">
-              {authState.user?.full_name?.[0] || authState.user?.email?.[0] || "U"}
-            </span>
-          </div>
-          <div>
-            <p className="font-medium text-gray-900 text-sm">
-              {authState.user?.full_name || "Google User"}
-            </p>
-            <p className="text-xs text-gray-600">{authState.user?.email}</p>
-            <div className="flex items-center space-x-2 mt-1">
-              <span className="text-xs text-emerald-600 flex items-center">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
-                Connected
-              </span>
-              {authState.hasGoogleAccess && (
-                <span className="text-xs text-blue-600 flex items-center">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                  Google Drive
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        <button
-          onClick={handleSignOut}
-          className="text-xs text-gray-500 hover:text-gray-700 transition-colors px-2 py-1 rounded border border-gray-200 hover:border-gray-300">
-          Sign out
-        </button>
-      </div>
-    </div>
-  )
+  return <AuthDetails user={authState.user} onSignOut={handleSignOut} />;
 } 
 

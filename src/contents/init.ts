@@ -258,6 +258,16 @@ export const init = async (): Promise<void> => {
   await scanAndProcessTables()
   console.log("TabXport: Initial scan completed")
 
+  // Проверяем лимиты экспорта при загрузке страницы
+  setTimeout(async () => {
+    try {
+      const { checkAndShowLimitWarning } = await import("./components/limit-warning")
+      await checkAndShowLimitWarning()
+    } catch (error) {
+      console.error("TabXport: Failed to check export limits:", error)
+    }
+  }, 2000) // Проверяем через 2 секунды после загрузки
+
   // Настройка наблюдателя за изменениями DOM
   console.log("TabXport: Setting up mutation observer")
   setupMutationObserver()

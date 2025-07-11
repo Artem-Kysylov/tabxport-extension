@@ -2,7 +2,17 @@ import React, { useEffect, useState } from "react"
 
 import { getUserSettings, saveUserSettings } from "../lib/storage"
 import type { UserSettings, AnalyticsSettings } from "../types"
-import { iconExcel, iconCsv, iconWord, iconPdf, iconGoogleSheets, iconDevice, iconGoogleDrive, iconPadlock } from "../contents/components/batch-export/svg-icons"
+import ExportLimitIndicator from "./ExportLimitIndicator"
+import {
+  iconExcel,
+  iconCsv,
+  iconWord,
+  iconPdf,
+  iconGoogleSheets,
+  iconDevice,
+  iconGoogleDrive,
+  iconPadlock
+} from "../contents/components/batch-export/svg-icons"
 
 interface SettingsFormProps {
   onSettingsChange?: (settings: UserSettings) => void
@@ -296,50 +306,28 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
 
   return (
     <div className="space-y-6 p-4">
-      {/* Default Format Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label style={{
-            fontSize: "14px",
-            fontWeight: 600,
-            color: "#062013",
-            marginBottom: "0"
-          }}>
-            Default Export Format
-          </label>
-          {rememberFormat && (
-            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-              Memory ON
-            </span>
-          )}
-        </div>
-
-        {/* Main formats in 2x2 grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "8px",
-          marginBottom: "8px"
-        }}>
-          {(() => {
-            const formats = [
-              { key: "xlsx", icon: iconExcel, name: "Excel", ext: ".xlsx", cloudNative: false },
-              { key: "csv", icon: iconCsv, name: "CSV", ext: "", cloudNative: false },
-              { key: "docx", icon: iconWord, name: "Word", ext: ".docx", cloudNative: false },
-              { key: "pdf", icon: iconPdf, name: "PDF", ext: "", cloudNative: false }
-            ] as Array<{ key: string; icon: string; name: string; ext: string; cloudNative: boolean }>
-            
-            return formats
-          })().map((format) => (
+      <form
+        className="space-y-6"
+        onSubmit={(e) => e.preventDefault()}>
+        {/* Default Export Format */}
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <h3 className="text-base font-semibold text-gray-800">
+              Default Export Format
+            </h3>
+            <ExportLimitIndicator />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Excel Button */}
             <button
-              key={format.key}
-              onClick={() => handleSettingChange("defaultFormat", format.key)}
+              key="xlsx"
+              onClick={() => handleSettingChange("defaultFormat", "xlsx")}
               style={{
                 display: "flex",
                 alignItems: "center",
                 padding: "12px 16px",
-                backgroundColor: settings.defaultFormat === format.key ? "#D2F2E2" : "white",
-                border: settings.defaultFormat === format.key ? "none" : "1.5px solid #CDD2D0",
+                backgroundColor: settings.defaultFormat === "xlsx" ? "#D2F2E2" : "white",
+                border: settings.defaultFormat === "xlsx" ? "none" : "1.5px solid #CDD2D0",
                 borderRadius: "8px",
                 cursor: "pointer",
                 transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -352,7 +340,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                 userSelect: "none"
               }}
               onMouseEnter={(e) => {
-                if (settings.defaultFormat !== format.key) {
+                if (settings.defaultFormat !== "xlsx") {
                   e.currentTarget.style.opacity = "0.5"
                 }
               }}
@@ -369,417 +357,487 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                   alignItems: "center", 
                   justifyContent: "center" 
                 }}
-                dangerouslySetInnerHTML={{ __html: format.icon }}
+                dangerouslySetInnerHTML={{ __html: iconExcel }}
               />
-              <span>{format.name}</span>
+              <span>Excel</span>
             </button>
-          ))}
-        </div>
 
-        {/* Google Sheets option - full width, always visible */}
-        <div style={{ width: "100%", marginBottom: "8px" }}>
-          <button
-            onClick={() => {
-              if (isGoogleDriveAuthenticated) {
-                handleSettingChange("defaultFormat", "google_sheets")
-              }
-            }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "12px 16px",
-              backgroundColor: settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white",
-              border: settings.defaultFormat === "google_sheets" ? "none" : "1.5px solid #CDD2D0",
-              borderRadius: "8px",
-              cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              fontSize: "14px",
-              fontWeight: 500,
-              color: "#062013",
-              width: "100%",
-              boxSizing: "border-box",
-              gap: "12px",
-              userSelect: "none",
-              opacity: isGoogleDriveAuthenticated ? 1 : 0.5,
-              backgroundColor: !isGoogleDriveAuthenticated 
-                ? "#f8f9fa" 
-                : (settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white")
-            }}
-            onMouseEnter={(e) => {
-              if (isGoogleDriveAuthenticated && settings.defaultFormat !== "google_sheets") {
-                e.currentTarget.style.opacity = "0.5"
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (isGoogleDriveAuthenticated) {
-                e.currentTarget.style.opacity = "1"
-              }
-            }}
-            disabled={isSaving || !isGoogleDriveAuthenticated}
-          >
-            <span 
-              style={{ 
-                width: "16px", 
-                height: "16px", 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center" 
-              }}
-              dangerouslySetInnerHTML={{ __html: iconGoogleSheets }}
-            />
-            <span>Google Sheets</span>
-          </button>
-          
-          {/* Info text under Google Sheets button */}
-          {!isGoogleDriveAuthenticated && (
-            <div style={{
-              fontSize: "12px",
-              fontWeight: "normal",
-              color: "#062013",
-              marginTop: "4px",
-              lineHeight: "1.4"
-            }}>
-              Google Sheets format requires Google Drive connection
-            </div>
-          )}
-          
-          {/* Format Memory Toggle - moved up */}
-          <div style={{ marginTop: !isGoogleDriveAuthenticated ? "8px" : "4px" }}>
-            <label 
-              onClick={() => handleRememberFormatChange(!rememberFormat)}
+            {/* CSV Button */}
+            <button
+              key="csv"
+              onClick={() => handleSettingChange("defaultFormat", "csv")}
               style={{
-                fontSize: "14px",
-                fontWeight: 400,
-                color: "#062013",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
+                padding: "12px 16px",
+                backgroundColor: settings.defaultFormat === "csv" ? "#D2F2E2" : "white",
+                border: settings.defaultFormat === "csv" ? "none" : "1.5px solid #CDD2D0",
+                borderRadius: "8px",
                 cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#062013",
+                width: "100%",
+                boxSizing: "border-box",
+                gap: "12px",
                 userSelect: "none"
               }}
+              onMouseEnter={(e) => {
+                if (settings.defaultFormat !== "csv") {
+                  e.currentTarget.style.opacity = "0.5"
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1"
+              }}
+              disabled={isSaving}
             >
-              <div 
-                style={{
-                  position: "relative",
-                  width: "44px",
-                  height: "24px",
-                  backgroundColor: rememberFormat ? "#1B9358" : "transparent",
-                  border: rememberFormat ? "1px solid #1B9358" : "1px solid #d1d5db",
-                  borderRadius: "12px",
-                  cursor: "pointer",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  margin: "0",
-                  boxSizing: "border-box"
+              <span 
+                style={{ 
+                  width: "16px", 
+                  height: "16px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center" 
                 }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "1px",
-                    left: rememberFormat ? "21px" : "1px",
-                    width: "20px",
-                    height: "20px",
-                    backgroundColor: rememberFormat ? "white" : "#1B9358",
-                    borderRadius: "50%",
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
-                  }}
-                />
-              </div>
-              <span>Remember my format</span>
-            </label>
-          </div>
-        </div>
+                dangerouslySetInnerHTML={{ __html: iconCsv }}
+              />
+              <span>CSV</span>
+            </button>
 
-        {/* Google Drive Authentication - moved here from top */}
-        {authBlock && (
-          <div style={{ marginTop: "18px", marginBottom: "6px" }}>
-            {authBlock}
-          </div>
-        )}
-
-
-      </div>
-
-      {/* Export Destination */}
-      <div style={{ marginTop: "24px" }}>
-        <h3 style={{
-          fontSize: "14px",
-          fontWeight: "600",
-          color: "#062013",
-          margin: "0 0 16px 0"
-        }}>
-          Export Destination
-        </h3>
-        
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px"
-        }}>
-          {/* Download to Device */}
-          <label 
-            style={{
-              display: "flex",
-              padding: "16px",
-              borderRadius: "8px",
-              border: settings.defaultDestination === "download" ? "none" : "1px solid #CDD2D0",
-              background: settings.defaultDestination === "download" ? "#D2F2E2" : "white",
-              cursor: "pointer",
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              fontSize: "14px",
-              fontWeight: "400",
-              color: "#062013",
-              margin: "0",
-              userSelect: "none"
-            }}
-            onMouseEnter={(e) => {
-              if (settings.defaultDestination !== "download") {
-                e.currentTarget.style.opacity = "0.5"
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "1"
-            }}
-          >
-            <input
-              type="radio"
-              name="destination"
-              value="download"
-              checked={settings.defaultDestination === "download"}
-              onChange={() => handleSettingChange("defaultDestination", "download")}
-              style={{ display: "none" }}
-            />
-            <div style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "12px",
-              width: "100%"
-            }}>
-              <div style={{
+            {/* Word Button */}
+            <button
+              key="docx"
+              onClick={() => handleSettingChange("defaultFormat", "docx")}
+              style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                width: "24px",
-                height: "24px",
-                marginTop: "2px"
-              }}>
-                <span dangerouslySetInnerHTML={{ __html: iconDevice }} />
-              </div>
-              <div style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px"
-              }}>
-                <div style={{
-                  fontSize: "14px",
-                  fontWeight: "400",
-                  color: "#062013",
-                  lineHeight: "20px"
-                }}>
-                  Download to Device
-                </div>
-                <div style={{
-                  fontSize: "12px",
-                  fontWeight: "400",
-                  color: "#062013",
-                  lineHeight: "16px",
-                  opacity: "0.6"
-                }}>
-                  Save files directly to your computer
-                </div>
-              </div>
-            </div>
-          </label>
+                padding: "12px 16px",
+                backgroundColor: settings.defaultFormat === "docx" ? "#D2F2E2" : "white",
+                border: settings.defaultFormat === "docx" ? "none" : "1.5px solid #CDD2D0",
+                borderRadius: "8px",
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#062013",
+                width: "100%",
+                boxSizing: "border-box",
+                gap: "12px",
+                userSelect: "none"
+              }}
+              onMouseEnter={(e) => {
+                if (settings.defaultFormat !== "docx") {
+                  e.currentTarget.style.opacity = "0.5"
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1"
+              }}
+              disabled={isSaving}
+            >
+              <span 
+                style={{ 
+                  width: "16px", 
+                  height: "16px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center" 
+                }}
+                dangerouslySetInnerHTML={{ __html: iconWord }}
+              />
+              <span>Word</span>
+            </button>
 
-          {/* Google Drive */}
-          <label 
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              padding: "16px",
-              borderRadius: "8px",
-              border: settings.defaultDestination === "google_drive" ? "none" : "1px solid #CDD2D0",
-              background: settings.defaultDestination === "google_drive" ? "#D2F2E2" : 
-                        !isGoogleDriveAuthenticated ? "#F3F4F3" : "white",
-              cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              fontSize: "14px",
-              fontWeight: "400",
-              color: "#062013",
-              margin: "0",
-              opacity: !isGoogleDriveAuthenticated ? "0.7" : "1",
-              userSelect: "none"
-            }}
-            onMouseEnter={(e) => {
-              if (isGoogleDriveAuthenticated && settings.defaultDestination !== "google_drive") {
-                e.currentTarget.style.opacity = "0.5"
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = !isGoogleDriveAuthenticated ? "0.7" : "1"
-            }}
-          >
-            <input
-              type="radio"
-              name="destination"
-              value="google_drive"
-              checked={settings.defaultDestination === "google_drive"}
-              onChange={() => handleSettingChange("defaultDestination", "google_drive")}
-              disabled={!isGoogleDriveAuthenticated}
-              style={{ display: "none" }}
-            />
-            <div style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "12px",
-              width: "100%"
-            }}>
-              <div style={{
+            {/* PDF Button */}
+            <button
+              key="pdf"
+              onClick={() => handleSettingChange("defaultFormat", "pdf")}
+              style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                width: "24px",
-                height: "24px",
-                marginTop: "2px"
-              }}>
-                <span dangerouslySetInnerHTML={{ __html: iconGoogleDrive }} />
-              </div>
-              <div style={{
+                padding: "12px 16px",
+                backgroundColor: settings.defaultFormat === "pdf" ? "#D2F2E2" : "white",
+                border: settings.defaultFormat === "pdf" ? "none" : "1.5px solid #CDD2D0",
+                borderRadius: "8px",
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#062013",
+                width: "100%",
+                boxSizing: "border-box",
+                gap: "12px",
+                userSelect: "none"
+              }}
+              onMouseEnter={(e) => {
+                if (settings.defaultFormat !== "pdf") {
+                  e.currentTarget.style.opacity = "0.5"
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1"
+              }}
+              disabled={isSaving}
+            >
+              <span 
+                style={{ 
+                  width: "16px", 
+                  height: "16px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center" 
+                }}
+                dangerouslySetInnerHTML={{ __html: iconPdf }}
+              />
+              <span>PDF</span>
+            </button>
+          </div>
+
+          {/* Google Sheets option - full width, always visible */}
+          <div style={{ width: "100%", marginBottom: "8px" }}>
+            <button
+              onClick={() => {
+                if (isGoogleDriveAuthenticated) {
+                  handleSettingChange("defaultFormat", "google_sheets")
+                }
+              }}
+              style={{
                 display: "flex",
-                flexDirection: "column",
-                gap: "4px"
-              }}>
-                <div style={{
-                  fontSize: "14px",
-                  fontWeight: "400",
-                  color: "#062013",
-                  lineHeight: "20px"
-                }}>
-                  Google Drive
-                </div>
-                <div style={{
-                  fontSize: "12px",
-                  fontWeight: "400",
-                  color: "#062013",
-                  lineHeight: "16px",
-                  opacity: "0.6"
-                }}>
-                  Sign in to your Google account to enable this option
-                </div>
-              </div>
-            </div>
+                alignItems: "center",
+                padding: "12px 16px",
+                backgroundColor: settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white",
+                border: settings.defaultFormat === "google_sheets" ? "none" : "1.5px solid #CDD2D0",
+                borderRadius: "8px",
+                cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#062013",
+                width: "100%",
+                boxSizing: "border-box",
+                gap: "12px",
+                userSelect: "none",
+                opacity: isGoogleDriveAuthenticated ? 1 : 0.5,
+                backgroundColor: !isGoogleDriveAuthenticated 
+                  ? "#f8f9fa" 
+                  : (settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white")
+              }}
+              onMouseEnter={(e) => {
+                if (isGoogleDriveAuthenticated && settings.defaultFormat !== "google_sheets") {
+                  e.currentTarget.style.opacity = "0.5"
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isGoogleDriveAuthenticated) {
+                  e.currentTarget.style.opacity = "1"
+                }
+              }}
+              disabled={isSaving || !isGoogleDriveAuthenticated}
+            >
+              <span 
+                style={{ 
+                  width: "16px", 
+                  height: "16px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center" 
+                }}
+                dangerouslySetInnerHTML={{ __html: iconGoogleSheets }}
+              />
+              <span>Google Sheets</span>
+            </button>
+            
+            {/* Info text under Google Sheets button */}
             {!isGoogleDriveAuthenticated && (
               <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                marginTop: "8px",
-                marginLeft: "0px"
+                fontSize: "12px",
+                fontWeight: "normal",
+                color: "#062013",
+                marginTop: "4px",
+                lineHeight: "1.4"
               }}>
-                <span 
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    width: "14px",
-                    height: "14px"
-                  }}
-                  dangerouslySetInnerHTML={{ __html: iconPadlock }}
-                />
-                <span style={{
-                  fontSize: "12px",
-                  fontWeight: "400",
-                  color: "#829089"
-                }}>
-                  Login Required
-                </span>
+                Google Sheets format requires Google Drive connection
               </div>
             )}
-          </label>
-        </div>
-      </div>
-
-      {/* Analytics Section */}
-      <div style={{ marginTop: "24px" }}>
-        <div style={{
-          padding: "20px",
-          border: "1px solid #CDD2D0",
-          borderRadius: "10px",
-          marginBottom: "20px"
-        }}>
-          <div style={{ marginBottom: "12px" }}>
-            <label style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-              userSelect: "none"
-            }}>
-              <input
-                type="checkbox"
-                checked={settings.analytics?.enabled || false}
-                onChange={(e) => handleAnalyticsSettingChange("enabled", e.target.checked)}
+            
+            {/* Format Memory Toggle - moved up */}
+            <div style={{ marginTop: !isGoogleDriveAuthenticated ? "8px" : "4px" }}>
+              <label 
+                onClick={() => handleRememberFormatChange(!rememberFormat)}
                 style={{
-                  appearance: "none",
-                  WebkitAppearance: "none",
-                  width: "20px",
-                  height: "20px",
-                  border: "1px solid #1B9358",
-                  borderRadius: "2px",
-                  margin: "0",
+                  fontSize: "14px",
+                  fontWeight: 400,
+                  color: "#062013",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                   cursor: "pointer",
-                  position: "relative",
-                  transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
-                  background: settings.analytics?.enabled ? "#1B9358" : "white"
+                  userSelect: "none"
                 }}
-              />
-              <span style={{
-                fontSize: "14px",
-                fontWeight: "600",
-                color: "#062013"
-              }}>
-                Analytics & Summaries
-              </span>
-            </label>
-            <div style={{
-              fontSize: "12px",
-              color: "#062013",
-              lineHeight: "1.4",
-              marginTop: "4px",
-              marginBottom: "16px"
-            }}>
-              Add automatic calculations (sums, averages, counts) to exported tables
+              >
+                <div 
+                  style={{
+                    position: "relative",
+                    width: "44px",
+                    height: "24px",
+                    backgroundColor: rememberFormat ? "#1B9358" : "transparent",
+                    border: rememberFormat ? "1px solid #1B9358" : "1px solid #d1d5db",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    margin: "0",
+                    boxSizing: "border-box"
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "1px",
+                      left: rememberFormat ? "21px" : "1px",
+                      width: "20px",
+                      height: "20px",
+                      backgroundColor: rememberFormat ? "white" : "#1B9358",
+                      borderRadius: "50%",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+                    }}
+                  />
+                </div>
+                <span>Remember my format</span>
+              </label>
             </div>
           </div>
+
+          {/* Google Drive Authentication - moved here from top */}
+          {authBlock && (
+            <div style={{ marginTop: "18px", marginBottom: "6px" }}>
+              {authBlock}
+            </div>
+          )}
+
+
+        </div>
+
+        {/* Export Destination */}
+        <div style={{ marginTop: "24px" }}>
+          <h3 style={{
+            fontSize: "14px",
+            fontWeight: "600",
+            color: "#062013",
+            margin: "0 0 16px 0"
+          }}>
+            Export Destination
+          </h3>
           
           <div style={{
-            transition: "all 0.3s ease",
-            opacity: settings.analytics?.enabled ? "1" : "0.5",
-            pointerEvents: settings.analytics?.enabled ? "auto" : "none"
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px"
           }}>
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-              marginBottom: "12px"
-            }}>
+            {/* Download to Device */}
+            <label 
+              style={{
+                display: "flex",
+                padding: "16px",
+                borderRadius: "8px",
+                border: settings.defaultDestination === "download" ? "none" : "1px solid #CDD2D0",
+                background: settings.defaultDestination === "download" ? "#D2F2E2" : "white",
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "14px",
+                fontWeight: "400",
+                color: "#062013",
+                margin: "0",
+                userSelect: "none"
+              }}
+              onMouseEnter={(e) => {
+                if (settings.defaultDestination !== "download") {
+                  e.currentTarget.style.opacity = "0.5"
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1"
+              }}
+            >
+              <input
+                type="radio"
+                name="destination"
+                value="download"
+                checked={settings.defaultDestination === "download"}
+                onChange={() => handleSettingChange("defaultDestination", "download")}
+                style={{ display: "none" }}
+              />
+              <div style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "12px",
+                width: "100%"
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  marginTop: "2px"
+                }}>
+                  <span dangerouslySetInnerHTML={{ __html: iconDevice }} />
+                </div>
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px"
+                }}>
+                  <div style={{
+                    fontSize: "14px",
+                    fontWeight: "400",
+                    color: "#062013",
+                    lineHeight: "20px"
+                  }}>
+                    Download to Device
+                  </div>
+                  <div style={{
+                    fontSize: "12px",
+                    fontWeight: "400",
+                    color: "#062013",
+                    lineHeight: "16px",
+                    opacity: "0.6"
+                  }}>
+                    Save files directly to your computer
+                  </div>
+                </div>
+              </div>
+            </label>
+
+            {/* Google Drive */}
+            <label 
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                padding: "16px",
+                borderRadius: "8px",
+                border: settings.defaultDestination === "google_drive" ? "none" : "1px solid #CDD2D0",
+                background: settings.defaultDestination === "google_drive" ? "#D2F2E2" : 
+                          !isGoogleDriveAuthenticated ? "#F3F4F3" : "white",
+                cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "14px",
+                fontWeight: "400",
+                color: "#062013",
+                margin: "0",
+                opacity: !isGoogleDriveAuthenticated ? "0.7" : "1",
+                userSelect: "none"
+              }}
+              onMouseEnter={(e) => {
+                if (isGoogleDriveAuthenticated && settings.defaultDestination !== "google_drive") {
+                  e.currentTarget.style.opacity = "0.5"
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = !isGoogleDriveAuthenticated ? "0.7" : "1"
+              }}
+            >
+              <input
+                type="radio"
+                name="destination"
+                value="google_drive"
+                checked={settings.defaultDestination === "google_drive"}
+                onChange={() => handleSettingChange("defaultDestination", "google_drive")}
+                disabled={!isGoogleDriveAuthenticated}
+                style={{ display: "none" }}
+              />
+              <div style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "12px",
+                width: "100%"
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  marginTop: "2px"
+                }}>
+                  <span dangerouslySetInnerHTML={{ __html: iconGoogleDrive }} />
+                </div>
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px"
+                }}>
+                  <div style={{
+                    fontSize: "14px",
+                    fontWeight: "400",
+                    color: "#062013",
+                    lineHeight: "20px"
+                  }}>
+                    Google Drive
+                  </div>
+                  <div style={{
+                    fontSize: "12px",
+                    fontWeight: "400",
+                    color: "#062013",
+                    lineHeight: "16px",
+                    opacity: "0.6"
+                  }}>
+                    Sign in to your Google account to enable this option
+                  </div>
+                </div>
+              </div>
+              {!isGoogleDriveAuthenticated && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  marginTop: "8px",
+                  marginLeft: "0px"
+                }}>
+                  <span 
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      width: "14px",
+                      height: "14px"
+                    }}
+                    dangerouslySetInnerHTML={{ __html: iconPadlock }}
+                  />
+                  <span style={{
+                    fontSize: "12px",
+                    fontWeight: "400",
+                    color: "#829089"
+                  }}>
+                    Login Required
+                  </span>
+                </div>
+              )}
+            </label>
+          </div>
+        </div>
+
+        {/* Analytics Section */}
+        <div style={{ marginTop: "24px" }}>
+          <div style={{
+            padding: "20px",
+            border: "1px solid #CDD2D0",
+            borderRadius: "10px",
+            marginBottom: "20px"
+          }}>
+            <div style={{ marginBottom: "12px" }}>
               <label style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
-                padding: "8px 12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                background: "white",
                 cursor: "pointer",
-                transition: "all 0.2s ease",
                 userSelect: "none"
               }}>
                 <input
                   type="checkbox"
-                  checked={settings.analytics?.calculateSums || false}
-                  onChange={(e) => handleAnalyticsSettingChange("calculateSums", e.target.checked)}
-                  disabled={!settings.analytics?.enabled}
+                  checked={settings.analytics?.enabled || false}
+                  onChange={(e) => handleAnalyticsSettingChange("enabled", e.target.checked)}
                   style={{
                     appearance: "none",
                     WebkitAppearance: "none",
@@ -791,148 +849,210 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                     cursor: "pointer",
                     position: "relative",
                     transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
-                    background: settings.analytics?.calculateSums ? "#1B9358" : "white"
+                    background: settings.analytics?.enabled ? "#1B9358" : "white"
                   }}
                 />
                 <span style={{
-                  fontSize: "13px",
-                  fontWeight: "500",
+                  fontSize: "14px",
+                  fontWeight: "600",
                   color: "#062013"
                 }}>
-                  Calculate Sums
+                  Analytics & Summaries
                 </span>
               </label>
-              
-              <label style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                background: "white",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                userSelect: "none"
+              <div style={{
+                fontSize: "12px",
+                color: "#062013",
+                lineHeight: "1.4",
+                marginTop: "4px",
+                marginBottom: "16px"
               }}>
-                <input
-                  type="checkbox"
-                  checked={settings.analytics?.calculateAverages || false}
-                  onChange={(e) => handleAnalyticsSettingChange("calculateAverages", e.target.checked)}
-                  disabled={!settings.analytics?.enabled}
-                  style={{
-                    appearance: "none",
-                    WebkitAppearance: "none",
-                    width: "20px",
-                    height: "20px",
-                    border: "1px solid #1B9358",
-                    borderRadius: "2px",
-                    margin: "0",
-                    cursor: "pointer",
-                    position: "relative",
-                    transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
-                    background: settings.analytics?.calculateAverages ? "#1B9358" : "white"
-                  }}
-                />
-                <span style={{
-                  fontSize: "13px",
-                  fontWeight: "500",
-                  color: "#062013"
-                }}>
-                  Calculate Averages
-                </span>
-              </label>
-              
-              <label style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "8px 12px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                background: "white",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                userSelect: "none"
-              }}>
-                <input
-                  type="checkbox"
-                  checked={settings.analytics?.countUnique || false}
-                  onChange={(e) => handleAnalyticsSettingChange("countUnique", e.target.checked)}
-                  disabled={!settings.analytics?.enabled}
-                  style={{
-                    appearance: "none",
-                    WebkitAppearance: "none",
-                    width: "20px",
-                    height: "20px",
-                    border: "1px solid #1B9358",
-                    borderRadius: "2px",
-                    margin: "0",
-                    cursor: "pointer",
-                    position: "relative",
-                    transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
-                    background: settings.analytics?.countUnique ? "#1B9358" : "white"
-                  }}
-                />
-                <span style={{
-                  fontSize: "13px",
-                  fontWeight: "500",
-                  color: "#062013"
-                }}>
-                  Count Unique Values
-                </span>
-              </label>
+                Add automatic calculations (sums, averages, counts) to exported tables
+              </div>
             </div>
             
             <div style={{
-              padding: "12px",
-              background: "#f8fdf9",
-              border: "1px solid #d1e7dd",
-              borderRadius: "6px",
               transition: "all 0.3s ease",
-              display: settings.analytics?.enabled ? "block" : "none"
+              opacity: settings.analytics?.enabled ? "1" : "0.5",
+              pointerEvents: settings.analytics?.enabled ? "auto" : "none"
             }}>
               <div style={{
                 display: "flex",
-                alignItems: "flex-start",
-                gap: "8px",
-                marginBottom: "8px"
+                flexDirection: "column",
+                gap: "16px",
+                marginBottom: "12px"
               }}>
-                <span style={{
-                  fontSize: "12px",
-                  color: "#062013",
-                  lineHeight: "1.4"
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  background: "white",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  userSelect: "none"
                 }}>
-                  Summary rows will be added below each table with calculated values
-                </span>
+                  <input
+                    type="checkbox"
+                    checked={settings.analytics?.calculateSums || false}
+                    onChange={(e) => handleAnalyticsSettingChange("calculateSums", e.target.checked)}
+                    disabled={!settings.analytics?.enabled}
+                    style={{
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      width: "20px",
+                      height: "20px",
+                      border: "1px solid #1B9358",
+                      borderRadius: "2px",
+                      margin: "0",
+                      cursor: "pointer",
+                      position: "relative",
+                      transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                      background: settings.analytics?.calculateSums ? "#1B9358" : "white"
+                    }}
+                  />
+                  <span style={{
+                    fontSize: "13px",
+                    fontWeight: "500",
+                    color: "#062013"
+                  }}>
+                    Calculate Sums
+                  </span>
+                </label>
+                
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  background: "white",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  userSelect: "none"
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.analytics?.calculateAverages || false}
+                    onChange={(e) => handleAnalyticsSettingChange("calculateAverages", e.target.checked)}
+                    disabled={!settings.analytics?.enabled}
+                    style={{
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      width: "20px",
+                      height: "20px",
+                      border: "1px solid #1B9358",
+                      borderRadius: "2px",
+                      margin: "0",
+                      cursor: "pointer",
+                      position: "relative",
+                      transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                      background: settings.analytics?.calculateAverages ? "#1B9358" : "white"
+                    }}
+                  />
+                  <span style={{
+                    fontSize: "13px",
+                    fontWeight: "500",
+                    color: "#062013"
+                  }}>
+                    Calculate Averages
+                  </span>
+                </label>
+                
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px 12px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  background: "white",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  userSelect: "none"
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.analytics?.countUnique || false}
+                    onChange={(e) => handleAnalyticsSettingChange("countUnique", e.target.checked)}
+                    disabled={!settings.analytics?.enabled}
+                    style={{
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      width: "20px",
+                      height: "20px",
+                      border: "1px solid #1B9358",
+                      borderRadius: "2px",
+                      margin: "0",
+                      cursor: "pointer",
+                      position: "relative",
+                      transition: "all 0.2s cubic-bezier(0.4,0,0.2,1)",
+                      background: settings.analytics?.countUnique ? "#1B9358" : "white"
+                    }}
+                  />
+                  <span style={{
+                    fontSize: "13px",
+                    fontWeight: "500",
+                    color: "#062013"
+                  }}>
+                    Count Unique Values
+                  </span>
+                </label>
               </div>
+              
               <div style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "8px"
+                padding: "12px",
+                background: "#f8fdf9",
+                border: "1px solid #d1e7dd",
+                borderRadius: "6px",
+                transition: "all 0.3s ease",
+                display: settings.analytics?.enabled ? "block" : "none"
               }}>
-                <span style={{
-                  fontSize: "12px",
-                  color: "#062013",
-                  lineHeight: "1.4"
+                <div style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                  marginBottom: "8px"
                 }}>
-                  Works with numeric data, currencies, and percentages
-                </span>
+                  <span style={{
+                    fontSize: "12px",
+                    color: "#062013",
+                    lineHeight: "1.4"
+                  }}>
+                    Summary rows will be added below each table with calculated values
+                  </span>
+                </div>
+                <div style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px"
+                }}>
+                  <span style={{
+                    fontSize: "12px",
+                    color: "#062013",
+                    lineHeight: "1.4"
+                  }}>
+                    Works with numeric data, currencies, and percentages
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Save Indicator */}
-      {isSaving && (
-        <div className="flex items-center justify-center py-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500 mr-2"></div>
-          <span className="text-sm text-emerald-600 font-medium">
-            Saving...
-          </span>
-        </div>
-      )}
+        {/* Save Indicator */}
+        {isSaving && (
+          <div className="flex items-center justify-center py-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-500 mr-2"></div>
+            <span className="text-sm text-emerald-600 font-medium">
+              Saving...
+            </span>
+          </div>
+        )}
+      </form>
     </div>
   )
 }

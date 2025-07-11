@@ -443,7 +443,37 @@ export type Subscription = Database["public"]["Tables"]["subscriptions"]["Row"]
 export type Payment = Database["public"]["Tables"]["payments"]["Row"]
 export type ExportHistory =
   Database["public"]["Tables"]["export_history"]["Row"]
-export type UsageQuota = Database["public"]["Tables"]["usage_quotas"]["Row"]
+// Export limits и usage types
+export interface UsageQuota {
+  id: string
+  user_id: string
+  exports_this_month: number
+  exports_today: number  // Новое поле для дневного отслеживания
+  last_reset_date: string  // Новое поле для отслеживания сброса
+  storage_used_mb: number
+  shared_tables_count: number
+  reset_date: string
+  updated_at: string
+}
+
+export interface DailyUsageStats {
+  exports_today: number
+  daily_limit: number
+  exports_remaining: number
+  plan_type: SubscriptionPlan
+  can_export: boolean
+  reset_time: string
+}
+
+export interface ExportLimitCheck {
+  canExport: boolean
+  canExportToGoogleDrive: boolean
+  remainingExports: number
+  remainingGoogleDriveExports: number
+  limitMessage?: string
+  dailyStats?: DailyUsageStats  // Новое поле для дневной статистики
+}
+
 export type SavedTemplate =
   Database["public"]["Tables"]["saved_templates"]["Row"]
 export type SharedTable = Database["public"]["Tables"]["shared_tables"]["Row"]

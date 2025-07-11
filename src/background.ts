@@ -154,6 +154,33 @@ const handleTableExport = async (
 
     const userId = authState.user.id
 
+    // 🚫 ПРОВЕРКА ДНЕВНЫХ ЛИМИТОВ
+    console.log("🔍 Background: Checking daily export limits for user:", userId)
+    try {
+      const limitCheck = await userService.checkExportLimits(userId, options.destination)
+      console.log("🔍 Background: Limit check result:", limitCheck)
+      
+      if (!limitCheck.canExport) {
+        console.warn("❌ Background: Export limit exceeded")
+        sendResponse({
+          success: false,
+          error: limitCheck.limitMessage || "Daily export limit exceeded. Please upgrade to Pro for unlimited exports.",
+          limitExceeded: true,
+          remainingExports: limitCheck.remainingExports
+        })
+        return
+      }
+      
+      console.log("✅ Background: Export limit check passed. Remaining exports:", limitCheck.remainingExports)
+    } catch (limitError) {
+      console.error("❌ Background: Error checking limits:", limitError)
+      sendResponse({
+        success: false,
+        error: "Unable to verify export limits. Please try again."
+      })
+      return
+    }
+
     // Нормализуем destination для совместимости
     let normalizedDestination = options.destination
     if (options.destination === "google-drive") {
@@ -183,6 +210,14 @@ const handleTableExport = async (
       }
 
       if (result.success) {
+        // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
+        try {
+          await userService.incrementExportCount(userId)
+          console.log("✅ Background: Export count incremented for user:", userId)
+        } catch (countError) {
+          console.error("❌ Background: Failed to increment export count:", countError)
+        }
+
         sendResponse({
           success: true,
           googleSheetsId: result.googleSheetsId,
@@ -239,6 +274,14 @@ const handleTableExport = async (
           console.log("🔍 Background: Direct upload result:", uploadResult)
           
           if (uploadResult.success) {
+            // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
+            try {
+              await userService.incrementExportCount(userId)
+              console.log("✅ Background: Export count incremented for batch upload:", userId)
+            } catch (countError) {
+              console.error("❌ Background: Failed to increment export count for batch:", countError)
+            }
+
             sendResponse({
               success: true,
               googleDriveLink: uploadResult.webViewLink,
@@ -312,6 +355,14 @@ const handleTableExport = async (
       })
 
       if (exportResult.success) {
+        // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
+        try {
+          await userService.incrementExportCount(userId)
+          console.log("✅ Background: Export count incremented for Google Drive:", userId)
+        } catch (countError) {
+          console.error("❌ Background: Failed to increment export count for Google Drive:", countError)
+        }
+
         console.log("🔍 Background: Sending response with googleDriveLink:", exportResult.googleDriveLink)
         sendResponse({
           success: true,
@@ -351,6 +402,14 @@ const handleTableExport = async (
       }
 
       if (result.success && result.downloadUrl) {
+        // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
+        try {
+          await userService.incrementExportCount(userId)
+          console.log("✅ Background: Export count incremented for download:", userId)
+        } catch (countError) {
+          console.error("❌ Background: Failed to increment export count for download:", countError)
+        }
+
         // Скачивание файла через Chrome Downloads API
         const downloadId = await chrome.downloads.download({
           url: result.downloadUrl,

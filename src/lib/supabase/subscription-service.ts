@@ -85,39 +85,38 @@ export class SubscriptionService {
     current: number
     limit: number
   }> {
-    // TESTING MODE: Always allow unlimited access
-    console.log("🧪 TESTING MODE: Bypassing subscription limits for user:", userId, "action:", action)
-    
-    return {
-      allowed: true,
-      reason: undefined,
-      current: 0,
-      limit: -1 // Unlimited
-    }
-
-    // Original subscription checking code commented out for testing
-    /*
-    const { subscription, usage, planConfig } =
-      await this.getUserSubscription(userId)
+    try {
+      const { subscription, usage, planConfig } = await this.getUserSubscription(userId)
 
     switch (action) {
       case "export": {
-        const current = usage.exports_this_month
-        const limit = planConfig.limits.exportsPerMonth
+          // Проверяем дневные лимиты вместо месячных
+          const today = new Date().toDateString()
+          const lastResetDate = usage.last_reset_date ? new Date(usage.last_reset_date).toDateString() : null
+          
+          let dailyExports = usage.exports_today || 0
+          
+          // Сбрасываем счетчик если новый день
+          if (lastResetDate !== today) {
+            dailyExports = 0
+            await this.resetDailyUsage(userId)
+          }
 
-        if (limit === -1) {
+          const dailyLimit = subscription.plan_type === 'free' ? 5 : -1 // Free: 5/день, Pro: unlimited
+
+          if (dailyLimit === -1) {
           // unlimited
-          return { allowed: true, current, limit }
+            return { allowed: true, current: dailyExports, limit: dailyLimit }
         }
 
-        const allowed = current + value <= limit
+          const allowed = dailyExports + value <= dailyLimit
         return {
           allowed,
           reason: allowed
             ? undefined
-            : `Export limit reached (${current}/${limit})`,
-          current,
-          limit
+              : `Daily export limit reached (${dailyExports}/${dailyLimit}). Upgrade to Pro for unlimited exports.`,
+            current: dailyExports,
+            limit: dailyLimit
         }
       }
 
@@ -164,22 +163,49 @@ export class SubscriptionService {
           limit: 0
         }
     }
-    */
+    } catch (error) {
+      console.error("Error checking action limits:", error)
+      return {
+        allowed: false,
+        reason: "Error checking limits",
+        current: 0,
+        limit: 0
+      }
+    }
+  }
+
+  /**
+   * Reset daily usage counters
+   */
+  private async resetDailyUsage(userId: string): Promise<void> {
+    try {
+      const { error } = await this.supabase
+        .from('usage_quotas')
+        .update({
+          exports_today: 0,
+          last_reset_date: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+
+      if (error) {
+        console.error("Error resetting daily usage:", error)
+      }
+    } catch (error) {
+      console.error("Error resetting daily usage:", error)
+    }
   }
 
   /**
    * Check if a file format is allowed for user's plan
    */
   async isFormatAllowed(userId: string, format: string): Promise<boolean> {
-    // TESTING MODE: Allow all formats
-    console.log("🧪 TESTING MODE: Allowing all formats for user:", userId, "format:", format)
-    return true
-
-    // Original format checking code commented out for testing
-    /*
+    try {
     const { planConfig } = await this.getUserSubscription(userId)
     return planConfig.limits.exportFormats.includes(format.toUpperCase())
-    */
+    } catch (error) {
+      console.error("Error checking format allowance:", error)
+      return false
+    }
   }
 
   /**
@@ -189,15 +215,13 @@ export class SubscriptionService {
     userId: string,
     fileSizeMB: number
   ): Promise<boolean> {
-    // TESTING MODE: Allow all file sizes
-    console.log("🧪 TESTING MODE: Allowing all file sizes for user:", userId, "size:", fileSizeMB, "MB")
-    return true
-
-    // Original file size checking code commented out for testing
-    /*
+    try {
     const { planConfig } = await this.getUserSubscription(userId)
     return fileSizeMB <= planConfig.limits.maxFileSize
-    */
+    } catch (error) {
+      console.error("Error checking file size allowance:", error)
+      return false
+    }
   }
 
   /**

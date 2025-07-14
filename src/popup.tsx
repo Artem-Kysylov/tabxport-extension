@@ -10,10 +10,14 @@ import { HelpTab } from "./components/popup/tabs/HelpTab"
 import { ProPlanTab } from "./components/popup/tabs/ProPlanTab"
 import { SettingsTab } from "./components/popup/tabs/SettingsTab"
 import type { UserSettings } from "./types"
+import { AuthStatus } from "./components/AuthStatus"
+import AuthDetails from "./components/AuthDetails"
 
 const Popup: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>("settings")
   const [isSupported, setIsSupported] = useState<boolean>(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [authUser, setAuthUser] = useState<any>(null)
 
   useEffect(() => {
     const getCurrentTab = async () => {
@@ -55,21 +59,50 @@ const Popup: React.FC = () => {
     })
   }
 
+  const handleAuthChange = (authState: any) => {
+    console.log("Auth state changed:", authState); // Добавим логирование для отладки
+    setIsAuthenticated(authState.isAuthenticated);
+    setAuthUser(authState.user); // Сохраняем данные пользователя
+  }
+
+  const handleSignOut = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "SIGN_OUT"
+      })
+
+      if (response?.success) {
+        setIsAuthenticated(false);
+        setAuthUser(null);
+      }
+    } catch (error) {
+      console.error("Sign out error:", error)
+    }
+  }
+
   return (
     <div className="w-80 bg-white">
-      <Header isSupported={isSupported} onUpgradeClick={handleUpgradeClick} />
+      <Header isSupported={isSupported} />
 
-      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      {isAuthenticated ? (
+        <>
+          {authUser && <AuthDetails user={authUser} onSignOut={handleSignOut} />}
+          
+          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {activeTab === "settings" && (
-        <SettingsTab onSettingsChange={handleSettingsChange} />
+          {activeTab === "settings" && (
+            <SettingsTab onSettingsChange={handleSettingsChange} />
+          )}
+
+          {activeTab === "proPlan" && (
+            <ProPlanTab onUpgradeClick={handleUpgradeClick} />
+          )}
+
+          {activeTab === "help" && <HelpTab />}
+        </>
+      ) : (
+        <AuthStatus onAuthChange={handleAuthChange} />
       )}
-
-      {activeTab === "proPlan" && (
-        <ProPlanTab onUpgradeClick={handleUpgradeClick} />
-      )}
-
-      {activeTab === "help" && <HelpTab />}
 
       <Footer />
     </div>

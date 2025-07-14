@@ -16,6 +16,10 @@ let warningContainer: HTMLElement | null = null
 let lastWarningShown = 0
 const WARNING_COOLDOWN = 30000 // 30 секунд между предупреждениями
 
+interface ShowWarningOptions {
+  force?: boolean
+}
+
 // Функция для получения статистики использования
 const getUsageStats = async (): Promise<LimitWarningData | null> => {
   try {
@@ -49,8 +53,8 @@ const createWarningStyles = (): string => {
   return `
     .tablexport-limit-warning {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      bottom: 20px;
+      left: 20px;
       z-index: 999999;
       background: linear-gradient(135deg, #ff6b6b, #ee5a52);
       color: white;
@@ -63,7 +67,7 @@ const createWarningStyles = (): string => {
       max-width: 350px;
       border: 1px solid rgba(255, 255, 255, 0.2);
       backdrop-filter: blur(10px);
-      animation: slideInRight 0.4s ease-out;
+      animation: slideInUp 0.4s ease-out;
     }
 
     .tablexport-limit-warning-yellow {
@@ -150,30 +154,30 @@ const createWarningStyles = (): string => {
       color: white;
     }
 
-    @keyframes slideInRight {
+    @keyframes slideInUp {
       from {
-        transform: translateX(100%);
+        transform: translateY(100%);
         opacity: 0;
       }
       to {
-        transform: translateX(0);
+        transform: translateY(0);
         opacity: 1;
       }
     }
 
-    @keyframes slideOutRight {
+    @keyframes slideOutDown {
       from {
-        transform: translateX(0);
+        transform: translateY(0);
         opacity: 1;
       }
       to {
-        transform: translateX(100%);
+        transform: translateY(100%);
         opacity: 0;
       }
     }
 
     .tablexport-limit-warning.hiding {
-      animation: slideOutRight 0.3s ease-in forwards;
+      animation: slideOutDown 0.3s ease-in forwards;
     }
   `
 }
@@ -219,7 +223,7 @@ const createWarningHTML = (data: LimitWarningData): string => {
 
   return `
     <div class="${warningClass}">
-      <button class="tablexport-limit-warning-close" onclick="this.parentElement.classList.add('hiding'); setTimeout(() => this.parentElement.remove(), 300)">×</button>
+      <button class="tablexport-limit-warning-close">×</button>
       
       <div class="tablexport-limit-warning-header">
         <span class="tablexport-limit-warning-icon">${icon}</span>
@@ -233,22 +237,33 @@ const createWarningHTML = (data: LimitWarningData): string => {
       
       <div class="tablexport-limit-warning-actions">
         ${data.plan_type === 'free' ? '<button class="tablexport-limit-warning-button tablexport-limit-warning-button-primary" onclick="window.open(\'https://tabxport.com/pricing\', \'_blank\')">Upgrade to Pro</button>' : ''}
-        <button class="tablexport-limit-warning-button" onclick="this.parentElement.parentElement.classList.add('hiding'); setTimeout(() => this.parentElement.parentElement.remove(), 300)">Dismiss</button>
+        <button class="tablexport-limit-warning-button tablexport-limit-warning-dismiss">Dismiss</button>
       </div>
     </div>
   `
 }
 
 // Показ предупреждения
-const showLimitWarning = (data: LimitWarningData): void => {
+export const showLimitWarning = (
+  data: LimitWarningData,
+  options: ShowWarningOptions = {}
+): void => {
+  const { force = false } = options
+
   // Проверяем cooldown
   const now = Date.now()
-  if (now - lastWarningShown < WARNING_COOLDOWN) {
+  if (!force && now - lastWarningShown < WARNING_COOLDOWN) {
+    console.log(
+      `TabXport: Warning cooldown active. Skipping. Last shown ${((now - lastWarningShown) / 1000).toFixed(1)}s ago.`
+    )
     return
   }
 
   // Удаляем существующее предупреждение
-  hideLimitWarning()
+  if (warningContainer) {
+    warningContainer.remove()
+    warningContainer = null
+  }
 
   // Добавляем стили
   addWarningStyles()
@@ -258,13 +273,31 @@ const showLimitWarning = (data: LimitWarningData): void => {
   warningContainer.innerHTML = createWarningHTML(data)
   document.body.appendChild(warningContainer)
 
-  // Автоматическое скрытие через 10 секунд
-  setTimeout(() => {
-    hideLimitWarning()
-  }, 10000)
+  lastWarningShown = Date.now()
 
-  lastWarningShown = now
-  console.log('✅ Limit warning shown:', data)
+  // Добавляем обработчики событий
+  const closeButton = warningContainer.querySelector(
+    ".tablexport-limit-warning-close"
+  )
+  const dismissButton = warningContainer.querySelector(
+    ".tablexport-limit-warning-dismiss"
+  )
+
+  const closeHandler = () => {
+    if (warningContainer) {
+      const modal = warningContainer.firstChild as HTMLElement
+      if (modal) {
+        modal.classList.add("hiding")
+        setTimeout(() => {
+          warningContainer?.remove()
+          warningContainer = null
+        }, 300)
+      }
+    }
+  }
+
+  closeButton?.addEventListener("click", closeHandler)
+  dismissButton?.addEventListener("click", closeHandler)
 }
 
 // Скрытие предупреждения
@@ -278,35 +311,45 @@ const hideLimitWarning = (): void => {
 // Основная функция для проверки и показа предупреждений
 export const checkAndShowLimitWarning = async (): Promise<void> => {
   try {
-    const stats = await getUsageStats()
-    if (!stats) {
-      return
-    }
+    const response = await chrome.runtime.sendMessage({
+      type: "GET_USAGE_STATS"
+    })
 
-    // Показываем предупреждение если осталось 2 или меньше экспортов
-    if (stats.plan_type === 'free' && stats.exports_remaining <= 2) {
-      showLimitWarning(stats)
+    if (response?.success && response.stats) {
+      const stats: LimitWarningData = response.stats
+      // Показываем предупреждение только если достигнут лимит экспортов (0 оставшихся)
+      if (stats.plan_type === "free" && stats.exports_remaining === 0) {
+        showLimitWarning(stats)
+      }
+    } else {
+      // Не показываем ошибку в консоли, если юзер просто не залогинен
+      if (response?.error !== "User not authenticated") {
+        console.error("TabXport: Failed to get usage stats:", response?.error)
+      }
     }
   } catch (error) {
-    console.error('Error checking export limits:', error)
+    console.error("Error checking export limits:", error)
   }
 }
 
-// Функция для показа предупреждения при превышении лимита
+// Показ окна с ошибкой, когда экспорт уже заблокирован
 export const showLimitExceededWarning = async (): Promise<void> => {
   try {
-    const stats = await getUsageStats()
-    if (!stats) {
-      return
-    }
+    const response = await chrome.runtime.sendMessage({
+      type: "GET_USAGE_STATS"
+    })
 
-    if (stats.plan_type === 'free' && stats.exports_remaining === 0) {
-      showLimitWarning(stats)
+    if (response?.success && response.stats) {
+      showLimitWarning(response.stats, { force: true })
+    } else {
+      console.error(
+        "TabXport: Could not show limit exceeded warning, stats unavailable."
+      )
     }
   } catch (error) {
-    console.error('Error showing limit exceeded warning:', error)
+    console.error("Error showing limit exceeded warning:", error)
   }
 }
 
 // Экспорт функций для использования в других модулях
-export { hideLimitWarning } 
+export { hideLimitWarning }

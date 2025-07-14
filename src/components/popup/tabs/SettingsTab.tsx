@@ -1,7 +1,6 @@
 import React from "react"
 
 import type { UserSettings } from "../../../types"
-import { AuthStatus } from "../../AuthStatus"
 import SettingsForm from "../../SettingsForm"
 
 interface SettingsTabProps {
@@ -17,12 +16,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         fontSize: "16px",
         fontWeight: 600,
         color: "#062013",
-        marginBottom: "16px"
+        marginBottom: "0",
       }}>
         Settings
       </h2>
       
-      <SettingsForm onSettingsChange={onSettingsChange} authBlock={<AuthStatus />} />
+      <SettingsForm onSettingsChange={onSettingsChange} />
     </div>
   )
 }

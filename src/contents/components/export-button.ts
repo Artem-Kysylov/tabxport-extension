@@ -1,6 +1,7 @@
 import { getUserSettings } from "../../lib/storage"
 import { ChromeMessage, ChromeMessageType, TableData } from "../../types"
 import { createTooltip } from "./tooltip"
+import { showLimitExceededWarning } from "./limit-warning"
 
 interface ButtonPosition {
   x: number
@@ -353,11 +354,13 @@ const handleExport = async (
       console.error("❌ TabXport: Export failed:", result)
       
       // Проверяем, если это ошибка лимита
-      if (result?.limitExceeded || result?.error?.includes('daily limit') || result?.error?.includes('Daily export')) {
+      if (
+        result?.limitExceeded ||
+        result?.error?.includes("daily limit") ||
+        result?.error?.includes("Daily export")
+      ) {
         // Показываем специальное предупреждение о лимите
-        import("./limit-warning").then(({ showLimitExceededWarning }) => {
-          showLimitExceededWarning()
-        }).catch(console.error)
+        showLimitExceededWarning()
       } else {
       showNotification(result?.error || "Export failed", "error")
       }

@@ -99,6 +99,10 @@ chrome.runtime.onMessage.addListener(
         handleGetUsageQuotas(sendResponse)
         return true
 
+      case "GET_USAGE_STATS":
+        handleGetUsageStats(sendResponse)
+        return true
+
       default:
         sendResponse({ error: "Unknown message type" })
         return false
@@ -1024,29 +1028,50 @@ const handleGetUsageQuotas = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("Background: Getting usage quotas...")
-    
     const authState = authService.getCurrentState()
     if (!authState.isAuthenticated || !authState.user) {
-      sendResponse({
-        success: false,
-        error: "User not authenticated"
-      })
+      sendResponse({ success: false, error: "User not authenticated" })
       return
     }
 
-    const quotas = await userService.getUserQuotas(authState.user.id)
-    
-    sendResponse({
-      success: true,
-      quotas
-    })
+    const { data, error } = await supabase
+      .from("usage_quotas")
+      .select("*")
+      .eq("user_id", authState.user.id)
+      .single()
+
+    if (error) throw error
+    sendResponse({ success: true, quotas: data })
   } catch (error) {
-    console.error("Background: Get usage quotas error:", error)
-    sendResponse({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+    sendResponse({ success: false, error: error.message })
+  }
+}
+
+const handleGetUsageStats = async (
+  sendResponse: (response: any) => void
+): Promise<void> => {
+  try {
+    const authState = authService.getCurrentState()
+    if (!authState.isAuthenticated || !authState.user) {
+      sendResponse({ success: false, error: "User not authenticated" })
+      return
+    }
+    const { data, error } = await supabase.rpc("get_usage_stats", {
+      user_uuid: authState.user.id
     })
+
+    if (error) {
+      throw error
+    }
+
+    if (data && data.length > 0) {
+      sendResponse({ success: true, stats: data[0] })
+    } else {
+      sendResponse({ success: false, error: "No usage data found" })
+    }
+  } catch (error) {
+    console.error("Error getting usage stats:", error)
+    sendResponse({ success: false, error: "Failed to get usage stats" })
   }
 }
 

@@ -249,24 +249,28 @@ export const init = async (): Promise<void> => {
   await waitForDOM()
   console.log("TabXport: DOM wait completed")
 
-  // Добавляем CSS для анимации
+  // Добавляем CSS для спиннера загрузки
   addSpinnerCSS()
-  console.log("TabXport: CSS added")
 
-  // Первоначальное сканирование
-  console.log("TabXport: Running initial scan")
+  try {
+    console.log("TabXport: [1] Attempting to check limit warning...")
+    const { checkAndShowLimitWarning } = await import(
+      "./components/limit-warning"
+    )
+    await checkAndShowLimitWarning()
+    console.log("TabXport: [2] Limit warning check completed.")
+  } catch (e) {
+    console.error("TabXport: Error during limit warning check:", e)
+  }
+
+  try {
+    console.log("TabXport: [3] Attempting to scan and process tables...")
+    // Запускаем первоначальное сканирование
   await scanAndProcessTables()
-  console.log("TabXport: Initial scan completed")
-
-  // Проверяем лимиты экспорта при загрузке страницы
-  setTimeout(async () => {
-    try {
-      const { checkAndShowLimitWarning } = await import("./components/limit-warning")
-      await checkAndShowLimitWarning()
-    } catch (error) {
-      console.error("TabXport: Failed to check export limits:", error)
-    }
-  }, 2000) // Проверяем через 2 секунды после загрузки
+    console.log("TabXport: [4] Table scan completed.")
+  } catch (e) {
+    console.error("TabXport: Error during table scan:", e)
+  }
 
   // Настройка наблюдателя за изменениями DOM
   console.log("TabXport: Setting up mutation observer")

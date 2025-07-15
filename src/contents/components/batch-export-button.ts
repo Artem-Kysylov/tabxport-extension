@@ -78,10 +78,39 @@ const loadUserSettings = async (): Promise<UserSettings> => {
 /**
  * Handles the batch export button click
  */
-const handleBatchExport = (): void => {
+const handleBatchExport = async (): Promise<void> => {
   logger.debug(`Batch export clicked for ${buttonState.count} tables`)
 
   if (currentBatchResult && currentBatchResult.tables.length > 0) {
+    // Проверяем, нужна ли аутентификация для Google Drive
+    if (currentSettings && currentSettings.defaultDestination === "google_drive") {
+      try {
+        // Проверяем статус аутентификации
+        const authResult = await chrome.runtime.sendMessage({
+          type: "CHECK_AUTH_STATUS"
+        })
+        
+        // Если пользователь не авторизован или у него нет доступа к Google Drive
+        if (!authResult?.success || 
+            !authResult?.authState?.isAuthenticated || 
+            !authResult?.authState?.hasGoogleAccess) {
+          
+          console.log("📋 User not authenticated for Google Drive, showing auth modal")
+          
+          // Импортируем функцию showAuthModal из export-button.ts
+          const { showAuthModal } = await import("./export-button")
+          
+          // Показываем модальное окно аутентификации
+          showAuthModal()
+          return
+        }
+      } catch (error) {
+        console.warn("Failed to check auth status for batch button:", error)
+      }
+    }
+    
+    // Если аутентификация не требуется или пользователь уже авторизован,
+    // показываем модальное окно пакетного экспорта
     showBatchExportModal(currentBatchResult)
   } else {
     showNotification("No tables available for batch export", "error")
@@ -202,10 +231,10 @@ const createButton = async (count: number): Promise<void> => {
     applyButtonStyles(button)
 
     // Add click handler
-    button.addEventListener("click", (e) => {
+    button.addEventListener("click", async (e) => {
       e.preventDefault()
       e.stopPropagation()
-      handleBatchExport()
+      await handleBatchExport()
     })
 
     // Add to page
@@ -290,6 +319,37 @@ export const updateBatchButton = async (
   console.log(`TableXport Batch: updateBatchButton called with ${tableCount} tables`)
 
   if (tableCount >= MIN_TABLES_FOR_BATCH) {
+    // Сначала проверяем общую авторизацию пользователя
+    try {
+      const authResult = await chrome.runtime.sendMessage({
+        type: "CHECK_AUTH_STATUS"
+      })
+      
+      // Если пользователь не авторизован вообще, скрываем кнопку
+      if (!authResult?.success || !authResult?.authState?.isAuthenticated) {
+        console.log(`TableXport Batch: Hiding button - user not authenticated`)
+        hideButton()
+        return
+      }
+      
+      // Проверяем настройки пользователя
+      const settings = await loadUserSettings()
+      
+      // Если destination = google_drive, дополнительно проверяем Google доступ
+      if (settings.defaultDestination === "google_drive") {
+        if (!authResult?.authState?.hasGoogleAccess) {
+          console.log(`TableXport Batch: Hiding button - user not authenticated for Google Drive`)
+          hideButton()
+          return
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to check auth status for batch button:", error)
+      // В случае ошибки проверки авторизации скрываем кнопку для безопасности
+      hideButton()
+      return
+    }
+    
     console.log(`TableXport Batch: Showing button for ${tableCount} tables`)
     await showButton(tableCount)
   } else {

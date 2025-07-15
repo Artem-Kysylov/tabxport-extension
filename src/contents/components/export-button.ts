@@ -278,6 +278,298 @@ export const showNotification = (
   }, 3000)
 }
 
+// Function to show authentication modal
+export const showAuthModal = (): void => {
+  // Check if modal already exists
+  const existingModal = document.getElementById('tablexport-auth-container')
+  if (existingModal) {
+    existingModal.remove()
+  }
+  
+  // Add styles for the modal
+  const styleId = 'tablexport-auth-styles'
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = `
+      /* Auth Modal Styles */
+      .tablexport-auth-container {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 10000;
+        font-family: system-ui, -apple-system, sans-serif;
+        pointer-events: none;
+      }
+
+      .tablexport-auth-modal {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 24px;
+        width: 320px;
+        max-width: calc(100vw - 40px);
+        pointer-events: auto;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .tablexport-auth-modal.visible {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .tablexport-auth-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+      }
+
+      .tablexport-auth-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #062013;
+        margin: 0;
+        line-height: 1.3;
+        flex: 1;
+        padding-right: 12px;
+      }
+
+      .tablexport-auth-close {
+        width: 24px;
+        height: 24px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: background-color 0.2s;
+        flex-shrink: 0;
+      }
+
+      .tablexport-auth-close:hover {
+        background-color: #f3f4f6;
+      }
+
+      .tablexport-auth-content {
+        margin-bottom: 20px;
+      }
+
+      .tablexport-auth-message {
+        font-size: 14px;
+        color: #4b5563;
+        line-height: 1.5;
+        margin-bottom: 20px;
+      }
+
+      /* Стили для блока аутентификации из попапа */
+      .tablexport-auth-block {
+        background: #F8F9FA;
+        border: 1px solid #CDD2D0;
+        border-radius: 10px;
+        padding: 20px;
+      }
+
+      .tablexport-auth-block-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #062013;
+        margin: 0 0 12px 0;
+        text-align: center;
+      }
+
+      .tablexport-auth-block-description {
+        font-size: 12px;
+        font-weight: normal;
+        color: #062013;
+        margin: 0 0 20px 0;
+        text-align: center;
+      }
+
+      .tablexport-auth-block-button {
+        width: 100%;
+        background: white;
+        border: 1.5px solid #CDD2D0;
+        color: #062013;
+        padding: 20px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .tablexport-auth-block-button:hover {
+        opacity: 0.5;
+      }
+
+      .tablexport-auth-block-privacy {
+        font-size: 10px;
+        color: #062013;
+        margin: 0;
+        text-align: center;
+      }
+
+      @media (max-width: 480px) {
+        .tablexport-auth-container {
+          bottom: 16px;
+          left: 16px;
+          right: 16px;
+        }
+
+        .tablexport-auth-modal {
+          width: 100%;
+          max-width: none;
+          padding: 20px;
+        }
+      }
+    `
+    document.head.appendChild(style)
+  }
+
+  // Create HTML for the modal with popup-style auth block
+  const modalHTML = `
+    <div class="tablexport-auth-container" id="tablexport-auth-container" style="display: none;">
+      <div class="tablexport-auth-modal" id="tablexport-auth-modal">
+        <div class="tablexport-auth-header">
+          <h3 class="tablexport-auth-title">
+            Authentication Required
+          </h3>
+          <button class="tablexport-auth-close" id="tablexport-auth-close" title="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6L18 18" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="tablexport-auth-content">
+          <p class="tablexport-auth-message">
+            You need to authenticate to export tables to Google Drive. Please click the button below to sign in with your Google account.
+          </p>
+          
+          <!-- Блок аутентификации из попапа -->
+          <div class="tablexport-auth-block">
+            <h3 class="tablexport-auth-block-title">Sign in to TableXport</h3>
+            <p class="tablexport-auth-block-description">
+              Connect your Google account to:
+              • Export tables to Google Drive
+              • Manage your subscription (Free & Pro plans)
+              • Unlock all supported export formats: Excel, CSV, DOCX, PDF, Google Sheets
+            </p>
+            
+            <button class="tablexport-auth-block-button" id="tablexport-auth-button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g clipPath="url(#clip0_192_42)">
+                  <mask id="mask0_192_42" style="mask-type: luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+                    <path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
+                  </mask>
+                  <g mask="url(#mask0_192_42)">
+                    <path d="M-0.354736 18.8343V5.16528L8.5827 11.9998L-0.354736 18.8343Z" fill="#FBBC05"/>
+                  </g>
+                  <mask id="mask1_192_42" style="mask-type: luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+                    <path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
+                  </mask>
+                  <g mask="url(#mask1_192_42)">
+                    <path d="M-0.354736 5.16537L8.5827 11.9999L12.2628 8.79293L24.8804 6.74256V-0.617676H-0.354736V5.16537Z" fill="#EA4335"/>
+                  </g>
+                  <mask id="mask2_192_42" style="mask-type: luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+                    <path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
+                  </mask>
+                  <g mask="url(#mask2_192_42)">
+                    <path d="M-0.354736 18.8344L15.4172 6.74256L19.5705 7.26829L24.8804 -0.617676V24.6173H-0.354736V18.8344Z" fill="#34A853"/>
+                  </g>
+                  <mask id="mask3_192_42" style="mask-type: luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+                    <path d="M23.0404 9.897H12.2629V14.3657H18.4665C17.8882 17.2047 15.4698 18.8344 12.2629 18.8344C8.4776 18.8344 5.42836 15.7852 5.42836 11.9999C5.42836 8.21466 8.4776 5.16542 12.2629 5.16542C13.8926 5.16542 15.3647 5.74374 16.5213 6.69005L19.886 3.32536C17.8356 1.53787 15.207 0.433838 12.2629 0.433838C5.84894 0.433838 0.696777 5.586 0.696777 11.9999C0.696777 18.4138 5.84894 23.566 12.2629 23.566C18.0459 23.566 23.3032 19.3602 23.3032 11.9999C23.3032 11.3165 23.1981 10.5805 23.0404 9.897Z" fill="white"/>
+                  </mask>
+                  <g mask="url(#mask3_192_42)">
+                    <path d="M24.8806 24.6173L8.58291 11.9998L6.47998 10.4226L24.8806 5.16528V24.6173Z" fill="#4285F4"/>
+                  </g>
+                </g>
+                <defs>
+                  <clipPath id="clip0_192_42">
+                    <rect width="24" height="24" fill="white"/>
+                  </clipPath>
+                </defs>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+            
+            <p class="tablexport-auth-block-privacy">
+              We only access files created by TableXport. Your data stays private
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+
+  // Add the modal to the DOM
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = modalHTML
+  const modalContainer = tempDiv.firstElementChild as HTMLElement
+  document.body.appendChild(modalContainer)
+
+  // Show container
+  const container = document.getElementById('tablexport-auth-container')
+  if (container) {
+    container.style.display = 'block'
+  }
+
+  // Animation for appearance
+  const modal = document.getElementById('tablexport-auth-modal')
+  setTimeout(() => {
+    if (modal) {
+      modal.classList.add('visible')
+    }
+  }, 50)
+
+  // Close handler
+  const closeBtn = document.getElementById('tablexport-auth-close')
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      if (modal) {
+        modal.classList.remove('visible')
+        setTimeout(() => {
+          const container = document.getElementById('tablexport-auth-container')
+          if (container) {
+            container.remove()
+          }
+        }, 300)
+      }
+    })
+  }
+
+  // Auth button handler
+  const authBtn = document.getElementById('tablexport-auth-button')
+  if (authBtn) {
+    authBtn.addEventListener('click', () => {
+      // Send message to background script for authorization
+      chrome.runtime.sendMessage({ type: 'GOOGLE_SIGN_IN' }, (response) => {
+        console.log('Auth response:', response)
+        // Close the modal after sending the authorization request
+        if (modal) {
+          modal.classList.remove('visible')
+          setTimeout(() => {
+            const container = document.getElementById('tablexport-auth-container')
+            if (container) {
+              container.remove()
+            }
+          }, 300)
+        }
+      })
+    })
+  }
+}
+
 // Обработчик экспорта таблицы (прямой экспорт)
 const handleExport = async (
   tableData: TableData,
@@ -361,8 +653,14 @@ const handleExport = async (
       ) {
         // Показываем специальное предупреждение о лимите
         showLimitExceededWarning()
-      } else {
-      showNotification(result?.error || "Export failed", "error")
+      } 
+      // Проверяем, если это ошибка аутентификации
+      else if (result?.error?.includes("Authentication required")) {
+        // Показываем модальное окно аутентификации
+        showAuthModal()
+      } 
+      else {
+        showNotification(result?.error || "Export failed", "error")
       }
     }
   } catch (error) {
@@ -573,3 +871,4 @@ export const addSpinnerCSS = (): void => {
   `
   document.head.appendChild(style)
 }
+

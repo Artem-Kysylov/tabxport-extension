@@ -172,7 +172,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
           border: '1px solid #CDD2D0',
           borderRadius: '10px',
           padding: '20px',
-          marginBottom: '16px'
+          margin: '16px 16px 16px 16px' // Добавляем отступы: сверху, справа, снизу, слева
         }}
       >
         <div style={{ textAlign: 'center' }}>

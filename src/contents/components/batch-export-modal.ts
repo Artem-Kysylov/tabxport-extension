@@ -598,7 +598,7 @@ export const showBatchExportModal = async (
     modalState.config.destination = "download"
   }
   
-  modal.innerHTML = createModalContent(modalState, isGoogleDriveAuthenticated)
+  modal.innerHTML = await createModalContent(modalState, isGoogleDriveAuthenticated)
 
   overlay.appendChild(modal)
   document.body.appendChild(overlay)

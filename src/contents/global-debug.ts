@@ -78,6 +78,26 @@ declare global {
       
       // Comprehensive extension health check
       extensionHealthCheck: () => Promise<{ contextHealth: boolean; storageHealth: boolean; authHealth: boolean; overallHealth: boolean }>
+      
+      // Limit warning testing functions (added by debug-limit-warnings.js)
+      testLimitWarnings?: {
+        showLimitExceeded: () => void
+        showLimitWarning1: () => void
+        showLimitWarning2: () => void
+        showLimitWarning3: () => void
+        showLimitWarning4: () => void
+        hideWarning: () => void
+        help: () => void
+      }
+    }
+    
+    // Temporary debug interface used in dom-observer.ts
+    TabXportDebugTemp?: {
+      runDiagnosis: () => Promise<any>
+      findOldTables: () => HTMLElement[]
+      findNewTables: () => Promise<any>
+      highlightTables: () => void
+      clearHighlights: () => void
     }
   }
 }
@@ -186,7 +206,7 @@ export const initializeGlobalDebug = (): void => {
         const { refreshAllBatchExportButtons } = await import("./components/batch-export-button")
         await refreshAllBatchExportButtons()
         console.log("✅ Test completed successfully")
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("❌ Test failed:", error)
       }
     },
@@ -205,7 +225,7 @@ export const initializeGlobalDebug = (): void => {
         console.log("🔄 Triggered button refresh")
         
         console.log("✅ Simulation completed successfully")
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("❌ Simulation failed:", error)
       }
     },
@@ -300,7 +320,7 @@ Example usage:
           console.error("❌ Google Drive test failed:", result.error)
         }
         
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("💥 Google Drive test error:", error)
       }
     },
@@ -330,7 +350,7 @@ Example usage:
           }
         })
         
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("❌ Error checking settings:", error)
       }
     },
@@ -375,7 +395,7 @@ Example usage:
         
         console.log("✅ Google authentication appears to be configured")
         return true
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("❌ Auth check failed:", error)
         return false
       }
@@ -392,7 +412,7 @@ Example usage:
         console.log("3. Click 'Connect' or 'Sign In'")
         console.log("4. Complete the OAuth flow")
         console.log("5. Try batch export again")
-      } catch (error) {
+      } catch (error: unknown) {
         console.log("❌ Could not open popup automatically")
         console.log("📝 Manual steps:")
         console.log("1. Click on extension icon in toolbar")
@@ -416,8 +436,9 @@ Example usage:
             try {
               await chrome.storage.sync.get('test')
               return "✅ Available"
-            } catch (error) {
-              return `❌ Error: ${error.message}`
+            } catch (error: unknown) {
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              return `❌ Error: ${errorMessage}`
             }
           },
           expected: "Storage should be accessible"
@@ -428,8 +449,9 @@ Example usage:
             try {
               await chrome.storage.local.get('test')
               return "✅ Available"
-            } catch (error) {
-              return `❌ Error: ${error.message}`
+            } catch (error: unknown) {
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              return `❌ Error: ${errorMessage}`
             }
           },
           expected: "Storage should be accessible"
@@ -440,8 +462,9 @@ Example usage:
             try {
               await chrome.tabs.query({ active: true, currentWindow: true })
               return "✅ Available"
-            } catch (error) {
-              return `❌ Error: ${error.message}`
+            } catch (error: unknown) {
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              return `❌ Error: ${errorMessage}`
             }
           },
           expected: "Tabs API should be accessible"
@@ -451,8 +474,9 @@ Example usage:
           test: () => {
             try {
               return chrome.action ? "✅ Available" : "❌ Not available"
-            } catch (error) {
-              return `❌ Error: ${error.message}`
+            } catch (error: unknown) {
+              const errorMessage = error instanceof Error ? error.message : String(error)
+              return `❌ Error: ${errorMessage}`
             }
           },
           expected: "Action API should be accessible"
@@ -465,8 +489,9 @@ Example usage:
         try {
           const result = await test()
           console.log(`${name}: ${result} | Expected: ${expected}`)
-        } catch (error) {
-          console.error(`${name}: ❌ FAILED - ${error.message}`)
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          console.error(`${name}: ❌ FAILED - ${errorMessage}`)
         }
       }
       
@@ -551,18 +576,18 @@ Example usage:
       
       // 1. Context health
       console.log("\n1. 🔍 Checking extension context...")
-      results.contextHealth = await TabXportDebug.testExtensionContext()
+      results.contextHealth = await window.TabXportDebug.testExtensionContext()
       
       // 2. Storage health
       console.log("\n2. 💾 Checking storage operations...")
-      const storageTest = await TabXportDebug.testStorageWithErrorHandling()
+      const storageTest = await window.TabXportDebug.testStorageWithErrorHandling()
       results.storageHealth = storageTest.writeSuccess && storageTest.readSuccess && storageTest.dataMatches
       
       console.log("Storage test results:", storageTest)
       
       // 3. Authentication health
       console.log("\n3. 🔐 Checking authentication...")
-      results.authHealth = await TabXportDebug.checkAuth()
+      results.authHealth = await window.TabXportDebug.checkAuth()
       
       // Overall health
       results.overallHealth = results.contextHealth && results.storageHealth
@@ -611,6 +636,13 @@ if (typeof window !== 'undefined') {
   } else {
     initializeGlobalDebug()
   }
+  
+  // Initialize limit warning debug functions
+  import('./debug-limit-warnings').then(module => {
+    module.initializeLimitWarningDebug()
+  }).catch((error: unknown) => {
+    console.error('Error loading limit warning debug module:', error)
+  })
 }
 
 /**
@@ -623,7 +655,7 @@ const testBatchButtonRefresh = async (): Promise<void> => {
     const { refreshAllBatchExportButtons } = await import("./components/batch-export-button")
     await refreshAllBatchExportButtons()
     console.log("✅ Batch button refresh test completed")
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Batch button refresh test failed:", error)
   }
-} 
+}

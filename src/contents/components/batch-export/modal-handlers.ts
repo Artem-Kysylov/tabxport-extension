@@ -270,7 +270,7 @@ export const updateModalContent = async (
     modalState.config.destination = "download"
   }
 
-  modal.innerHTML = createModalContent(modalState, isGoogleDriveAuthenticated)
+  modal.innerHTML = await createModalContent(modalState, isGoogleDriveAuthenticated)
   attachEventListenersFn()
 }
 

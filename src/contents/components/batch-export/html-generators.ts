@@ -2,6 +2,7 @@ import { COMBINED_EXPORT_LIMITS } from "./constants"
 import { FormatPreferences } from "./preferences"
 import type { BatchModalState, ExportFormat, ExportMode } from "./types"
 import { EXPORT_FORMATS, EXPORT_MODES } from "./types"
+import { getUserSubscription } from "../../../lib/storage"
 
 // Импорт SVG-иконок как raw строки
 import {
@@ -29,7 +30,7 @@ const formatIcons: Record<string, string> = {
   docx: iconWord,
   pdf: iconPdf,
   google_sheets: iconGoogleSheets,
-  device: iconDevice,
+  download: iconDevice,
   google_drive: iconGoogleDrive,
   separate: iconSeparate,
   zip: iconZip,
@@ -116,7 +117,7 @@ export const createCustomFormatSelector = (modalState: BatchModalState): string 
 /**
  * Кастомный radio-group для выбора формата с иконками
  */
-export const createFormatRadioGroup = (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): string => {
+export const createFormatRadioGroup = async (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): Promise<string> => {
   // По умолчанию выбран Excel, если не выбран другой
   const currentKey = modalState.config.format || "xlsx"
   const hasPreference = FormatPreferences.exists()
@@ -130,13 +131,39 @@ export const createFormatRadioGroup = (modalState: BatchModalState, isGoogleDriv
   }
 
   // Разделяем форматы на основные (сетка 2x2) и Google Sheets (отдельно)
-  const mainFormats = ['xlsx', 'csv', 'docx', 'pdf']
-  const googleSheetsFormat = 'google_sheets'
+  const mainFormats: ExportFormat[] = ['xlsx', 'csv', 'docx', 'pdf']
+  const googleSheetsFormat: ExportFormat = 'google_sheets'
 
-  const createFormatOption = (key: string, isGridItem: boolean = false) => {
+  // Проверка премиум-статуса пользователя
+  let isPremium = false
+  try {
+    const subscription = await getUserSubscription()
+    isPremium = subscription?.planType === 'pro'
+    console.log('👑 User premium status:', isPremium ? 'Premium' : 'Free')
+  } catch (error) {
+    console.error('❌ Error checking subscription:', error)
+    isPremium = false
+  }
+
+  const createFormatOption = (key: ExportFormat, isGridItem: boolean = false) => {
     const format = EXPORT_FORMATS[key]
     const isGoogleSheets = key === 'google_sheets'
-    const isDisabled = isGoogleSheets && !isGoogleDriveAuthenticated
+    
+    // Google Sheets требует и аутентификации Google Drive, и премиум-подписки
+    const isDisabled = isGoogleSheets && (!isGoogleDriveAuthenticated || !isPremium)
+    
+    // Определяем причину отключения
+    let disabledReason = ''
+    if (isGoogleSheets) {
+      if (!isGoogleDriveAuthenticated && !isPremium) {
+        disabledReason = 'Google Sheets requires Google Drive connection and Premium subscription'
+      } else if (!isGoogleDriveAuthenticated) {
+        disabledReason = 'Google Sheets requires Google Drive connection'
+      } else if (!isPremium) {
+        disabledReason = 'Google Sheets requires Premium subscription'
+      }
+    }
+    
     const disabledClass = isDisabled ? ' disabled' : ''
     const gridClass = isGridItem ? ' grid-item' : ' full-width'
     const disabledAttr = isDisabled ? 'disabled' : ''
@@ -150,7 +177,7 @@ export const createFormatRadioGroup = (modalState: BatchModalState, isGoogleDriv
             <span class="format-name">${shortTitles[key]}</span>
           </span>
         </label>
-        ${isDisabled ? '<div class="format-disabled-notice">Google Sheets format requires Google Drive connection</div>' : ''}
+        ${isDisabled ? `<div class="format-disabled-notice">${disabledReason}</div>` : ''}
       </div>
     `
   }
@@ -408,15 +435,39 @@ export const createProgressIndicator = (
 /**
  * Creates destination selector HTML
  */
-export const createDestinationSelector = (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): string => {
-  const currentDestination = modalState.config.destination || "device"
+export const createDestinationSelector = async (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): Promise<string> => {
+  const currentDestination = modalState.config.destination || "download"
+  
+  // Проверка премиум-статуса пользователя
+  let isPremium = false
+  try {
+    const subscription = await getUserSubscription()
+    isPremium = subscription?.planType === 'pro'
+    console.log('👑 User premium status for destination selector:', isPremium ? 'Premium' : 'Free')
+  } catch (error) {
+    console.error('❌ Error checking subscription for destination selector:', error)
+    isPremium = false
+  }
+  
+  // Google Drive требует премиум-подписки
+  const isGoogleDriveDisabled = !isGoogleDriveAuthenticated || !isPremium
+  
+  // Определяем причину отключения
+  let disabledReason = ''
+  if (!isGoogleDriveAuthenticated && !isPremium) {
+    disabledReason = 'Google Drive requires connection and Premium subscription'
+  } else if (!isGoogleDriveAuthenticated) {
+    disabledReason = 'Google Drive requires connection'
+  } else if (!isPremium) {
+    disabledReason = 'Google Drive requires Premium subscription'
+  }
   
   return `
     <div class="destination-radio-group">
       <h3 class="section-heading">Export destination:</h3>
       <div class="destination-radio-options">
-        <label class="destination-radio-option${currentDestination === 'device' ? ' selected' : ''}">
-          <input type="radio" name="export-destination" value="device" ${currentDestination === 'device' ? 'checked' : ''} class="destination-radio-input">
+        <label class="destination-radio-option${currentDestination === 'download' ? ' selected' : ''}">
+          <input type="radio" name="export-destination" value="download" ${currentDestination === 'download' ? 'checked' : ''} class="destination-radio-input">
           <div class="destination-radio-content">
             <div class="destination-icon">${destinationIcons.download}</div>
             <div class="destination-text">
@@ -426,14 +477,14 @@ export const createDestinationSelector = (modalState: BatchModalState, isGoogleD
           </div>
         </label>
 
-        <label class="destination-radio-option${currentDestination === 'google_drive' ? ' selected' : ''}${!isGoogleDriveAuthenticated ? ' disabled' : ''}">
-          <input type="radio" name="export-destination" value="google_drive" ${currentDestination === 'google_drive' ? 'checked' : ''} ${!isGoogleDriveAuthenticated ? 'disabled' : ''} class="destination-radio-input">
+        <label class="destination-radio-option${currentDestination === 'google_drive' ? ' selected' : ''}${isGoogleDriveDisabled ? ' disabled' : ''}">
+          <input type="radio" name="export-destination" value="google_drive" ${currentDestination === 'google_drive' ? 'checked' : ''} ${isGoogleDriveDisabled ? 'disabled' : ''} class="destination-radio-input">
           <div class="destination-radio-content">
             <div class="destination-icon">${destinationIcons.google_drive}</div>
             <div class="destination-text">
               <div class="destination-name">Google Drive</div>
-              <div class="destination-desc">Sign in to your Google account to enable this option</div>
-              ${!isGoogleDriveAuthenticated ? '<div class="destination-login-required"><span class="login-required-icon">' + formatIcons.padlock + '</span><span class="login-required-text">Login Required</span></div>' : ''}
+              <div class="destination-desc">Export tables directly to your Google Drive</div>
+              ${isGoogleDriveDisabled ? '<div class="destination-login-required"><span class="login-required-icon">' + formatIcons.padlock + '</span><span class="login-required-text">' + disabledReason + '</span></div>' : ''}
             </div>
           </div>
         </label>
@@ -445,7 +496,7 @@ export const createDestinationSelector = (modalState: BatchModalState, isGoogleD
 /**
  * Creates the modal content
  */
-export const createModalContent = (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): string => {
+export const createModalContent = async (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): Promise<string> => {
   const selectedCount = modalState.config.selectedTables.size
   const totalCount = modalState.batchResult?.tables.length || 0
   const isOverLimit =
@@ -468,6 +519,12 @@ export const createModalContent = (modalState: BatchModalState, isGoogleDriveAut
       buttonText = `Export Selected (${selectedCount})`
   }
 
+  // Асинхронно получаем HTML для выбора формата
+  const formatRadioGroupHtml = await createFormatRadioGroup(modalState, isGoogleDriveAuthenticated)
+
+  // Асинхронно получаем HTML для выбора места назначения
+  const destinationSelectorHtml = await createDestinationSelector(modalState, isGoogleDriveAuthenticated)
+
   return `
     <div id="tablexport-batch-modal">
       <div class="modal-header">
@@ -475,11 +532,11 @@ export const createModalContent = (modalState: BatchModalState, isGoogleDriveAut
         <button class="close-button" id="close-batch-modal" title="Close">${iconClose}</button>
       </div>
       <div class="modal-body">
-        ${createFormatRadioGroup(modalState, isGoogleDriveAuthenticated)}
+        ${formatRadioGroupHtml}
         ${createExportModeSelector(modalState)}
         ${createCombinedFilenameInput(modalState)}
         ${createTableList(modalState)}
-        ${createDestinationSelector(modalState, isGoogleDriveAuthenticated)}
+        ${destinationSelectorHtml}
         ${createAnalyticsOptions(modalState)}
         ${createProgressIndicator(modalState)}
       </div>

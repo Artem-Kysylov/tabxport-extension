@@ -172,7 +172,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
           border: '1px solid #CDD2D0',
           borderRadius: '10px',
           padding: '20px',
-          marginBottom: '16px'
+          margin: '16px 16px 16px 16px' // Добавляем отступы: сверху, справа, снизу, слева
         }}
       >
         <div style={{ textAlign: 'center' }}>
@@ -185,7 +185,7 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
             }}
           >
             Sign in to TableXport
-          </h3>
+            </h3>
           <p 
             style={{
               fontSize: '12px',
@@ -194,8 +194,11 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
               margin: '0 0 20px 0'
             }}
           >
-            Connect your Google account to export tables to Google Drive
-          </p>
+              Connect your Google account to:
+              • Export tables to Google Drive
+              • Manage your subscription (Free & Pro plans)
+              • Unlock all supported export formats: Excel, CSV, DOCX, PDF, Google Sheets
+            </p>
           
           <button
             onClick={handleGoogleSignIn}
@@ -327,13 +330,14 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
               margin: '0'
             }}
           >
-            We'll only access files created by TableXport
+            We only access files created by TableXport. Your data stays private
           </p>
         </div>
       </div>
     );
   }
 
+  // В конце компонента AuthStatus
   return <AuthDetails user={authState.user} onSignOut={handleSignOut} />;
-} 
+}
 

@@ -16,10 +16,9 @@ import {
 
 interface SettingsFormProps {
   onSettingsChange?: (settings: UserSettings) => void
-  authBlock?: React.ReactNode
 }
 
-const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock }) => {
+const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
   const [settings, setSettings] = useState<UserSettings>({
     defaultFormat: "xlsx",
     defaultDestination: "download",
@@ -36,9 +35,10 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
   const [isSaving, setIsSaving] = useState(false)
   const [rememberFormat, setRememberFormat] = useState(false)
   const [isGoogleDriveAuthenticated, setIsGoogleDriveAuthenticated] = useState(false)
+  const [isPremium, setIsPremium] = useState(false)
 
   // Refresh authentication state function
-  const refreshAuthState = async () => {
+  const refreshAuthState = async (): Promise<boolean> => {
     try {
       const authResult = await chrome.runtime.sendMessage({
         type: "CHECK_AUTH_STATUS"
@@ -64,17 +64,38 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
 
   // Load settings on component mount
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadSettings = async (): Promise<void> => {
       try {
         const userSettings = await getUserSettings()
         
         // Check Google Drive authentication
         const isAuthenticated = await refreshAuthState()
         
-        // If user prefers Google Drive but not authenticated, switch to download
-        if (userSettings.defaultDestination === "google_drive" && !isAuthenticated) {
+        // If user prefers Google Drive but not authenticated or not premium, switch to download
+        if (userSettings.defaultDestination === "google_drive" && (!isAuthenticated || !isPremium)) {
           userSettings.defaultDestination = "download"
-          console.log("📋 Google Drive not authenticated, defaulting to download in settings")
+          console.log("📋 Google Drive not available (auth or premium), defaulting to download in settings")
+        }
+        
+        // Check premium status
+        try {
+          const response = await chrome.runtime.sendMessage({
+            type: "CHECK_SUBSCRIPTION"
+          })
+          if (response.success && response.subscription) {
+            const isPremiumUser = response.subscription.planType === 'pro'
+            setIsPremium(isPremiumUser)
+            console.log('👑 User premium status:', isPremiumUser ? 'Premium' : 'Free')
+            
+            // If user prefers Google Sheets but is not premium, switch to Excel
+            if (userSettings.defaultFormat === "google_sheets" && !isPremiumUser) {
+              userSettings.defaultFormat = "xlsx"
+              console.log("📋 Google Sheets requires Premium, defaulting to Excel in settings")
+            }
+          }
+        } catch (error) {
+          console.error("Failed to check subscription:", error)
+          setIsPremium(false)
         }
         
         setSettings(userSettings)
@@ -92,7 +113,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
     }
 
     // Add checkbox styles for checked state
-    const addCheckboxStyles = () => {
+    const addCheckboxStyles = (): void => {
       const styleId = "settings-checkbox-styles"
       
       // Remove existing styles if present
@@ -147,7 +168,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
     addCheckboxStyles()
 
     // Listen for auth state changes
-    const handleMessage = (message: any) => {
+    const handleMessage = (message: any): void => {
       if (message.type === "AUTH_STATE_CHANGED" || message.type === "GOOGLE_AUTH_SUCCESS") {
         console.log("🔄 [SettingsForm] Auth state changed, refreshing...")
         refreshAuthState()
@@ -170,7 +191,13 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
   }, [])
 
   // Handle setting changes
-  const handleSettingChange = async (key: keyof UserSettings, value: any) => {
+  const handleSettingChange = async (key: keyof UserSettings, value: any): Promise<void> => {
+    // Special case for defaultDestination
+    if (key === "defaultDestination" && value === "google_drive" && (!isGoogleDriveAuthenticated || !isPremium)) {
+      console.warn("Cannot set Google Drive as destination when not authenticated or not premium")
+      return
+    }
+    
     setIsSaving(true)
 
     try {
@@ -229,12 +256,26 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
       }
 
       // If Google Sheets format is selected, automatically set destination to google_drive
-      if (key === "defaultFormat" && value === "google_sheets" && settings.defaultDestination !== "google_drive") {
-        console.log("📊 Google Sheets selected, auto-switching to Google Drive destination")
-        const updatedSettings = { ...newSettings, defaultDestination: "google_drive" as const }
-        setSettings(updatedSettings)
-        await saveUserSettings(updatedSettings)
-        onSettingsChange?.(updatedSettings)
+      if (key === "defaultFormat" && value === "google_sheets") {
+        // Проверяем премиум-статус и аутентификацию Google Drive
+        if (!isPremium || !isGoogleDriveAuthenticated) {
+          console.log("⚠️ Google Sheets requires Premium subscription and Google Drive connection, ignoring selection")
+          // Возвращаем Excel как формат по умолчанию для бесплатных пользователей или неаутентифицированных
+          const updatedSettings = { ...newSettings, defaultFormat: "xlsx" as const }
+          setSettings(updatedSettings)
+          await saveUserSettings(updatedSettings)
+          onSettingsChange?.(updatedSettings)
+          return
+        }
+        
+        // Если премиум, аутентифицирован и выбран Google Sheets, автоматически переключаем на Google Drive
+        if (settings.defaultDestination !== "google_drive") {
+          console.log("📊 Google Sheets selected, auto-switching to Google Drive destination")
+          const updatedSettings = { ...newSettings, defaultDestination: "google_drive" as const }
+          setSettings(updatedSettings)
+          await saveUserSettings(updatedSettings)
+          onSettingsChange?.(updatedSettings)
+        }
       }
 
       // If format changed and remember is enabled, save it
@@ -250,7 +291,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
   }
 
   // Handle remember format toggle
-  const handleRememberFormatChange = (enabled: boolean) => {
+  const handleRememberFormatChange = (enabled: boolean): void => {
     setRememberFormat(enabled)
     localStorage.setItem(
       "tablexport-remember-format-enabled",
@@ -274,11 +315,14 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
   }
 
   // Handle analytics setting changes
-  const handleAnalyticsSettingChange = async (key: keyof AnalyticsSettings, value: any) => {
+  const handleAnalyticsSettingChange = async (key: keyof AnalyticsSettings, value: any): Promise<void> => {
     setIsSaving(true)
 
     try {
-      const newAnalyticsSettings = { ...settings.analytics, [key]: value }
+      const newAnalyticsSettings = { 
+        ...settings.analytics, 
+        [key]: value 
+      } as AnalyticsSettings
       const newSettings = { ...settings, analytics: newAnalyticsSettings }
       
       setSettings(newSettings)
@@ -286,7 +330,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
       
       // Notify parent component
       onSettingsChange?.(newSettings)
-      
+    
       console.log(`📊 Analytics setting changed: ${key} = ${value}`)
     } catch (error) {
       console.error("Failed to save analytics settings:", error)
@@ -393,7 +437,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
               }}
               disabled={isSaving}
             >
-              <span 
+              <span
                 style={{ 
                   width: "16px", 
                   height: "16px", 
@@ -499,7 +543,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
           <div style={{ width: "100%", marginBottom: "8px" }}>
             <button
               onClick={() => {
-                if (isGoogleDriveAuthenticated) {
+                if (isGoogleDriveAuthenticated && isPremium) {
                   handleSettingChange("defaultFormat", "google_sheets")
                 }
               }}
@@ -507,10 +551,12 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                 display: "flex",
                 alignItems: "center",
                 padding: "12px 16px",
-                backgroundColor: settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white",
+                backgroundColor: (!isGoogleDriveAuthenticated || !isPremium) 
+                  ? "#f8f9fa" 
+                  : (settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white"),
                 border: settings.defaultFormat === "google_sheets" ? "none" : "1.5px solid #CDD2D0",
                 borderRadius: "8px",
-                cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
+                cursor: (isGoogleDriveAuthenticated && isPremium) ? "pointer" : "not-allowed",
                 transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 fontSize: "14px",
                 fontWeight: 500,
@@ -519,24 +565,21 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                 boxSizing: "border-box",
                 gap: "12px",
                 userSelect: "none",
-                opacity: isGoogleDriveAuthenticated ? 1 : 0.5,
-                backgroundColor: !isGoogleDriveAuthenticated 
-                  ? "#f8f9fa" 
-                  : (settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white")
+                opacity: (isGoogleDriveAuthenticated && isPremium) ? 1 : 0.5
               }}
               onMouseEnter={(e) => {
-                if (isGoogleDriveAuthenticated && settings.defaultFormat !== "google_sheets") {
+                if (isGoogleDriveAuthenticated && isPremium && settings.defaultFormat !== "google_sheets") {
                   e.currentTarget.style.opacity = "0.5"
                 }
               }}
               onMouseLeave={(e) => {
-                if (isGoogleDriveAuthenticated) {
+                if (isGoogleDriveAuthenticated && isPremium) {
                   e.currentTarget.style.opacity = "1"
                 }
               }}
-              disabled={isSaving || !isGoogleDriveAuthenticated}
+              disabled={isSaving || !isGoogleDriveAuthenticated || !isPremium}
             >
-              <span 
+              <span
                 style={{ 
                   width: "16px", 
                   height: "16px", 
@@ -550,7 +593,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
             </button>
             
             {/* Info text under Google Sheets button */}
-            {!isGoogleDriveAuthenticated && (
+            {(!isGoogleDriveAuthenticated || !isPremium) && (
               <div style={{
                 fontSize: "12px",
                 fontWeight: "normal",
@@ -558,7 +601,11 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                 marginTop: "4px",
                 lineHeight: "1.4"
               }}>
-                Google Sheets format requires Google Drive connection
+                {!isGoogleDriveAuthenticated && !isPremium
+                  ? "Google Sheets requires Google Drive connection and Premium subscription"
+                  : !isGoogleDriveAuthenticated
+                    ? "Google Sheets requires Google Drive connection"
+                    : "Google Sheets requires Premium subscription"}
               </div>
             )}
             
@@ -567,7 +614,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
               <label 
                 onClick={() => handleRememberFormatChange(!rememberFormat)}
                 style={{
-                  fontSize: "14px",
+                  fontSize: "12px",
                   fontWeight: 400,
                   color: "#062013",
                   display: "flex",
@@ -610,16 +657,9 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
             </div>
           </div>
 
-          {/* Google Drive Authentication - moved here from top */}
-          {authBlock && (
-            <div style={{ marginTop: "18px", marginBottom: "6px" }}>
-              {authBlock}
-            </div>
-          )}
-
-
+          {/* Google Drive Authentication - removed from here */}
         </div>
-
+        
         {/* Export Destination */}
         <div style={{ marginTop: "24px" }}>
           <h3 style={{
@@ -720,23 +760,23 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                 borderRadius: "8px",
                 border: settings.defaultDestination === "google_drive" ? "none" : "1px solid #CDD2D0",
                 background: settings.defaultDestination === "google_drive" ? "#D2F2E2" : 
-                          !isGoogleDriveAuthenticated ? "#F3F4F3" : "white",
-                cursor: isGoogleDriveAuthenticated ? "pointer" : "not-allowed",
+                          (!isGoogleDriveAuthenticated || !isPremium) ? "#F3F4F3" : "white",
+                cursor: (isGoogleDriveAuthenticated && isPremium) ? "pointer" : "not-allowed",
                 transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 fontSize: "14px",
                 fontWeight: "400",
                 color: "#062013",
                 margin: "0",
-                opacity: !isGoogleDriveAuthenticated ? "0.7" : "1",
+                opacity: (!isGoogleDriveAuthenticated || !isPremium) ? "0.7" : "1",
                 userSelect: "none"
               }}
               onMouseEnter={(e) => {
-                if (isGoogleDriveAuthenticated && settings.defaultDestination !== "google_drive") {
+                if (isGoogleDriveAuthenticated && isPremium && settings.defaultDestination !== "google_drive") {
                   e.currentTarget.style.opacity = "0.5"
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = !isGoogleDriveAuthenticated ? "0.7" : "1"
+                e.currentTarget.style.opacity = (!isGoogleDriveAuthenticated || !isPremium) ? "0.7" : "1"
               }}
             >
               <input
@@ -745,7 +785,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                 value="google_drive"
                 checked={settings.defaultDestination === "google_drive"}
                 onChange={() => handleSettingChange("defaultDestination", "google_drive")}
-                disabled={!isGoogleDriveAuthenticated}
+                disabled={!isGoogleDriveAuthenticated || !isPremium}
                 style={{ display: "none" }}
               />
               <div style={{
@@ -784,11 +824,11 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                     lineHeight: "16px",
                     opacity: "0.6"
                   }}>
-                    Sign in to your Google account to enable this option
+                    Export tables directly to your Google Drive
                   </div>
                 </div>
               </div>
-              {!isGoogleDriveAuthenticated && (
+              {(!isGoogleDriveAuthenticated || !isPremium) && (
                 <div style={{
                   display: "flex",
                   alignItems: "center",
@@ -796,7 +836,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                   marginTop: "8px",
                   marginLeft: "0px"
                 }}>
-                  <span 
+                  <span
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -810,7 +850,11 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                     fontWeight: "400",
                     color: "#829089"
                   }}>
-                    Login Required
+                    {!isGoogleDriveAuthenticated && !isPremium
+                      ? "Google Drive requires connection and Premium subscription"
+                      : !isGoogleDriveAuthenticated
+                        ? "Google Drive requires connection"
+                        : "Google Drive requires Premium subscription"}
                   </span>
                 </div>
               )}
@@ -1002,7 +1046,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
                   </span>
                 </label>
               </div>
-              
+
               <div style={{
                 padding: "12px",
                 background: "#f8fdf9",
@@ -1042,6 +1086,8 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange, authBlock
             </div>
           </div>
         </div>
+
+
 
         {/* Save Indicator */}
         {isSaving && (

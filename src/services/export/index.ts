@@ -18,6 +18,7 @@ import { generateFilename } from "./utils"
 import { googleSheetsService } from "../../lib/google-sheets-api"
 import { analyticsService } from "../analytics"
 import { getUserSettings } from "../../lib/storage"
+import { exportCombinedTables } from "../../lib/exporters/combined-exporter"
 
 export class ExportService {
   /**
@@ -705,6 +706,43 @@ export class ExportService {
 
     } catch (error) {
       console.error("ExportService: Export error:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error occurred"
+      }
+    }
+  }
+
+  /**
+   * Combined tables export
+   */
+  public async combineTables(
+    tables: TableData[],
+    options: ExportOptions & { 
+      combinedFileName?: string
+    }
+  ): Promise<ExportResult> {
+    console.log(`🔄 ExportService: Starting combined export for ${tables.length} tables`)
+
+    try {
+      // Export using combined exporter
+      const combinedOptions = {
+        ...options,
+        combinedFileName: options.combinedFileName || `combined_export_${Date.now()}`
+      }
+
+      const result = await exportCombinedTables(tables, combinedOptions)
+      
+      if (result.success) {
+        console.log("✅ ExportService: Combined export completed successfully")
+      } else {
+        console.error("❌ ExportService: Combined export failed:", result.error)
+      }
+
+      return result
+
+    } catch (error) {
+      console.error("💥 ExportService: Critical error in combined export:", error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error occurred"

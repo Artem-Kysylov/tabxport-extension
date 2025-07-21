@@ -637,12 +637,12 @@ if (typeof window !== 'undefined') {
     initializeGlobalDebug()
   }
   
-  // Initialize limit warning debug functions
-  import('./debug-limit-warnings').then(module => {
-    module.initializeLimitWarningDebug()
-  }).catch((error: unknown) => {
-    console.error('Error loading limit warning debug module:', error)
-  })
+  // Remove the problematic import since debug-limit-warnings.ts doesn't exist
+  // import('./debug-limit-warnings').then(module => {
+  //   module.initializeLimitWarningDebug()
+  // }).catch((error: unknown) => {
+  //   console.error('Error loading limit warning debug module:', error)
+  // })
 }
 
 /**
@@ -659,3 +659,12 @@ const testBatchButtonRefresh = async (): Promise<void> => {
     console.error("❌ Batch button refresh test failed:", error)
   }
 }
+
+/**
+ * Отключение лимитов экспорта
+ */
+import('./disable-limits').then(() => {
+  console.log('🚀 Limit disabler module loaded');
+}).catch((error: unknown) => {
+  console.error('Error loading limit disabler module:', error);
+});

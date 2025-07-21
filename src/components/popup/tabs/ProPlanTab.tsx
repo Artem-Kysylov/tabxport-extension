@@ -35,38 +35,43 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
     isAuthenticated: false
   })
 
-  useEffect(() => {
-    checkUserPlan()
-  }, [])
-
   const checkUserPlan = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      setUserPlan(prev => ({ ...prev, isLoading: true }))
       
-      if (!user) {
-        setUserPlan({ planType: 'free', isLoading: false, isAuthenticated: false })
-        return
-      }
-
-      // For testing purposes, simulate different plans
-      // In production, this would fetch from SubscriptionService
-      const subscriptionService = new SubscriptionService(
-        process.env.PLASMO_PUBLIC_SUPABASE_URL!,
-        process.env.PLASMO_PUBLIC_SUPABASE_ANON_KEY!
-      )
-
-      const { subscription } = await subscriptionService.getUserSubscription(user.id)
-      
-      setUserPlan({
-        planType: subscription.plan_type as 'free' | 'pro' | 'enterprise',
-        isLoading: false,
-        isAuthenticated: true
+      // Получаем данные через background скрипт вместо прямого обращения к Supabase
+      const response = await chrome.runtime.sendMessage({
+        type: "CHECK_SUBSCRIPTION"
       })
+      
+      if (response.success) {
+        setUserPlan({
+          planType: response.subscription.planType,
+          isLoading: false,
+          isAuthenticated: response.subscription.isAuthenticated
+        })
+      } else {
+        // Если ответ неуспешный, устанавливаем бесплатный план
+        setUserPlan({ planType: 'free', isLoading: false, isAuthenticated: false })
+      }
     } catch (error) {
-      console.error('Error checking user plan:', error)
+      console.error("Failed to check subscription:", error)
       setUserPlan({ planType: 'free', isLoading: false, isAuthenticated: false })
     }
   }
+
+  // Первоначальная проверка при монтировании компонента
+  useEffect(() => {
+    checkUserPlan()
+  }, [])
+  
+  // Добавляем периодическую проверку статуса подписки
+  useEffect(() => {
+    // Периодически проверяем статус подписки
+    const interval: ReturnType<typeof setInterval> = setInterval(checkUserPlan, 5000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   const handleUpgradeClick = () => {
     onUpgradeClick()
@@ -75,7 +80,7 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
 
   const renderCurrentPlan = () => {
     // Для неаутентифицированных пользователей показываем Free план
-    const isPro = userPlan.isAuthenticated && (userPlan.planType === 'pro' || userPlan.planType === 'enterprise')
+    const isPro = userPlan.isAuthenticated && userPlan.planType === 'pro'
     
     return (
       <div style={{ marginBottom: '24px' }}>
@@ -286,7 +291,7 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
   }
 
   const renderUpgradeCTA = () => {
-    const isPro = userPlan.planType === 'pro' || userPlan.planType === 'enterprise'
+    const isPro = userPlan.planType === 'pro'
     
     if (isPro) {
       return (
@@ -463,4 +468,4 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
       {renderSupport()}
     </div>
   )
-} 
+}

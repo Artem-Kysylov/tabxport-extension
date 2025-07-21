@@ -68,7 +68,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
           </span>
           <span
             className={`text-sm font-semibold ${isProPlan ? "text-emerald-600" : "text-gray-600"}`}>
-            {isProPlan ? "Pro" : "Free"}
+            {isProPlan ? "Pro 🎉" : "Free"}
           </span>
         </div>
 

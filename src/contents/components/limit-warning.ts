@@ -271,7 +271,10 @@ export const showLimitWarning = (
   // Создаем новое предупреждение
   warningContainer = document.createElement('div')
   warningContainer.innerHTML = createWarningHTML(data)
-  document.body.appendChild(warningContainer)
+  document.body.appendChild(warningContainer.firstElementChild as HTMLElement) // Изменение здесь
+
+  // Сохраняем ссылку на контейнер предупреждения
+  warningContainer = document.querySelector('.tablexport-limit-warning') as HTMLElement
 
   lastWarningShown = Date.now()
 
@@ -285,14 +288,11 @@ export const showLimitWarning = (
 
   const closeHandler = () => {
     if (warningContainer) {
-      const modal = warningContainer.firstChild as HTMLElement
-      if (modal) {
-        modal.classList.add("hiding")
-        setTimeout(() => {
-          warningContainer?.remove()
-          warningContainer = null
-        }, 300)
-      }
+      warningContainer.classList.add("hiding")
+      setTimeout(() => {
+        warningContainer?.remove()
+        warningContainer = null
+      }, 300)
     }
   }
 

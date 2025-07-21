@@ -5,6 +5,7 @@ import {
   saveLastExportTime
 } from "./lib/storage"
 import { authService } from "./lib/supabase/auth-service"
+import { SubscriptionService } from "./lib/supabase/subscription-service"
 import { supabase } from "./lib/supabase"
 import { SessionManager } from "./lib/supabase/session-manager"
 import { googleDriveService } from "./lib/google-drive-api"
@@ -20,6 +21,36 @@ import type {
 
 // Create ExportService instance
 const newExportService = new ExportService()
+
+// Добавляем отсутствующую функцию tryAlternativeDownload
+const tryAlternativeDownload = async (downloadUrl: string, filename: string): Promise<void> => {
+  try {
+    console.log("🔄 Background: Trying alternative download method...")
+    
+    // Создаем временную ссылку для скачивания
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = filename
+    link.style.display = 'none'
+    
+    // Добавляем в DOM, кликаем и удаляем
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    console.log("✅ Background: Alternative download method completed")
+  } catch (error) {
+    console.error("❌ Background: Alternative download method failed:", error)
+    
+    // Последняя попытка - открыть URL в новой вкладке
+    try {
+      await chrome.tabs.create({ url: downloadUrl })
+      console.log("✅ Background: Opened download URL in new tab")
+    } catch (tabError) {
+      console.error("❌ Background: Failed to open download URL in new tab:", tabError)
+    }
+  }
+}
 
 // Обработчик сообщений от content scripts
 chrome.runtime.onMessage.addListener(
@@ -110,24 +141,22 @@ chrome.runtime.onMessage.addListener(
   }
 )
 
-// Обработка экспорта таблицы
+// Упрощенная обработка экспорта таблицы
 const handleTableExport = async (
   payload: any,
   sendResponse: (response: any) => void
 ): Promise<void> => {
   console.log("🔍 Background: Received message EXPORT_TABLE")
-  console.log("🔍 Background: Full payload:", JSON.stringify(payload, null, 2))
+  console.log("🔍 Background: Payload:", { 
+    hasTableData: !!payload.tableData, 
+    hasOptions: !!payload.options,
+    destination: payload.options?.destination,
+    format: payload.options?.format
+  })
   
   try {
     const { tableData, options } = payload
-    // Используем платформу из tableData.source или 'unknown' как fallback
     const platform = tableData?.source || "unknown"
-
-    console.log("🔍 Background: Extracted options:", options)
-    console.log("🔍 Background: Options destination:", options.destination)
-    console.log("🔍 Background: Options format:", options.format)
-    console.log("🔍 Background: Platform:", platform)
-    console.log("🔍 Background: Is batch upload:", !!options.isBatchUpload)
 
     if (!tableData || !options) {
       console.error("❌ Background: Missing required data")
@@ -138,15 +167,8 @@ const handleTableExport = async (
       return
     }
 
-    // Проверяем настройки пользователя для сравнения
-    const userSettings = await getUserSettings()
-    console.log("🔍 Background: Current user settings:", userSettings)
-    console.log("🔍 Background: User defaultDestination:", userSettings.defaultDestination)
-
     // Проверяем авторизацию
     const authState = authService.getCurrentState()
-    console.log("🔍 Background: Auth state:", authState)
-
     if (!authState.isAuthenticated || !authState.user) {
       console.error("❌ Background: User not authenticated")
       sendResponse({
@@ -158,216 +180,62 @@ const handleTableExport = async (
 
     const userId = authState.user.id
 
-    // 🚫 ПРОВЕРКА ДНЕВНЫХ ЛИМИТОВ
-    console.log("🔍 Background: Checking daily export limits for user:", userId)
-    try {
-      const limitCheck = await userService.checkExportLimits(userId, options.destination)
-      console.log("🔍 Background: Limit check result:", limitCheck)
-      
-      if (!limitCheck.canExport) {
-        console.warn("❌ Background: Export limit exceeded")
-        sendResponse({
-          success: false,
-          error: limitCheck.limitMessage || "Daily export limit exceeded. Please upgrade to Pro for unlimited exports.",
-          limitExceeded: true,
-          remainingExports: limitCheck.remainingExports
-        })
-        return
-      }
-      
-      console.log("✅ Background: Export limit check passed. Remaining exports:", limitCheck.remainingExports)
-    } catch (limitError) {
-      console.error("❌ Background: Error checking limits:", limitError)
-      sendResponse({
-        success: false,
-        error: "Unable to verify export limits. Please try again."
-      })
-      return
-    }
-
     // Нормализуем destination для совместимости
     let normalizedDestination = options.destination
     if (options.destination === "google-drive") {
-      console.log("🔄 Background: Converting 'google-drive' to 'google_drive'")
       normalizedDestination = "google_drive"
     }
-    
-    console.log("🔍 Background: Normalized destination:", normalizedDestination)
-    console.log("🔍 Background: Checking destination condition...")
-    console.log("🔍 Background: Is google_drive?", normalizedDestination === "google_drive")
-    console.log("🔍 Background: Is google-drive?", normalizedDestination === "google-drive")
 
-    // Специальная обработка для Google Sheets формата
-    if (options.format === "google_sheets") {
-      console.log("✅ Background: Using new ExportService for Google Sheets...")
+    console.log("🔍 Background: Processing export:", {
+      destination: normalizedDestination,
+      format: options.format,
+      platform,
+      userId: userId.substring(0, 8) + "..."
+    })
+
+    // Обработка экспорта в Google Drive
+    if (normalizedDestination === "google_drive") {
+      console.log("📤 Background: Starting Google Drive export...")
       
+      if (!authState.hasGoogleAccess) {
+        console.error("❌ Background: No Google access")
+        sendResponse({
+          success: false,
+          error: "Google Drive access required. Please reconnect your Google account."
+        })
+        return
+      }
+
       // Очистка данных таблицы
       const cleanedTableData = cleanTableData(tableData)
       
-      // Экспорт таблицы через новый ExportService с analytics поддержкой
-      const result: ExportResult = await newExportService.exportTable(cleanedTableData, options)
-      console.log("🔍 Background: Google Sheets export result:", result)
-      
-      // Log analytics info
-      if (result.analyticsApplied) {
-        console.log("📊 Background: Google Sheets export completed with analytics")
-      }
-
-      if (result.success) {
-        // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
-        try {
-          await userService.incrementExportCount(userId)
-          console.log("✅ Background: Export count incremented for user:", userId)
-        } catch (countError) {
-          console.error("❌ Background: Failed to increment export count:", countError)
-        }
-
-        sendResponse({
-          success: true,
-          googleSheetsId: result.googleSheetsId,
-          googleSheetsUrl: result.googleSheetsUrl,
-          filename: result.filename,
-          analyticsApplied: result.analyticsApplied
-        })
-
-        // Показ уведомления
-        const analyticsMessage = result.analyticsApplied ? " with analytics" : ""
-        chrome.notifications.create({
-          type: "basic",
-          iconUrl: "/icon48.plasmo.aced7582.png",
-          title: "TableXport",
-          message: `Table exported to Google Sheets successfully${analyticsMessage}!`
-        })
-      } else {
-        console.error("❌ Background: Google Sheets export failed:", result.error)
-        sendResponse({
-          success: false,
-          error: result.error || "Google Sheets export failed"
-        })
-      }
-    }
-    // Используем новый ExportService для экспорта с проверками лимитов
-    else if (normalizedDestination === "google_drive") {
-      console.log("✅ Background: Using Google Drive export...")
-      
-      // Для batch upload с dataUrl используем прямую загрузку в Google Drive
-      if (options.isBatchUpload && options.dataUrl) {
-        console.log("🔄 Background: Handling batch upload with dataUrl")
-        
-        try {
-          // Конвертируем dataUrl в blob
-          const response = await fetch(options.dataUrl)
-          const blob = await response.blob()
-          
-          // Определяем MIME type
-          const mimeType = blob.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          
-          console.log("🔍 Background: Blob details:", {
-            size: blob.size,
-            type: blob.type,
-            filename: options.filename
-          })
-          
-          // Загружаем в Google Drive
-          const uploadResult = await googleDriveService.uploadFile({
-            filename: options.filename || `batch_export_${Date.now()}.xlsx`,
-            content: blob,
-            mimeType: mimeType
-          })
-          
-          console.log("🔍 Background: Direct upload result:", uploadResult)
-          
-          if (uploadResult.success) {
-            // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
-            try {
-              await userService.incrementExportCount(userId)
-              console.log("✅ Background: Export count incremented for batch upload:", userId)
-            } catch (countError) {
-              console.error("❌ Background: Failed to increment export count for batch:", countError)
-            }
-
-            sendResponse({
-              success: true,
-              googleDriveLink: uploadResult.webViewLink,
-              fileId: uploadResult.fileId
-            })
-            
-            // Показ уведомления
-            chrome.notifications.create({
-              type: "basic",
-              iconUrl: "/icon48.plasmo.aced7582.png",
-              title: "TableXport",
-              message: `File uploaded to Google Drive successfully!`
-            })
-          } else {
-            console.error("❌ Background: Direct upload failed:", uploadResult.error)
-            sendResponse({
-              success: false,
-              error: uploadResult.error || "Google Drive upload failed"
-            })
-          }
-          
-          return
-        } catch (error) {
-          console.error("❌ Background: Error processing batch upload:", error)
-          sendResponse({
-            success: false,
-            error: error instanceof Error ? error.message : "Batch upload failed"
-          })
-          return
-        }
-      }
-      
-      // Обычный экспорт через exportService
-      // Преобразуем tableData в формат массива массивов
-      const tableArray: any[][] = []
-      
-      // Добавляем заголовки если они есть и включены
-      if (options.includeHeaders && tableData.headers) {
-        tableArray.push(tableData.headers)
-        console.log("🔍 Background: Added headers to table array:", tableData.headers)
-      }
-      
-      // Добавляем строки данных
-      if (tableData.rows && Array.isArray(tableData.rows)) {
-        tableArray.push(...tableData.rows)
-        console.log("🔍 Background: Added rows to table array, count:", tableData.rows.length)
-      }
-      
-      console.log("🔍 Background: Final table array format:", tableArray.slice(0, 2)) // Показываем первые 2 строки
-      
-      const exportResult = await exportService.exportTable({
+      // Экспорт в Google Drive
+      const exportResult = await newExportService.exportTable(cleanedTableData, {
+        ...options,
+        destination: normalizedDestination,
         userId,
-        tableName: options.filename || `table_${Date.now()}`,
-        tableData: tableArray, // Передаем массив массивов
-        format: options.format as "csv" | "xlsx" | "docx" | "pdf" | "google_sheets",
         platform,
-        destination: "google_drive",
         metadata: {
           exportedFrom: "TableXport Extension",
           timestamp: new Date().toISOString()
         }
       })
 
-      console.log("🔍 Background: Google Drive export result:", exportResult)
-      console.log("🔍 Background: Export result detailed:", {
+      console.log("🔍 Background: Google Drive export result:", {
         success: exportResult.success,
-        googleDriveLink: exportResult.googleDriveLink,
-        exportId: exportResult.exportId,
-        error: exportResult.error,
-        allKeys: Object.keys(exportResult)
+        hasGoogleDriveLink: !!exportResult.googleDriveLink,
+        error: exportResult.error
       })
 
       if (exportResult.success) {
-        // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
+        // Увеличиваем счетчик экспортов
         try {
           await userService.incrementExportCount(userId)
-          console.log("✅ Background: Export count incremented for Google Drive:", userId)
+          console.log("✅ Background: Export count incremented for Google Drive")
         } catch (countError) {
-          console.error("❌ Background: Failed to increment export count for Google Drive:", countError)
+          console.error("❌ Background: Failed to increment export count:", countError)
         }
 
-        console.log("🔍 Background: Sending response with googleDriveLink:", exportResult.googleDriveLink)
         sendResponse({
           success: true,
           googleDriveLink: exportResult.googleDriveLink,
@@ -377,7 +245,7 @@ const handleTableExport = async (
         // Показ уведомления
         chrome.notifications.create({
           type: "basic",
-          iconUrl: "/icon48.plasmo.aced7582.png", // Используем прямой путь к файлу иконки
+          iconUrl: "/icon48.plasmo.aced7582.png",
           title: "TableXport",
           message: `Table exported to Google Drive successfully!`
         })
@@ -389,37 +257,68 @@ const handleTableExport = async (
         })
       }
     } else {
-      // Новый метод для обычного скачивания через ExportService с analytics
-      console.log("📥 Background: Using new ExportService for download export...")
-      console.log("🔍 Background: Destination was:", options.destination, "-> normalized to:", normalizedDestination)
+      // Обработка локального скачивания
+      console.log("📥 Background: Starting local download export...")
       
       // Очистка данных таблицы
       const cleanedTableData = cleanTableData(tableData)
       
-      // Экспорт таблицы через новый ExportService с analytics поддержкой
+      // Экспорт таблицы через ExportService
       const result: ExportResult = await newExportService.exportTable(cleanedTableData, options)
-      console.log("🔍 Background: Download export result:", result)
-      
-      // Log analytics info
-      if (result.analyticsApplied) {
-        console.log("📊 Background: Download export completed with analytics")
-      }
+      console.log("🔍 Background: Download export result:", {
+        success: result.success,
+        hasDownloadUrl: !!result.downloadUrl,
+        filename: result.filename,
+        error: result.error
+      })
 
       if (result.success && result.downloadUrl) {
-        // 📊 УВЕЛИЧИВАЕМ СЧЕТЧИК ЭКСПОРТОВ
+        // Увеличиваем счетчик экспортов
         try {
           await userService.incrementExportCount(userId)
-          console.log("✅ Background: Export count incremented for download:", userId)
+          console.log("✅ Background: Export count incremented for download")
         } catch (countError) {
-          console.error("❌ Background: Failed to increment export count for download:", countError)
+          console.error("❌ Background: Failed to increment export count:", countError)
         }
 
         // Скачивание файла через Chrome Downloads API
-        const downloadId = await chrome.downloads.download({
-          url: result.downloadUrl,
-          filename: result.filename,
-          saveAs: false
-        })
+        console.log("🔍 Background: Starting download with Chrome Downloads API")
+        
+        try {
+          const downloadId = await chrome.downloads.download({
+            url: result.downloadUrl,
+            filename: result.filename,
+            saveAs: false
+          })
+          
+          console.log("✅ Background: Download initiated successfully, ID:", downloadId)
+          
+          // Проверяем статус скачивания
+          setTimeout(async () => {
+            try {
+              const downloads = await chrome.downloads.search({ id: downloadId })
+              if (downloads.length > 0) {
+                const download = downloads[0]
+                console.log("🔍 Background: Download status:", download.state)
+                
+                if (download.state === 'interrupted' || download.error) {
+                  console.error("❌ Background: Download failed:", download.error)
+                  if (result.downloadUrl && result.filename) {
+                    await tryAlternativeDownload(result.downloadUrl, result.filename)
+                  }
+                }
+              }
+            } catch (statusError) {
+              console.error("❌ Background: Error checking download status:", statusError)
+            }
+          }, 2000)
+          
+        } catch (downloadError) {
+          console.error("❌ Background: Chrome Downloads API failed:", downloadError)
+          if (result.downloadUrl && result.filename) {
+            await tryAlternativeDownload(result.downloadUrl, result.filename)
+          }
+        }
 
         // Сохранение времени последнего экспорта
         await saveLastExportTime()
@@ -427,7 +326,6 @@ const handleTableExport = async (
         sendResponse({
           success: true,
           filename: result.filename,
-          downloadId,
           analyticsApplied: result.analyticsApplied
         })
 
@@ -435,7 +333,7 @@ const handleTableExport = async (
         const analyticsMessage = result.analyticsApplied ? " with analytics" : ""
         chrome.notifications.create({
           type: "basic",
-          iconUrl: "/icon48.plasmo.aced7582.png", // Используем прямой путь к файлу иконки
+          iconUrl: "/icon48.plasmo.aced7582.png",
           title: "TableXport",
           message: `Table exported as ${result.filename}${analyticsMessage}`
         })
@@ -494,13 +392,65 @@ const handleCheckSubscription = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    const subscription = await getUserSubscription()
-    sendResponse({ success: true, subscription })
+    console.log("Background: Checking subscription status...")
+    
+    // Проверяем авторизацию пользователя
+    const authState = authService.getCurrentState()
+    if (!authState.isAuthenticated || !authState.user) {
+      console.log("Background: User not authenticated, returning free plan")
+      // Возвращаем базовую подписку для неавторизованных пользователей
+      const freeSubscription = {
+        planType: "free",
+        exportsLimit: 5,
+        exportsUsed: 0,
+        isAuthenticated: false
+      }
+      sendResponse({ success: true, subscription: freeSubscription })
+      return
+    }
+
+    const userId = authState.user.id
+    console.log("Background: Getting subscription for user:", userId.substring(0, 8) + "...")
+
+    // Создаем экземпляр SubscriptionService
+    const subscriptionService = new SubscriptionService(
+      process.env.PLASMO_PUBLIC_SUPABASE_URL!,
+      process.env.PLASMO_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    // Получаем актуальные данные подписки из Supabase
+    const { subscription, usage } = await subscriptionService.getUserSubscription(userId)
+    
+    console.log("Background: Subscription data:", {
+      planType: subscription.plan_type,
+      status: subscription.status,
+      exportsToday: usage.exports_today || 0
+    })
+
+    // Формируем ответ в формате, ожидаемом компонентами
+    const subscriptionResponse = {
+      planType: subscription.plan_type,
+      exportsLimit: subscription.plan_type === "free" ? 5 : -1, // Free: 5/день, Pro: unlimited
+      exportsUsed: usage.exports_today || 0,
+      isAuthenticated: true,
+      status: subscription.status
+    }
+
+    sendResponse({ success: true, subscription: subscriptionResponse })
   } catch (error) {
-    console.error("Check subscription error:", error)
+    console.error("Background: Check subscription error:", error)
+    
+    // В случае ошибки возвращаем базовую подписку
+    const fallbackSubscription = {
+      planType: "free",
+      exportsLimit: 5,
+      exportsUsed: 0,
+      isAuthenticated: false
+    }
+    
     sendResponse({
-      success: false,
-      error: "Failed to check subscription"
+      success: true, // Возвращаем success: true с fallback данными
+      subscription: fallbackSubscription
     })
   }
 }
@@ -1043,7 +993,10 @@ const handleGetUsageQuotas = async (
     if (error) throw error
     sendResponse({ success: true, quotas: data })
   } catch (error) {
-    sendResponse({ success: false, error: error.message })
+    sendResponse({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error" 
+    })
   }
 }
 

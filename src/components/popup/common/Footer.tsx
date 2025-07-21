@@ -20,14 +20,19 @@ export const Footer: React.FC = () => {
         style={{
           fontSize: '12px',
           fontWeight: '600',
-          color: '#1B9358'
+          color: '#1B9358',
+          textAlign: 'center',
+          width: '100%',
+          cursor: 'pointer',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          textDecoration: 'underline',
         }}
       >
         support@yourdomain.com
       </div>
 
       {/* GitHub button */}
-      <button
+      {/* <button
         onClick={() => handleLinkClick("https://github.com/Artem-Kysylov/tabxport-extension")}
         style={{
           background: '#000000',
@@ -66,7 +71,7 @@ export const Footer: React.FC = () => {
           }}
         />
         <span>GitHub</span>
-      </button>
+      </button> */}
     </div>
   )
 }

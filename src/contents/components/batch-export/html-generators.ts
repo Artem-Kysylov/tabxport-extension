@@ -437,6 +437,7 @@ export const createProgressIndicator = (
  */
 export const createDestinationSelector = async (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): Promise<string> => {
   const currentDestination = modalState.config.destination || "download"
+  const isGoogleSheets = modalState.config.format === 'google_sheets'
   
   // Проверка премиум-статуса пользователя
   let isPremium = false
@@ -452,27 +453,31 @@ export const createDestinationSelector = async (modalState: BatchModalState, isG
   // Google Drive требует премиум-подписки
   const isGoogleDriveDisabled = !isGoogleDriveAuthenticated || !isPremium
   
-  // Определяем причину отключения
-  let disabledReason = ''
+  // Device download должен быть отключен для Google Sheets
+  const isDeviceDownloadDisabled = isGoogleSheets
+  
+  // Определяем причину отключения Google Drive
+  let googleDriveDisabledReason = ''
   if (!isGoogleDriveAuthenticated && !isPremium) {
-    disabledReason = 'Google Drive requires connection and Premium subscription'
+    googleDriveDisabledReason = 'Google Drive requires connection and Premium subscription'
   } else if (!isGoogleDriveAuthenticated) {
-    disabledReason = 'Google Drive requires connection'
+    googleDriveDisabledReason = 'Google Drive requires connection'
   } else if (!isPremium) {
-    disabledReason = 'Google Drive requires Premium subscription'
+    googleDriveDisabledReason = 'Google Drive requires Premium subscription'
   }
   
   return `
     <div class="destination-radio-group">
       <h3 class="section-heading">Export destination:</h3>
       <div class="destination-radio-options">
-        <label class="destination-radio-option${currentDestination === 'download' ? ' selected' : ''}">
-          <input type="radio" name="export-destination" value="download" ${currentDestination === 'download' ? 'checked' : ''} class="destination-radio-input">
+        <label class="destination-radio-option${currentDestination === 'download' ? ' selected' : ''}${isDeviceDownloadDisabled ? ' disabled' : ''}">
+          <input type="radio" name="export-destination" value="download" ${currentDestination === 'download' ? 'checked' : ''} ${isDeviceDownloadDisabled ? 'disabled' : ''} class="destination-radio-input">
           <div class="destination-radio-content">
             <div class="destination-icon">${destinationIcons.download}</div>
             <div class="destination-text">
               <div class="destination-name">Download to Device</div>
               <div class="destination-desc">Save files directly to your computer</div>
+              ${isDeviceDownloadDisabled ? '<div class="destination-login-required"><span class="login-required-icon">' + formatIcons.padlock + '</span><span class="login-required-text">Google Sheets requires Google Drive destination</span></div>' : ''}
             </div>
           </div>
         </label>
@@ -484,7 +489,7 @@ export const createDestinationSelector = async (modalState: BatchModalState, isG
             <div class="destination-text">
               <div class="destination-name">Google Drive</div>
               <div class="destination-desc">Export tables directly to your Google Drive</div>
-              ${isGoogleDriveDisabled ? '<div class="destination-login-required"><span class="login-required-icon">' + formatIcons.padlock + '</span><span class="login-required-text">' + disabledReason + '</span></div>' : ''}
+              ${isGoogleDriveDisabled ? '<div class="destination-login-required"><span class="login-required-icon">' + formatIcons.padlock + '</span><span class="login-required-text">' + googleDriveDisabledReason + '</span></div>' : ''}
             </div>
           </div>
         </label>

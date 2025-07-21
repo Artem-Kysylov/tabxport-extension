@@ -645,14 +645,15 @@ const handleExport = async (
     } else {
       console.error("❌ TabXport: Export failed:", result)
       
-      // Проверяем, если это ошибка лимита
+      // Проверяем, если это ошибка лимита - отключено
       if (
         result?.limitExceeded ||
         result?.error?.includes("daily limit") ||
         result?.error?.includes("Daily export")
       ) {
-        // Показываем специальное предупреждение о лимите
-        showLimitExceededWarning()
+        // Пропускаем показ предупреждения о лимите
+        console.log("✅ TabXport: Bypassing limit exceeded warning")
+        // showLimitExceededWarning() - отключено
       } 
       // Проверяем, если это ошибка аутентификации
       else if (result?.error?.includes("Authentication required")) {

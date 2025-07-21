@@ -97,6 +97,9 @@ export interface ExportResult {
   downloadUrl?: string
   googleSheetsId?: string
   googleSheetsUrl?: string
+  // Google Drive specific properties
+  googleDriveLink?: string
+  exportId?: string
   // Analytics results (optional)
   analyticsApplied?: boolean
   analyticsErrors?: AnalysisError[]
@@ -116,6 +119,20 @@ export interface CheckSubscriptionPayload {
   userId: string
 }
 
+// OAuth related payloads
+export interface OAuthSuccessPayload {
+  sessionData: any
+}
+
+export interface OAuthErrorPayload {
+  error: string
+  errorDescription: string
+}
+
+export interface OAuthCodePayload {
+  code: string
+}
+
 // Типы сообщений Chrome Extension
 export enum ChromeMessageType {
   EXPORT_TABLE = "EXPORT_TABLE",
@@ -125,7 +142,16 @@ export enum ChromeMessageType {
   REFRESH_TABLES = "REFRESH_TABLES",
   CHECK_AUTH_STATUS = "CHECK_AUTH_STATUS",
   GOOGLE_SIGN_IN = "GOOGLE_SIGN_IN",
-  SIGN_OUT = "SIGN_OUT"
+  SIGN_OUT = "SIGN_OUT",
+  OAUTH_SUCCESS = "OAUTH_SUCCESS",
+  OAUTH_ERROR = "OAUTH_ERROR",
+  OAUTH_CODE = "OAUTH_CODE",
+  CHROMIUMAPP_OAUTH_DATA = "CHROMIUMAPP_OAUTH_DATA",
+  CREATE_TABLEXPORT_FOLDER = "CREATE_TABLEXPORT_FOLDER",
+  GET_GOOGLE_TOKEN = "GET_GOOGLE_TOKEN",
+  GET_EXPORT_HISTORY = "GET_EXPORT_HISTORY",
+  GET_USAGE_QUOTAS = "GET_USAGE_QUOTAS",
+  GET_USAGE_STATS = "GET_USAGE_STATS"
 }
 
 // Сообщения между content script и background с дискриминированными типами
@@ -143,7 +169,33 @@ export type ChromeMessage =
       payload: CheckSubscriptionPayload
     }
   | {
-      type: ChromeMessageType.GET_SETTINGS | ChromeMessageType.REFRESH_TABLES | ChromeMessageType.CHECK_AUTH_STATUS | ChromeMessageType.GOOGLE_SIGN_IN | ChromeMessageType.SIGN_OUT
+      type: ChromeMessageType.OAUTH_SUCCESS
+      sessionData: any
+    }
+  | {
+      type: ChromeMessageType.OAUTH_ERROR
+      error: string
+      errorDescription: string
+    }
+  | {
+      type: ChromeMessageType.OAUTH_CODE
+      code: string
+    }
+  | {
+      type: ChromeMessageType.CHROMIUMAPP_OAUTH_DATA
+      [key: string]: any
+    }
+  | {
+      type: ChromeMessageType.GET_SETTINGS | 
+           ChromeMessageType.REFRESH_TABLES | 
+           ChromeMessageType.CHECK_AUTH_STATUS | 
+           ChromeMessageType.GOOGLE_SIGN_IN | 
+           ChromeMessageType.SIGN_OUT |
+           ChromeMessageType.CREATE_TABLEXPORT_FOLDER |
+           ChromeMessageType.GET_GOOGLE_TOKEN |
+           ChromeMessageType.GET_EXPORT_HISTORY |
+           ChromeMessageType.GET_USAGE_QUOTAS |
+           ChromeMessageType.GET_USAGE_STATS
       payload?: undefined
     }
 

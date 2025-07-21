@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react"
 
-import "./debug-env"
+// Remove the problematic import since debug-env doesn't exist
+// import "./debug-env"
 import "./style.css"
 
 import { Footer } from "./components/popup/common/Footer"

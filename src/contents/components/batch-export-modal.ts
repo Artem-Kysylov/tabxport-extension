@@ -36,7 +36,7 @@ let modalState: BatchModalState = {
     combinedFileName: undefined,
     includeHeaders: true,
     zipArchive: false, // Legacy field for backward compatibility - not used in UI
-    destination: "device", // Default to device download
+    destination: "download", // Default to download
     analytics: {
       enabled: false, // Default to disabled
       summaryTypes: ["sum", "average", "count"] // Default summary types
@@ -187,10 +187,10 @@ const loadUserSettingsForModal = async (): Promise<UserSettings> => {
     
     // Always set destination to download if not authenticated
     if (!isGoogleDriveAuthenticated) {
-      modalState.config.destination = "device"
+      modalState.config.destination = "download"
       console.log("📋 Google Drive not authenticated, defaulting to device download")
     } else {
-      modalState.config.destination = settings.defaultDestination || "device"
+      modalState.config.destination = settings.defaultDestination || "download"
     }
     
     // Load rememberFormat setting from localStorage
@@ -236,13 +236,13 @@ const loadUserSettingsForModal = async (): Promise<UserSettings> => {
     // Fallback to defaults
     const defaultSettings: UserSettings = {
       defaultFormat: "xlsx",
-      defaultDestination: "device",
+      defaultDestination: "download",
       autoExport: false,
       theme: "auto"
     }
     
     modalState.config.format = defaultSettings.defaultFormat as ExportFormat
-    modalState.config.destination = "device" // Always default to device on error
+    modalState.config.destination = "download" // Always default to download on error
     
     return defaultSettings
   }
@@ -295,6 +295,11 @@ const attachEventListeners = (): void => {
       if (modalState.config.exportMode !== 'combined') {
         modalState.config.exportMode = "combined"
         console.log('🔄 Switched to combined mode for Google Sheets format')
+      }
+      // Automatically switch to Google Drive destination for Google Sheets
+      if (modalState.config.destination !== 'google_drive') {
+        modalState.config.destination = 'google_drive'
+        console.log('🔄 Automatically switched to Google Drive for Google Sheets format')
       }
     }
     // Reset to separate mode if format doesn't support combined
@@ -394,6 +399,11 @@ const attachEventListeners = (): void => {
       if (modalState.config.format === 'google_sheets') {
         modalState.config.exportMode = "combined"
         console.log('🔄 Switched to combined mode for Google Sheets format')
+        // Automatically switch to Google Drive destination for Google Sheets
+        if (modalState.config.destination !== 'google_drive') {
+          modalState.config.destination = 'google_drive'
+          console.log('🔄 Automatically switched to Google Drive for Google Sheets format')
+        }
       }
       // Reset to separate mode if format doesn't support combined
       else if (

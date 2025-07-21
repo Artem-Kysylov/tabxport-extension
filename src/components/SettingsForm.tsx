@@ -257,24 +257,33 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
 
       // If Google Sheets format is selected, automatically set destination to google_drive
       if (key === "defaultFormat" && value === "google_sheets") {
-        // Проверяем премиум-статус и аутентификацию Google Drive
-        if (!isPremium || !isGoogleDriveAuthenticated) {
-          console.log("⚠️ Google Sheets requires Premium subscription and Google Drive connection, ignoring selection")
-          // Возвращаем Excel как формат по умолчанию для бесплатных пользователей или неаутентифицированных
-          const updatedSettings = { ...newSettings, defaultFormat: "xlsx" as const }
-          setSettings(updatedSettings)
-          await saveUserSettings(updatedSettings)
-          onSettingsChange?.(updatedSettings)
-          return
-        }
-        
-        // Если премиум, аутентифицирован и выбран Google Sheets, автоматически переключаем на Google Drive
+        // Автоматически переключаем на Google Drive при выборе Google Sheets
         if (settings.defaultDestination !== "google_drive") {
           console.log("📊 Google Sheets selected, auto-switching to Google Drive destination")
           const updatedSettings = { ...newSettings, defaultDestination: "google_drive" as const }
           setSettings(updatedSettings)
           await saveUserSettings(updatedSettings)
           onSettingsChange?.(updatedSettings)
+          
+          // Также уведомляем content script об изменении destination
+          try {
+            const [tab] = await chrome.tabs.query({
+              active: true,
+              currentWindow: true
+            })
+            
+            if (tab.id) {
+              await chrome.tabs.sendMessage(tab.id, {
+                type: "SETTINGS_CHANGED",
+                key: "defaultDestination",
+                value: "google_drive",
+                settings: updatedSettings
+              })
+              console.log("🚀 Notified content script about auto-switched destination: google_drive")
+            }
+          } catch (error) {
+            console.log("Content script not available (expected on non-supported sites)")
+          }
         }
       }
 
@@ -653,6 +662,20 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
                   />
                 </div>
                 <span>Remember my format</span>
+                {rememberFormat && (
+                  <span 
+                    style={{
+                      fontSize: "10px",
+                      backgroundColor: "#d1fae5",
+                      color: "#047857",
+                      padding: "4px",
+                      borderRadius: "9999px",
+                      fontWeight: "500"
+                    }}
+                  >
+                    Memory ON
+                  </span>
+                )}
               </label>
             </div>
           </div>
@@ -678,27 +701,34 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
           }}>
             {/* Download to Device */}
             <label 
+              onClick={() => {
+                if (settings.defaultFormat !== "google_sheets") {
+                  handleSettingChange("defaultDestination", "download")
+                }
+              }}
               style={{
                 display: "flex",
                 padding: "16px",
                 borderRadius: "8px",
                 border: settings.defaultDestination === "download" ? "none" : "1px solid #CDD2D0",
-                background: settings.defaultDestination === "download" ? "#D2F2E2" : "white",
-                cursor: "pointer",
+                background: settings.defaultDestination === "download" ? "#D2F2E2" : 
+                          settings.defaultFormat === "google_sheets" ? "#F3F4F3" : "white",
+                cursor: settings.defaultFormat === "google_sheets" ? "not-allowed" : "pointer",
                 transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 fontSize: "14px",
                 fontWeight: "400",
                 color: "#062013",
                 margin: "0",
+                opacity: settings.defaultFormat === "google_sheets" ? "0.7" : "1",
                 userSelect: "none"
               }}
               onMouseEnter={(e) => {
-                if (settings.defaultDestination !== "download") {
+                if (settings.defaultDestination !== "download" && settings.defaultFormat !== "google_sheets") {
                   e.currentTarget.style.opacity = "0.5"
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = "1"
+                e.currentTarget.style.opacity = settings.defaultFormat === "google_sheets" ? "0.7" : "1"
               }}
             >
               <input
@@ -707,6 +737,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
                 value="download"
                 checked={settings.defaultDestination === "download"}
                 onChange={() => handleSettingChange("defaultDestination", "download")}
+                disabled={settings.defaultFormat === "google_sheets"}
                 style={{ display: "none" }}
               />
               <div style={{
@@ -747,12 +778,42 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
                   }}>
                     Save files directly to your computer
                   </div>
+                  {settings.defaultFormat === "google_sheets" && (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      marginTop: "4px"
+                    }}>
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          width: "14px",
+                          height: "14px"
+                        }}
+                        dangerouslySetInnerHTML={{ __html: iconPadlock }}
+                      />
+                      <span style={{
+                        fontSize: "12px",
+                        fontWeight: "400",
+                        color: "#829089"
+                      }}>
+                        Google Sheets requires Google Drive destination
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </label>
 
             {/* Google Drive */}
             <label 
+              onClick={() => {
+                if (isGoogleDriveAuthenticated && isPremium) {
+                  handleSettingChange("defaultDestination", "google_drive")
+                }
+              }}
               style={{
                 display: "flex",
                 flexDirection: "column",

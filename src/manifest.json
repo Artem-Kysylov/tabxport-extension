@@ -47,7 +47,6 @@
     "identity",
     "tabs"
   ],
-
   "host_permissions": [
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",

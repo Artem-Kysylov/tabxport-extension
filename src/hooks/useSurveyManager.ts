@@ -6,6 +6,7 @@ import {
   SURVEY_STORAGE_KEY, 
   SURVEY_COOLDOWN_MS 
 } from '../types/survey'
+import { surveyService } from '../lib/supabase/survey-service'
 
 interface UseSurveyManagerReturn {
   surveyState: SurveyState
@@ -92,7 +93,7 @@ export const useSurveyManager = (): UseSurveyManagerReturn => {
   }, [canShowSurvey, getSurveyData, saveSurveyData])
 
   // Отправить ответ
-  const submitResponse = useCallback((optionId: string, exportContext?: any) => {
+  const submitResponse = useCallback(async (optionId: string, exportContext?: any) => {
     const data = getSurveyData()
     
     const response: SurveyResponse = {
@@ -101,6 +102,7 @@ export const useSurveyManager = (): UseSurveyManagerReturn => {
       exportContext
     }
 
+    // Сохраняем локально
     data.surveyResponses.push(response)
     data.lastSurveyAnswered = Date.now()
     saveSurveyData(data)
@@ -112,12 +114,20 @@ export const useSurveyManager = (): UseSurveyManagerReturn => {
       setSurveyState('hidden')
     }, 3000)
 
-    // Отправить событие в аналитику (если нужно)
+    // Отправляем на сервер (асинхронно, не блокируем UI)
     try {
-      // TODO: Добавить аналитику
-      console.log('Survey response submitted:', response)
+      console.log('📧 Sending survey response to server...')
+      const result = await surveyService.submitSurveyResponse(response)
+      
+      if (result.success) {
+        console.log('✅ Survey response sent successfully')
+      } else {
+        console.error('❌ Failed to send survey response:', result.error)
+        // Не показываем ошибку пользователю, чтобы не портить UX
+      }
     } catch (error) {
-      console.error('Error sending survey analytics:', error)
+      console.error('❌ Error sending survey response:', error)
+      // Не блокируем UI из-за ошибки отправки
     }
   }, [getSurveyData, saveSurveyData])
 
@@ -139,4 +149,4 @@ export const useSurveyManager = (): UseSurveyManagerReturn => {
     closeSurvey,
     getSurveyStats
   }
-} 
+}

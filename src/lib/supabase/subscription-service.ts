@@ -507,4 +507,43 @@ export class SubscriptionService {
       (trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     )
   }
+
+  /**
+   * Cancel user's subscription via Supabase Edge Function
+   */
+  async cancelSubscription(userId: string): Promise<{
+    success: boolean
+    error?: string
+    message?: string
+  }> {
+    try {
+      console.log('📋 Canceling subscription for user:', userId.substring(0, 8) + "...")
+
+      // Вызываем Edge Function для отмены подписки
+      const { data, error } = await this.supabase.functions.invoke('cancel-subscription', {
+        body: { userId }
+      })
+
+      if (error) {
+        console.error('❌ Error canceling subscription:', error)
+        return { 
+          success: false, 
+          error: error.message || 'Failed to cancel subscription'
+        }
+      }
+
+      console.log('✅ Subscription canceled successfully:', data)
+      return { 
+        success: true, 
+        message: data?.message || 'Subscription canceled successfully'
+      }
+
+    } catch (error) {
+      console.error('❌ Subscription cancellation error:', error)
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  }
 }

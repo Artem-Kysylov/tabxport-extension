@@ -236,7 +236,7 @@ const createWarningHTML = (data: LimitWarningData): string => {
       </div>
       
       <div class="tablexport-limit-warning-actions">
-        ${data.plan_type === 'free' ? '<button class="tablexport-limit-warning-button tablexport-limit-warning-button-primary" onclick="window.open(\'https://tabxport.com/pricing\', \'_blank\')">Upgrade to Pro</button>' : ''}
+        ${data.plan_type === 'free' ? '<button class="tablexport-limit-warning-button tablexport-limit-warning-button-primary" onclick="window.open(\'https://www.tablexport.com/payment?source=extension\', \'_blank\')">Upgrade to Pro</button>' : ''}
         <button class="tablexport-limit-warning-button tablexport-limit-warning-dismiss">Dismiss</button>
       </div>
     </div>

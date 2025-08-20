@@ -134,6 +134,10 @@ chrome.runtime.onMessage.addListener(
         handleGetUsageStats(sendResponse)
         return true
 
+      case "CANCEL_SUBSCRIPTION":
+        handleCancelSubscription(sendResponse)
+        return true
+
       default:
         sendResponse({ error: "Unknown message type" })
         return false
@@ -1025,6 +1029,50 @@ const handleGetUsageStats = async (
   } catch (error) {
     console.error("Error getting usage stats:", error)
     sendResponse({ success: false, error: "Failed to get usage stats" })
+  }
+}
+
+/**
+ * Handle subscription cancellation
+ */
+const handleCancelSubscription = async (
+  sendResponse: (response: any) => void
+): Promise<void> => {
+  try {
+    console.log("Background: Handling cancel subscription...")
+    
+    // Проверяем авторизацию
+    const authState = authService.getCurrentState()
+    if (!authState.isAuthenticated || !authState.user) {
+      console.error("Background: User not authenticated")
+      sendResponse({
+        success: false,
+        error: "Authentication required"
+      })
+      return
+    }
+
+    const userId = authState.user.id
+    console.log("Background: Canceling subscription for user:", userId.substring(0, 8) + "...")
+
+    // Создаем экземпляр SubscriptionService
+    const subscriptionService = new SubscriptionService(
+      process.env.PLASMO_PUBLIC_SUPABASE_URL!,
+      process.env.PLASMO_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    // Отменяем подписку
+    const result = await subscriptionService.cancelSubscription(userId)
+    
+    console.log("Background: Cancel subscription result:", result)
+
+    sendResponse(result)
+  } catch (error) {
+    console.error("Background: Cancel subscription error:", error)
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to cancel subscription"
+    })
   }
 }
 

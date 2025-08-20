@@ -11,6 +11,7 @@ import {
 class ContentSurveyManager {
   private surveyState: SurveyState = 'hidden'
   private surveyContainer: HTMLElement | null = null
+  private currentExportContext: any = null
 
   // Получить данные опроса из localStorage
   private getSurveyData() {
@@ -330,7 +331,9 @@ class ContentSurveyManager {
       return
     }
 
-    // Отмечаем что опрос показан
+    // Сохраняем контекст экспорта
+    this.currentExportContext = exportContext
+
     const data = this.getSurveyData()
     data.lastSurveyShown = Date.now()
     this.saveSurveyData(data)
@@ -349,17 +352,17 @@ class ContentSurveyManager {
       content.style.display = 'block'
       thankYou.style.display = 'none'
       
-      // Показываем контейнер
-      container.style.display = 'block'
+      container.style.display = 'flex'
       
-      // Анимация появления
       setTimeout(() => {
-        modal.classList.add('visible')
-      }, 50)
-
-      this.surveyState = 'showing'
-      console.log('✅ Survey shown successfully')
+        if (modal) {
+          modal.classList.add('visible')
+        }
+      }, 10)
     }
+
+    this.surveyState = 'showing'
+    console.log('✅ Survey shown successfully')
   }
 
   // Создать survey container в DOM
@@ -430,12 +433,13 @@ class ContentSurveyManager {
   }
 
   // Отправить ответ
-  private submitResponse(optionId: string) {
+  private async submitResponse(optionId: string) {
     const data = this.getSurveyData()
     
     const response = {
       optionId,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      exportContext: this.currentExportContext
     }
 
     data.surveyResponses.push(response)
@@ -445,7 +449,25 @@ class ContentSurveyManager {
     // Показываем thank you экран
     this.showThankYou()
 
-    console.log('📊 Survey response submitted:', response)
+    console.log('📊 Survey response submitted locally:', response)
+
+    // Отправляем на сервер асинхронно
+    try {
+      console.log('📧 Sending survey response to server...')
+      
+      // Динамический импорт сервиса
+      const { surveyService } = await import('../lib/supabase/survey-service')
+      const result = await surveyService.submitSurveyResponseSimple(optionId, this.currentExportContext)
+      
+      if (result.success) {
+        console.log('✅ Survey response sent to server successfully')
+      } else {
+        console.error('❌ Failed to send survey response to server:', result.error)
+      }
+    } catch (error) {
+      console.error('❌ Error sending survey response to server:', error)
+      // Не блокируем UI из-за ошибки отправки
+    }
   }
 
   // Показать thank you экран
@@ -499,9 +521,10 @@ export const initContentSurveyManager = () => {
     }
     
     // Слушатель событий
-    window.addEventListener('tablexport:survey-trigger', (event: CustomEvent) => {
-      console.log('📡 Survey trigger event received:', event.detail)
-      globalSurveyManager?.showSurvey(event.detail)
+    window.addEventListener('tablexport:survey-trigger', (event: Event) => {
+      const customEvent = event as CustomEvent
+      console.log('📡 Survey trigger event received:', customEvent.detail)
+      globalSurveyManager?.showSurvey(customEvent.detail)
     })
     
     console.log('✅ Content Survey Manager initialized')
@@ -511,4 +534,4 @@ export const initContentSurveyManager = () => {
 // Экспорт для использования в других модулях
 export const triggerSurvey = (exportContext?: any) => {
   globalSurveyManager?.showSurvey(exportContext)
-} 
+}

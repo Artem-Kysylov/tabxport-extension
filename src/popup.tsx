@@ -55,8 +55,15 @@ const Popup: React.FC = () => {
   }
 
   const handleUpgradeClick = () => {
+    const baseUrl = "https://www.tablexport.com/payment"
+    const params = new URLSearchParams({
+      source: "extension",
+      ...(authUser?.id ? { user: authUser.id } : {}),
+      ...(authUser?.email ? { email: authUser.email } : {})
+    })
+
     chrome.tabs.create({
-      url: "https://tabxport.com/pricing"
+      url: `${baseUrl}?${params.toString()}`
     })
   }
 

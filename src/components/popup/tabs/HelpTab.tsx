@@ -107,10 +107,14 @@ export const HelpTab: React.FC = () => {
             fontSize: '14px',
             fontWeight: '600',
             color: '#1B9358',
-            margin: '0'
+            margin: '0',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            textDecoration: 'underline',
           }}
+          onClick={() => handleLinkClick('mailto:hello@tablexport.com')}
         >
-          support@yourdomain.com
+          hello@tablexport.com
         </p>
       </div>
 

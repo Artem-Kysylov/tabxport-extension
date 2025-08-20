@@ -1,7 +1,8 @@
 export interface SurveyOption {
   id: string
-  emoji: string
   text: string
+  description?: string
+  emoji?: string
 }
 
 export interface SurveyResponse {
@@ -11,37 +12,71 @@ export interface SurveyResponse {
     format?: string
     tableCount?: number
     destination?: string
+    exportType?: 'single' | 'batch'
+    platform?: string
   }
 }
 
-export type SurveyState = 'hidden' | 'showing' | 'answered' | 'thanking'
-
 export interface SurveyData {
-  lastSurveyShown?: number
-  lastSurveyAnswered?: number
   surveyResponses: SurveyResponse[]
   surveySettings: {
     enabled: boolean
   }
+  lastSurveyShown?: number
+  lastSurveyAnswered?: number
 }
 
+export type SurveyState = 'hidden' | 'showing' | 'thanking'
+
+// Константы
+export const SURVEY_STORAGE_KEY = 'tablexport-survey-data'
+export const SURVEY_COOLDOWN_MS = 24 * 60 * 60 * 1000 // 24 часа
+
+// Опции опроса
 export const SURVEY_OPTIONS: SurveyOption[] = [
   {
-    id: 'ai-analysis',
-    emoji: '🤖',
-    text: 'AI Analysis (sums, trends, anomalies)'
+    id: 'very-useful',
+    text: 'Очень полезно',
+    description: 'Расширение значительно упростило работу',
+    emoji: '🚀'
   },
   {
-    id: 'notion-sync',
-    emoji: '📌',
-    text: 'Notion Synchronization'
+    id: 'useful',
+    text: 'Полезно',
+    description: 'Расширение помогает в работе',
+    emoji: '👍'
   },
   {
-    id: 'satisfied',
-    emoji: '✋',
-    text: 'I\'m satisfied with current features'
+    id: 'neutral',
+    text: 'Нейтрально',
+    description: 'Расширение работает как ожидалось',
+    emoji: '😐'
+  },
+  {
+    id: 'not-useful',
+    text: 'Не очень полезно',
+    description: 'Расширение имеет ограниченную пользу',
+    emoji: '🤔'
+  },
+  {
+    id: 'not-useful-at-all',
+    text: 'Совсем не полезно',
+    description: 'Расширение не приносит пользы',
+    emoji: '👎'
   }
 ]
 
-export const SURVEY_STORAGE_KEY = 'tablexport_survey_data'
-export const SURVEY_COOLDOWN_MS = 24 * 60 * 60 * 1000 // 24 часа 
+// Интерфейс для отправки на сервер
+export interface SurveySubmissionData {
+  optionId: string
+  optionText: string
+  timestamp: number
+  userEmail?: string
+  exportContext?: {
+    format?: string
+    tableCount?: number
+    destination?: string
+    exportType?: 'single' | 'batch'
+    platform?: string
+  }
+}

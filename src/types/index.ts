@@ -151,7 +151,8 @@ export enum ChromeMessageType {
   GET_GOOGLE_TOKEN = "GET_GOOGLE_TOKEN",
   GET_EXPORT_HISTORY = "GET_EXPORT_HISTORY",
   GET_USAGE_QUOTAS = "GET_USAGE_QUOTAS",
-  GET_USAGE_STATS = "GET_USAGE_STATS"
+  GET_USAGE_STATS = "GET_USAGE_STATS",
+  CANCEL_SUBSCRIPTION = "CANCEL_SUBSCRIPTION"
 }
 
 // Сообщения между content script и background с дискриминированными типами
@@ -184,6 +185,10 @@ export type ChromeMessage =
   | {
       type: ChromeMessageType.CHROMIUMAPP_OAUTH_DATA
       [key: string]: any
+    }
+  | {
+      type: ChromeMessageType.CANCEL_SUBSCRIPTION
+      payload?: undefined
     }
   | {
       type: ChromeMessageType.GET_SETTINGS | 

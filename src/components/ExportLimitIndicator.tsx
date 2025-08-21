@@ -16,6 +16,7 @@ const ExportLimitIndicator: React.FC<ExportLimitIndicatorProps> = ({
 }) => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
+    session: null,
     isLoading: true,
     isAuthenticated: false,
     hasGoogleAccess: false
@@ -167,4 +168,4 @@ const ExportLimitIndicator: React.FC<ExportLimitIndicatorProps> = ({
   );
 };
 
-export default ExportLimitIndicator; 
+export default ExportLimitIndicator;

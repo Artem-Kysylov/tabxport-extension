@@ -283,12 +283,17 @@ export const analyzeElementContent = (element: HTMLElement): {
   
   // Check for HTML table
   if (element.tagName === 'TABLE' || element.querySelector('table')) {
+    const tableEl =
+      element.tagName === 'TABLE'
+        ? (element as HTMLTableElement)
+        : (element.querySelector('table') as HTMLTableElement | null)
+
     return {
       hasTableContent: true,
       contentType: 'html',
       tableLines: [],
       confidence: 0.95,
-      issues: element.rows?.length === 0 ? ['Empty table'] : []
+      issues: tableEl && tableEl.rows.length === 0 ? ['Empty table'] : []
     }
   }
   
@@ -448,4 +453,4 @@ export const runCompleteTableDiagnosis = async (): Promise<TableDetectionCompari
   highlightDiscrepancies(comparison)
   
   return comparison
-} 
+}

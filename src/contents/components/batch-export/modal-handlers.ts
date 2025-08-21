@@ -4,7 +4,8 @@ import { cleanTableData, validateTableData } from "../../../lib/export"
 import { ExportService } from "../../../services/export"
 import { googleDriveService } from "../../../lib/google-drive-api"
 import { safeStorageOperation, logExtensionError, createErrorNotification } from "../../../lib/error-handlers"
-import type { ExportOptions, ChromeMessage, ChromeMessageType } from "../../../types"
+import type { ExportOptions, ChromeMessage } from "../../../types"
+import { ChromeMessageType } from "../../../types"
 import type {
   BatchTableDetectionResult,
   TableDetectionResult
@@ -110,7 +111,7 @@ export const uploadToGoogleDriveViaBackground = async (
     
     // FIXED: Send ready file for direct upload instead of empty table
     const message = {
-      type: "EXPORT_TABLE" as ChromeMessageType,
+      type: ChromeMessageType.EXPORT_TABLE,
       payload: {
         tableData: {
           source: "batch-export-ready-file",
@@ -343,7 +344,7 @@ export const handleBatchExport = async (
   console.log(`🚀 Starting batch export with ${modalState.config.selectedTables.size} tables`)
   console.log("Export configuration:", {
     format: modalState.config.format,
-    mode: modalState.config.mode,
+    exportMode: modalState.config.exportMode,
     destination: modalState.config.destination,
     selectedTables: Array.from(modalState.config.selectedTables)
   })
@@ -661,7 +662,7 @@ export const handleBatchExport = async (
         console.log(`🔄 Exporting table ${tableNumber} to Google Drive via background...`)
         
         const message: ChromeMessage = {
-          type: "EXPORT_TABLE" as ChromeMessageType,
+          type: ChromeMessageType.EXPORT_TABLE,
           payload: {
             tableData: table.data,
             options: {

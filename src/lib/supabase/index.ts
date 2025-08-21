@@ -1,6 +1,6 @@
 // Основной клиент и типы
 export { supabase } from "../supabase"
-export type { Database } from "./types"
+export type { Database, ExportLimitCheck } from "./types"
 export * from "./types"
 
 // Сервисы
@@ -8,7 +8,7 @@ export { authService } from "./auth-service"
 export type { AuthUser, AuthState } from "./auth-service"
 
 export { userService } from "./user-service"
-export type { UserData, ExportLimitCheck } from "./user-service"
+export type { UserData } from "./user-service"
 
 export { exportService } from "./export-service"
 export type { ExportOptions, ExportResult } from "./export-service"

@@ -1,4 +1,5 @@
 import { googleDriveService } from "../google-drive-api"
+import { googleSheetsService } from "../google-sheets-api"
 import { supabase } from "../supabase"
 import type { ExportDestination, ExportHistoryInsert } from "./types"
 import { userService } from "./user-service"
@@ -64,7 +65,11 @@ class ExportService {
       let result: ExportResult
 
       if (destination === "google_drive") {
-        result = await this.exportToGoogleDrive(tableName, tableData, format)
+        if (format === "google_sheets") {
+          result = await this.exportToGoogleSheets(tableName, tableData)
+        } else {
+          result = await this.exportToGoogleDrive(tableName, tableData, format)
+        }
       } else {
         result = await this.exportAsDownload(tableName, tableData, format)
       }
@@ -105,10 +110,7 @@ class ExportService {
       }
 
       // 4. Увеличиваем счетчик использования
-      const usageUpdated = await userService.incrementUsage(userId, destination)
-      if (!usageUpdated) {
-        console.error("Failed to update usage statistics")
-      }
+      await userService.incrementExportCount(userId)
 
       return {
         ...result,
@@ -129,7 +131,7 @@ class ExportService {
   private async exportToGoogleDrive(
     tableName: string,
     tableData: any[][],
-    format: "csv" | "xlsx" | "docx" | "pdf" | "google_sheets"
+    format: "csv" | "xlsx" | "docx" | "pdf"
   ): Promise<ExportResult> {
     try {
       const result = await googleDriveService.exportTable(
@@ -155,6 +157,53 @@ class ExportService {
         success: false,
         error:
           error instanceof Error ? error.message : "Google Drive export failed"
+      }
+    }
+  }
+
+  /**
+   * Экспорт в Google Sheets (нативная таблица)
+   */
+  private async exportToGoogleSheets(
+    tableName: string,
+    tableData: any[][]
+  ): Promise<ExportResult> {
+    try {
+      // Преобразуем в структуру, совместимую с GoogleSheetsService
+      const headers = (tableData[0] || []).map((c) => String(c))
+      const rows = (tableData.slice(1) || []).map((r) => r.map((c) => String(c)))
+
+      const sheetTable = {
+        id: `export_${Date.now()}`,
+        headers,
+        rows,
+        source: "batch-export",
+        timestamp: Date.now(),
+        url: ""
+      }
+
+      const res = await googleSheetsService.exportTable(sheetTable as any, {
+        spreadsheetTitle: tableName,
+        includeHeaders: true
+      })
+
+      if (!res.success) {
+        return {
+          success: false,
+          error: res.error || "Failed to export to Google Sheets"
+        }
+      }
+
+      return {
+        success: true,
+        googleDriveLink: res.spreadsheetUrl
+      }
+    } catch (error) {
+      console.error("Google Sheets export error:", error)
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Google Sheets export failed"
       }
     }
   }

@@ -90,6 +90,7 @@ export interface BatchExportConfig {
     enabled: boolean
     summaryTypes: Array<"sum" | "average" | "count">
   }
+  mergeSimilarColumns?: boolean
 }
 
 /**

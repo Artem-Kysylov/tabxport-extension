@@ -57,15 +57,16 @@ export const createExportContext = (
  */
 export const initSurveyEventListener = () => {
   if (typeof window !== 'undefined') {
-    window.addEventListener('tablexport:survey-trigger', (event: CustomEvent) => {
-      console.log('📡 Survey trigger event received:', event.detail)
+    window.addEventListener('tablexport:survey-trigger', (event: Event) => {
+      const customEvent = event as CustomEvent
+      console.log('📡 Survey trigger event received:', customEvent.detail)
       
       // Если глобальная функция доступна, используем её
       if ((window as any).tablexportShowSurvey) {
-        ;(window as any).tablexportShowSurvey(event.detail)
+        ;(window as any).tablexportShowSurvey(customEvent.detail)
       }
     })
     
     console.log('✅ Survey event listener initialized')
   }
-} 
+}

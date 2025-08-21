@@ -137,6 +137,9 @@ class GoogleDriveService {
       }
     }
 
+    // Перенесено сюда, чтобы было доступно и в catch
+    let originalSize = 0
+
     try {
       // Получаем ID папки TableXport
       const folderId = options.folderId || (await this.createTableXportFolder())
@@ -155,14 +158,12 @@ class GoogleDriveService {
       
       // 🔧 ИСПРАВЛЕНИЕ: Правильная обработка Blob данных
       let content: string | ArrayBuffer
-      let originalSize = 0
       
       if (typeof options.content === "string") {
         content = options.content
         originalSize = content.length
         console.log(`📄 String content: ${originalSize} characters`)
       } else {
-        // Для Blob используем ArrayBuffer вместо .text()
         const blob = options.content as Blob
         originalSize = blob.size
         content = await blob.arrayBuffer()

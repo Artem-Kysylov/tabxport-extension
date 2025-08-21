@@ -5,14 +5,13 @@
 // Функция для перехвата запросов к API и подмены ответов о лимитах
 function injectLimitOverride() {
   // Перехватываем сообщения расширения
-  const originalSendMessage = chrome.runtime.sendMessage;
-  chrome.runtime.sendMessage = function(message: any, ...args: any[]) {
+  const originalSendMessage = chrome.runtime.sendMessage.bind(chrome.runtime);
+  (chrome.runtime as any).sendMessage = function(message: any, ...args: any[]) {
     // Если это запрос на проверку подписки или статистики использования
     if (message && (message.type === 'CHECK_SUBSCRIPTION' || message.type === 'GET_USAGE_STATS')) {
       console.log('🔧 Intercepting subscription/usage check and injecting PRO data');
-      
-      // Создаем промис, который сразу резолвится с PRO-подпиской
-      return Promise.resolve({
+
+      const proResponse = {
         success: true,
         subscription: {
           id: 'pro-unlimited',
@@ -28,11 +27,25 @@ function injectLimitOverride() {
           exports_remaining: 999999,
           plan_type: 'pro'
         }
-      });
+      };
+
+      // Если передан callback — работаем в callback-стиле
+      const maybeCallback = args.find(arg => typeof arg === 'function') as ((response: any) => void) | undefined;
+      if (maybeCallback) {
+        try {
+          maybeCallback(proResponse);
+        } catch (e) {
+          console.error('Callback error in limit override:', e);
+        }
+        return; // в callback-стиле ничего не возвращаем
+      }
+
+      // Иначе — возвращаем Promise
+      return Promise.resolve(proResponse);
     }
     
     // Для всех остальных сообщений используем оригинальный метод
-    return originalSendMessage.call(chrome.runtime, message, ...args);
+    return (originalSendMessage as (message: any, ...rest: any[]) => any)(message, ...args);
   };
   
   console.log('✅ Limit override installed - PRO mode activated!');

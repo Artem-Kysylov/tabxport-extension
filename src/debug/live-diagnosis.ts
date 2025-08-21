@@ -31,22 +31,25 @@ export class LiveTableDiagnosis {
     console.log('🔍 Начинаю диагностику текущей страницы...');
     
     // Импортируем детекторы
-    const { detectAllTables } = await import('../utils/table-detection');
-    const { findAllTables } = await import('../utils/table-detection/legacy-detector');
+    const { detectAllTables } = await import('../utils/table-detection/batch-detector');
+    const { findAllTables } = await import('../utils/table-detector');
     
     // Запускаем оба алгоритма
     const newResults = await detectAllTables();
     const oldResults = findAllTables();
     
     console.log(`📊 Старый алгоритм: ${oldResults.length} таблиц`);
-    console.log(`🆕 Новый алгоритм: ${newResults.length} таблиц`);
+    console.log(`🆕 Новый алгоритм: ${newResults.count} таблиц`);
     
     // Анализируем каждый найденный элемент
     const realTables: Element[] = [];
     const falsePositives: FalsePositiveAnalysis[] = [];
     
-    // Объединяем результаты для анализа
-    const allFound = new Set([...oldResults, ...newResults]);
+    // Объединяем результаты для анализа (берём элементы из нового алгоритма)
+    const allFound = new Set<Element>([
+      ...oldResults,
+      ...newResults.tables.map(r => r.element)
+    ]);
     
     for (const element of allFound) {
       const analysis = this.analyzeElement(element);
@@ -225,4 +228,4 @@ if (typeof window !== 'undefined') {
     const diagnosis = LiveTableDiagnosis.getInstance();
     diagnosis.clearHighlights();
   };
-} 
+}

@@ -197,6 +197,41 @@ const handleTableExport = async (
       userId: userId.substring(0, 8) + "..."
     })
 
+    // === Новая жесткая проверка лимитов до выполнения экспорта ===
+    try {
+      const limitCheck = await userService.checkExportLimits(userId, normalizedDestination)
+      console.log("🔒 Background: Limit check:", limitCheck)
+
+      if (!limitCheck.canExport) {
+        console.error("❌ Background: Export blocked by daily limit")
+        sendResponse({
+          success: false,
+          error: limitCheck.limitMessage || "Daily export limit exceeded",
+          limitExceeded: true,
+          remaining: limitCheck.remainingExports
+        })
+        return
+      }
+
+      if (normalizedDestination === "google_drive" && !limitCheck.canExportToGoogleDrive) {
+        console.error("❌ Background: Google Drive export blocked by plan restrictions")
+        sendResponse({
+          success: false,
+          error: limitCheck.limitMessage || "Google Drive export is available only for Pro subscribers.",
+          limitExceeded: true
+        })
+        return
+      }
+    } catch (limitError) {
+      console.error("❌ Background: Failed to check export limits:", limitError)
+      sendResponse({
+        success: false,
+        error: "Failed to check export limits. Please try again later."
+      })
+      return
+    }
+    // === Конец блока проверки лимитов ===
+
     // Обработка экспорта в Google Drive
     if (normalizedDestination === "google_drive") {
       console.log("📤 Background: Starting Google Drive export...")

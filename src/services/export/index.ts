@@ -19,6 +19,7 @@ import { googleSheetsService } from "../../lib/google-sheets-api"
 import { analyticsService } from "../analytics"
 import { getUserSettings } from "../../lib/storage"
 import { exportCombinedTables } from "../../lib/exporters/combined-exporter"
+import { registerRobotoCyrillicOrFallback } from "../../assets/fonts/roboto-cyrillic"
 
 export class ExportService {
   /**
@@ -283,7 +284,8 @@ export class ExportService {
       })
 
       // Создаем data URL для CSV
-      const base64 = btoa(unescape(encodeURIComponent(csv)))
+      const bom = "\uFEFF"
+      const base64 = btoa(unescape(encodeURIComponent(bom + csv)))
       const dataUrl = `data:text/csv;charset=utf-8;base64,${base64}`
 
       return {
@@ -493,6 +495,8 @@ export class ExportService {
         compress: true
       })
 
+      const pdfFontName = registerRobotoCyrillicOrFallback(doc)
+      doc.setFont(pdfFontName, "normal")
       // Helper function for safe text encoding
       const encodeTextForPDF = (text: string): string => {
         if (!text) return ""
@@ -519,74 +523,160 @@ export class ExportService {
 
       doc.text(encodeTextForPDF(title), titleX, 20)
 
-      // Prepare table data
-      const tableData_processed: string[][] = []
-      
-      // Add headers if enabled
-      if (options.includeHeaders && tableData.headers.length > 0) {
-        tableData_processed.push(tableData.headers.map(encodeTextForPDF))
-      }
+      // Подготовка данных таблицы
+      const rawHeadRow =
+        options.includeHeaders && tableData.headers.length > 0
+          ? tableData.headers.map((h) => encodeTextForPDF(String(h ?? "")))
+          : undefined
 
-      // Add regular data rows
-      tableData.rows.forEach(row => {
-        tableData_processed.push(row.map(encodeTextForPDF))
+      // Если заголовок пустой — игнорируем его
+      let headRow = rawHeadRow && rawHeadRow.length > 0 ? rawHeadRow : undefined
+
+      // Основные строки (жёстко приводим к массивам строк)
+      let rawRows = Array.isArray(tableData.rows) ? tableData.rows : []
+      let bodyRows: string[][] = rawRows.map((row) => {
+        if (!Array.isArray(row)) {
+          // если вдруг пришёл не-массив
+          return [encodeTextForPDF(String((row as any) ?? ""))]
+        }
+        return row.map((cell) => encodeTextForPDF(String(cell ?? "")))
       })
 
-      // Add analytics summary rows if available
-      let summaryStartIndex = -1
-      if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
-        console.log("📊 ExportService: Adding analytics summary rows to PDF")
-        
-        // Add empty separator row
-        tableData_processed.push(new Array(tableData.headers.length).fill(""))
-        
-        // Mark where summary rows start
-        summaryStartIndex = tableData_processed.length
-        
-        // Add summary rows
-        tableData.analytics.summaryRows.forEach(row => {
-          tableData_processed.push(row.map(encodeTextForPDF))
-        })
+      // Определяем ожидаемое число колонок
+      let expectedCols =
+        (headRow?.length && headRow.length > 0 ? headRow.length : NaN) ||
+        Math.max(1, ...bodyRows.map((r) => r.length))
+      if (!isFinite(expectedCols) || expectedCols < 1) expectedCols = 1
+
+      // Если нет ни одной строки — добавим пустую
+      if (bodyRows.length === 0) {
+        bodyRows = [new Array(expectedCols).fill("")]
       }
 
-      // Create autoTable with styling for summary rows
+      // Нормализуем заголовок под expectedCols (если он есть)
+      if (headRow) {
+        if (headRow.length < expectedCols) {
+          headRow = headRow.concat(new Array(expectedCols - headRow.length).fill(""))
+        } else if (headRow.length > expectedCols) {
+          headRow = headRow.slice(0, expectedCols)
+        }
+      }
+
+      // Нормализуем каждую строку под expectedCols
+      bodyRows = bodyRows.map((r) => {
+        if (!Array.isArray(r)) {
+          return new Array(expectedCols).fill("")
+        }
+        if (r.length === expectedCols) return r
+        if (r.length < expectedCols)
+          return r.concat(new Array(expectedCols - r.length).fill(""))
+        return r.slice(0, expectedCols)
+      })
+
+      // Добавляем аналитические строки, если есть, также нормализуем
+      let summaryStartIndex = -1
+      if (
+        tableData.analytics?.summaryRows &&
+        tableData.analytics.summaryRows.length > 0
+      ) {
+        // Разделитель той же ширины
+        bodyRows.push(new Array(expectedCols).fill(""))
+
+        // Индекс начала summary
+        summaryStartIndex = bodyRows.length
+
+        // Summary строки
+        for (const row of tableData.analytics.summaryRows) {
+          const encoded = (Array.isArray(row) ? row : [row as any]).map((v) =>
+            encodeTextForPDF(String(v ?? ""))
+          )
+          const norm =
+            encoded.length < expectedCols
+              ? encoded.concat(new Array(expectedCols - encoded.length).fill(""))
+              : encoded.slice(0, expectedCols)
+          bodyRows.push(norm)
+        }
+      }
+
+      // Для диагностики (поможет, если проблема повторится)
+      console.log("📄 PDF export normalized:", {
+        headCols: headRow ? headRow.length : 0,
+        expectedCols,
+        firstRowsLens: bodyRows.slice(0, 3).map((r) => r.length),
+        totalRows: bodyRows.length
+      })
+
       const autoTableOptions: any = {
-        head: options.includeHeaders ? [tableData_processed[0]] : undefined,
-        body: options.includeHeaders ? tableData_processed.slice(1) : tableData_processed,
+        head: headRow ? [headRow] : undefined,
+        body: bodyRows,
         startY: 30,
         styles: {
           fontSize: 9,
           cellPadding: 3,
-          font: 'helvetica'
+          font: pdfFontName
         },
         headStyles: {
           fillColor: [52, 73, 94],
           textColor: 255,
-          fontStyle: 'bold'
+          fontStyle: "bold"
         },
-        didParseCell: function(data: any) {
-          // Style summary rows
+        didParseCell: function (data: any) {
+          // Стиль для summary-строк
           if (summaryStartIndex >= 0) {
-            const actualRowIndex = options.includeHeaders ? data.row.index + 1 : data.row.index
+            const actualRowIndex = headRow ? data.row.index + 1 : data.row.index
             if (actualRowIndex >= summaryStartIndex) {
-              data.cell.styles.fontStyle = 'bold'
+              data.cell.styles.fontStyle = "bold"
               data.cell.styles.fillColor = [245, 245, 245]
             }
           }
         }
       }
 
-      autoTable(doc, autoTableOptions)
+      try {
+        autoTable(doc, autoTableOptions)
+      } catch (tblErr) {
+        console.error("❌ autoTable failed. Fallback rendering will be used.", {
+          error: tblErr instanceof Error ? tblErr.message : tblErr,
+          debug: {
+            headCols: headRow ? headRow.length : 0,
+            expectedCols,
+            firstRowsLens: bodyRows.slice(0, 3).map((r) => r.length),
+            totalRows: bodyRows.length
+          }
+        })
+        // Фолбэк без autotable — используем pdfFontName
+        doc.setFont(pdfFontName, "normal")
+        doc.setFontSize(9)
+        const marginLeft = 14
+        let y = 30
+        const lineHeight = 6
+
+        if (headRow) {
+          doc.setFont(pdfFontName, "bold")
+          doc.text(headRow.join(" | "), marginLeft, y)
+          y += lineHeight
+          doc.setFont(pdfFontName, "normal")
+        }
+
+        for (const r of bodyRows) {
+          if (y > doc.internal.pageSize.getHeight() - 20) {
+            doc.addPage()
+            y = 20
+          }
+          doc.text((r.join(" | ")) || " ", marginLeft, y)
+          y += lineHeight
+        }
+      }
 
       // Add footer
       const pageCount = doc.getNumberOfPages()
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i)
-        doc.setFont("helvetica", "normal")
+        doc.setFont(pdfFontName, "normal")
         doc.setFontSize(9)
         doc.setTextColor(100, 100, 100)
 
-        const footerText = `Generated at ${new Date().toLocaleString()} • Page ${i} of ${pageCount} • TabXport`
+        const footerText = `Generated at ${new Date().toLocaleString()} • Page ${i} of ${pageCount} • TableXport`
         const encodedFooterText = encodeTextForPDF(footerText)
         const footerWidth = doc.getTextWidth(encodedFooterText)
         const footerX = (pageWidth - footerWidth) / 2

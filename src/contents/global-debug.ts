@@ -4,8 +4,8 @@
  */
 
 import { runCompleteTableDiagnosis, clearDebugMarkers } from "../debug/table-detection-comparison"
+// ... existing code ...
 import { 
-  smartTableDetection, 
   setDetectionMode, 
   getDetectionMode,
   enableDebugMode,
@@ -78,6 +78,9 @@ declare global {
       
       // Comprehensive extension health check
       extensionHealthCheck: () => Promise<{ contextHealth: boolean; storageHealth: boolean; authHealth: boolean; overallHealth: boolean }>
+
+      // Enable fake limits interceptor (manual, for debug only)
+      enableLimitDisabling: () => Promise<void>
       
       // Limit warning testing functions (added by debug-limit-warnings.js)
       testLimitWarnings?: {
@@ -615,6 +618,18 @@ Example usage:
       }
       
       return results
+    },
+
+    /**
+     * Manually enable limit disabling for debug purposes (loads disable-limits.ts)
+     */
+    enableLimitDisabling: async () => {
+      try {
+        await import('./disable-limits')
+        console.log('🚀 Debug: Limit disabler module loaded manually')
+      } catch (error: unknown) {
+        console.error('Error loading limit disabler module:', error)
+      }
     }
   }
   
@@ -624,47 +639,26 @@ Example usage:
 }
 
 /**
+ * Отключение лимитов экспорта (ОТКЛЮЧЕНО - включается только вручную через TabXportDebug.enableLimitDisabling())
+ *
+ * Раньше здесь был безусловный динамический импорт:
+ *   import('./disable-limits').then(...).catch(...)
+ * Он перехватывал сообщения CHECK_SUBSCRIPTION/GET_USAGE_STATS и подменял ответы на 'pro',
+ * из‑за чего во фронтенде всегда показывался Pro Plan.
+ * Сейчас это отключено по умолчанию.
+ */
+
+/**
  * Initialize debug interface when content script loads
  */
 if (typeof window !== 'undefined') {
-  // Initialize immediately
-  initializeGlobalDebug()
-  
-  // Also initialize after DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeGlobalDebug)
   } else {
     initializeGlobalDebug()
   }
-  
-  // Remove the problematic import since debug-limit-warnings.ts doesn't exist
-  // import('./debug-limit-warnings').then(module => {
-  //   module.initializeLimitWarningDebug()
-  // }).catch((error: unknown) => {
-  //   console.error('Error loading limit warning debug module:', error)
-  // })
-}
 
-/**
- * Test batch export button refresh functionality
- */
-const testBatchButtonRefresh = async (): Promise<void> => {
-  console.log("🧪 Testing batch export button refresh...")
-  
-  try {
-    const { refreshAllBatchExportButtons } = await import("./components/batch-export-button")
-    await refreshAllBatchExportButtons()
-    console.log("✅ Batch button refresh test completed")
-  } catch (error: unknown) {
-    console.error("❌ Batch button refresh test failed:", error)
-  }
+  // Если понадобится вернуть отладчик предупреждений о лимитах, раскомментируйте и добавьте модуль
+  // import('./debug-limit-warnings').then(m => m.initializeLimitWarningDebug())
+  //   .catch((error: unknown) => console.error('Error loading limit warning debug module:', error))
 }
-
-/**
- * Отключение лимитов экспорта
- */
-import('./disable-limits').then(() => {
-  console.log('🚀 Limit disabler module loaded');
-}).catch((error: unknown) => {
-  console.error('Error loading limit disabler module:', error);
-});

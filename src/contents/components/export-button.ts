@@ -615,45 +615,22 @@ const handleExport = async (
         console.log("🔗 TabXport: Google Drive link:", result.googleDriveLink)
         showNotification("Table exported to Google Drive successfully!", "success")
         
-        // Trigger post-export survey
-        import("../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
-          const exportContext = createExportContext(
-            settings.defaultFormat,
-            1,
-            'google_drive',
-            'single',
-            window.location.hostname
-          )
-          triggerPostExportSurvey(exportContext)
-        }).catch(console.error)
       } else {
         console.log("📥 TabXport: Download export successful!")
         showNotification("Table exported successfully!", "success")
         
-        // Trigger post-export survey
-        import("../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
-          const exportContext = createExportContext(
-            settings.defaultFormat,
-            1,
-            'download',
-            'single',
-            window.location.hostname
-          )
-          triggerPostExportSurvey(exportContext)
-        }).catch(console.error)
       }
     } else {
       console.error("❌ TabXport: Export failed:", result)
       
-      // Проверяем, если это ошибка лимита - отключено
+      // Проверяем, если это ошибка лимита – показываем поп-ап
       if (
         result?.limitExceeded ||
         result?.error?.includes("daily limit") ||
         result?.error?.includes("Daily export")
       ) {
-        // Пропускаем показ предупреждения о лимите
-        console.log("✅ TabXport: Bypassing limit exceeded warning")
-        // showLimitExceededWarning() - отключено
+        console.log("⚠️ TabXport: Limit exceeded, showing upgrade prompt")
+        showLimitExceededWarning()
       } 
       // Проверяем, если это ошибка аутентификации
       else if (result?.error?.includes("Authentication required")) {
@@ -786,12 +763,12 @@ export const createExportButton = (
   // Обработчики событий
   buttonWrapper.addEventListener("mouseenter", () => {
     if (isGemini) {
-      // Специальная обработка для Gemini - только меняем фон на прозрачный
-      button.style.backgroundColor = "transparent !important"
-      button.style.border = "1px solid #1B9358 !important"
+      // Специальная обработка для Gemini — применяем important через setProperty
+      button.style.setProperty("background-color", "transparent", "important")
+      button.style.setProperty("border", "1px solid #1B9358", "important")
       const svg = button.querySelector("svg")
       if (svg) {
-        svg.style.stroke = "#1B9358 !important"
+        (svg as SVGElement).style.setProperty("stroke", "#1B9358", "important")
       }
     } else if (isDeepSeek) {
       button.style.backgroundColor = "transparent"
@@ -815,12 +792,12 @@ export const createExportButton = (
 
   buttonWrapper.addEventListener("mouseleave", () => {
     if (isGemini) {
-      // Специальная обработка для Gemini - возвращаем зеленый фон
-      button.style.backgroundColor = "#1B9358 !important"
-      button.style.border = "none !important"
+      // Возвращаем исходные стили с приоритетом
+      button.style.setProperty("background-color", "#1B9358", "important")
+      button.style.setProperty("border", "none", "important")
       const svg = button.querySelector("svg")
       if (svg) {
-        svg.style.stroke = "white !important"
+        (svg as SVGElement).style.setProperty("stroke", "white", "important")
       }
     } else if (isDeepSeek) {
       button.style.backgroundColor = "#1B9358"

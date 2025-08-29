@@ -15,9 +15,9 @@ import autoTable from "jspdf-autotable"
 import * as XLSX from "xlsx"
 
 import type { ExportOptions, ExportResult, TableData } from "../../types"
-import { generateFilename } from "../export"
 import { googleSheetsService } from "../google-sheets-api"
 import { getDefaultCsvSeparator } from "../../services/export/utils"
+import { registerRobotoCyrillicOrFallback, ROBOTO_FONT_NAME } from "../../assets/fonts/roboto-cyrillic"
 
 /**
  * Combined export options interface
@@ -99,18 +99,65 @@ const tableDataToWorksheet = (
 
   // Add analytics summary rows if available
   if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
-    console.log("📊 Combined Export: Adding analytics summary rows to worksheet")
-    
     // Add empty row for separation
-    data.push(new Array(tableData.headers.length).fill(""))
-    
-    // Add summary rows with analytics data
+    const colCount =
+      Math.max(
+        includeHeaders ? tableData.headers.length : 0,
+        ...tableData.rows.map(r => r?.length || 0),
+        ...tableData.analytics.summaryRows.map(r => r?.length || 0),
+        1
+      )
+    data.push(new Array(colCount).fill(""))
     data.push(...tableData.analytics.summaryRows)
-    
-    console.log(`📊 Combined Export: Added ${tableData.analytics.summaryRows.length} summary rows`)
   }
 
   const worksheet = XLSX.utils.aoa_to_sheet(data)
+
+  // Автоматическое вычисление ширины столбцов
+  const colWidths: { wch: number }[] = []
+  
+  // Определяем количество столбцов
+  const maxCols = Math.max(
+    includeHeaders ? (tableData.headers?.length || 0) : 0,
+    ...tableData.rows.map(row => row?.length || 0),
+    ...(tableData.analytics?.summaryRows?.map(row => row?.length || 0) || [])
+  )
+
+  // Вычисляем максимальную ширину для каждого столбца
+  for (let col = 0; col < maxCols; col++) {
+    let maxWidth = 8 // Минимальная ширина
+
+    // Проверяем заголовок
+    if (includeHeaders && tableData.headers[col]) {
+      maxWidth = Math.max(maxWidth, String(tableData.headers[col]).length)
+    }
+
+    // Проверяем все строки данных
+    for (const row of tableData.rows) {
+      if (row[col] !== undefined && row[col] !== null) {
+        const cellValue = String(row[col])
+        maxWidth = Math.max(maxWidth, cellValue.length)
+      }
+    }
+
+    // Проверяем строки аналитики
+    if (tableData.analytics?.summaryRows) {
+      for (const row of tableData.analytics.summaryRows) {
+        if (row[col] !== undefined && row[col] !== null) {
+          const cellValue = String(row[col])
+          maxWidth = Math.max(maxWidth, cellValue.length)
+        }
+      }
+    }
+
+    // Ограничиваем максимальную ширину для производительности
+    maxWidth = Math.min(maxWidth, 50)
+    
+    colWidths.push({ wch: maxWidth })
+  }
+
+  // Применяем ширину столбцов
+  worksheet['!cols'] = colWidths
 
   // Apply styling to summary rows if analytics data exists
   if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
@@ -121,7 +168,7 @@ const tableDataToWorksheet = (
 }
 
 /**
- * Converts ArrayBuffer to base64 (same as in export.ts)
+ * Converts ArrayBuffer to base64
  */
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer)
@@ -144,50 +191,46 @@ const applySummaryRowStyling = (
     const headerOffset = includeHeaders ? 1 : 0
     const dataRowsCount = tableData.rows.length
     const summaryRowsCount = tableData.analytics?.summaryRows?.length || 0
-    
+
+    if (!summaryRowsCount) return
+
     // Calculate row indices for summary rows
-    const summaryStartRow = headerOffset + dataRowsCount + 1 // +1 for empty separator row
-    
-    console.log(`📊 Combined Export: Applying styling to summary rows starting at row ${summaryStartRow}`)
-    
-    // Initialize worksheet style object if not exists
-    if (!worksheet['!rows']) {
-      worksheet['!rows'] = []
-    }
-    
-    // Apply bold formatting and borders to summary rows
+    const colCount =
+      Math.max(
+        includeHeaders ? tableData.headers.length : 0,
+        ...tableData.rows.map(r => r?.length || 0),
+        ...tableData.analytics!.summaryRows!.map(r => r?.length || 0),
+        1
+      )
+
+    const separatorRow = headerOffset + dataRowsCount // 0-based within sheet
+    const summaryStartRow = separatorRow + 1
+
+    if (!worksheet["!rows"]) worksheet["!rows"] = []
+
     for (let i = 0; i < summaryRowsCount; i++) {
       const rowIndex = summaryStartRow + i
-      
-      // Set row style properties
-      if (!worksheet['!rows'][rowIndex]) {
-        worksheet['!rows'][rowIndex] = {}
+
+      if (!worksheet["!rows"][rowIndex]) {
+        worksheet["!rows"][rowIndex] = {}
       }
-      
-      // Apply styles to each cell in the summary row
-      for (let col = 0; col < tableData.headers.length; col++) {
+
+      for (let col = 0; col < colCount; col++) {
         const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: col })
-        
+
         if (!worksheet[cellAddress]) {
           worksheet[cellAddress] = { v: "", t: "s" }
         }
-        
-        // Apply bold font and border styling
-        worksheet[cellAddress].s = {
+
+        ;(worksheet as any)[cellAddress].s = {
           font: { bold: true },
-          border: {
-            top: { style: "medium", color: { rgb: "000000" } }
-          },
-          fill: {
-            fgColor: { rgb: "F0F0F0" }
-          }
+          border: { top: { style: "medium", color: { rgb: "000000" } } },
+          fill: { fgColor: { rgb: "F0F0F0" } }
         }
       }
     }
-    
-    console.log("✅ Combined Export: Summary row styling applied successfully")
   } catch (error) {
-    console.warn("⚠️ Combined Export: Failed to apply summary row styling:", error)
+    console.warn("Failed to apply summary row styling:", error)
   }
 }
 
@@ -199,16 +242,9 @@ export const exportCombinedXLSX = async (
   options: CombinedExportOptions
 ): Promise<ExportResult> => {
   try {
-    console.log(`🔄 Starting combined XLSX export for ${tables.length} tables`)
-
-    // Validate table count
     if (tables.length === 0) {
-      return {
-        success: false,
-        error: "No tables to export"
-      }
+      return { success: false, error: "No tables to export" }
     }
-
     if (tables.length > COMBINED_LIMITS.MAX_TABLES) {
       return {
         success: false,
@@ -216,56 +252,26 @@ export const exportCombinedXLSX = async (
       }
     }
 
-    // Create new workbook using the exact same method as in export.ts
     const workbook = XLSX.utils.book_new()
     const existingSheetNames = new Set<string>()
 
-    console.log(`📊 Creating workbook with ${tables.length} sheets...`)
-
-    // Process each table using the same method as single table export
     tables.forEach((table, index) => {
-      console.log(`📋 Processing table ${index + 1}/${tables.length}`)
-
-      // Generate unique sheet name
       const sheetName = generateSheetName(table, index, existingSheetNames)
-      console.log(`📝 Sheet name: "${sheetName}"`)
-
-      // Create worksheet using the EXACT same method as export.ts
       const worksheet = tableDataToWorksheet(table, options.includeHeaders)
-      
-      console.log(`📊 Table ${index + 1} data: headers=${table.headers.length}, rows=${table.rows.length}`)
-
-      // Add worksheet to workbook
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
-      
-      console.log(`✅ Added sheet "${sheetName}" to workbook`)
     })
 
-    // Generate filename
     const baseFilename = options.combinedFileName || "Combined_Tables"
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
     const filename = `${baseFilename}_${timestamp}.xlsx`
 
-    console.log(`💾 Generated filename: ${filename}`)
-
-    // Generate file buffer - используем тот же метод что и в обычном экспорте
     const arrayBuffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" })
-
-    // Создаем data URL точно так же, как в обычном экспорте
     const base64 = arrayBufferToBase64(arrayBuffer)
     const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`
 
-    console.log(`✅ Combined XLSX export completed successfully`)
-    console.log(`📊 File size: ${arrayBuffer.byteLength} bytes`)
-    console.log(`📋 Sheets created: ${workbook.SheetNames.join(", ")}`)
-
-    return {
-      success: true,
-      filename,
-      downloadUrl: dataUrl
-    }
+    return { success: true, filename, downloadUrl: dataUrl }
   } catch (error) {
-    console.error("💥 Error in combined XLSX export:", error)
+    console.error("Error in combined XLSX export:", error)
     return {
       success: false,
       error:
@@ -279,21 +285,40 @@ export const exportCombinedXLSX = async (
 /**
  * Exports multiple tables into a single CSV file with section separators
  */
+// Функция для определения и форматирования дат в CSV
+const formatCellForCSV = (cell: string): string => {
+  const cellStr = String(cell || "").trim()
+  
+  // Проверяем, является ли строка датой/временем
+  const datePatterns = [
+    /^\d{4}-\d{2}-\d{2}$/,                    // YYYY-MM-DD
+    /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/,      // YYYY-MM-DD HH:MM
+    /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/, // YYYY-MM-DD HH:MM:SS
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,  // ISO format
+    /^\d{2}\/\d{2}\/\d{4}$/,                 // MM/DD/YYYY
+    /^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}/,     // MM/DD/YYYY HH:MM
+    /^\d{2}\.\d{2}\.\d{4}$/,                 // DD.MM.YYYY
+    /^\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}/      // DD.MM.YYYY HH:MM
+  ]
+  
+  const isDate = datePatterns.some(pattern => pattern.test(cellStr))
+  
+  if (isDate) {
+    // Преобразуем дату в понятный Excel формат и оборачиваем в кавычки
+    return `"${cellStr}"`
+  }
+  
+  return cellStr
+}
+
 export const exportCombinedCSV = async (
   tables: TableData[],
   options: CombinedExportOptions
 ): Promise<ExportResult> => {
   try {
-    console.log(`🔄 Starting combined CSV export for ${tables.length} tables`)
-
-    // Validate table count
     if (tables.length === 0) {
-      return {
-        success: false,
-        error: "No tables to export"
-      }
+      return { success: false, error: "No tables to export" }
     }
-
     if (tables.length > COMBINED_LIMITS.MAX_TABLES) {
       return {
         success: false,
@@ -301,61 +326,41 @@ export const exportCombinedCSV = async (
       }
     }
 
-    console.log(`📄 Creating combined CSV with ${tables.length} sections...`)
-
     const csvSections: string[] = []
-    // Определяем разделитель по локали
     const separator = getDefaultCsvSeparator()
 
-    // Process each table
     tables.forEach((table, index) => {
-      console.log(`📋 Processing table ${index + 1}/${tables.length}`)
-
-      // Generate section header
       const sectionTitle = generateSectionTitle(table, index)
-      console.log(`📝 Section title: "${sectionTitle}"`)
-
-      // Add section separator (except for first table)
-      if (index > 0) {
-        csvSections.push("") // Empty line separator
-      }
-
-      // Add section title
+      if (index > 0) csvSections.push("")
       csvSections.push(`=== ${sectionTitle} ===`)
-      csvSections.push("") // Empty line after title
+      csvSections.push("")
 
-      // Convert table to CSV data
-      const tableData: string[][] = []
-
+      const tableDataArr: string[][] = []
       if (options.includeHeaders && table.headers.length > 0) {
-        tableData.push(table.headers)
+        tableDataArr.push(table.headers)
       }
+      tableDataArr.push(...table.rows)
 
-      tableData.push(...table.rows)
-
-      // Add analytics summary rows if available
       if (table.analytics?.summaryRows && table.analytics.summaryRows.length > 0) {
-        console.log(`📊 Combined CSV: Adding analytics to section ${index + 1}`)
-        tableData.push([]) // Empty separator row
+        tableDataArr.push([])
         table.analytics.summaryRows.forEach(row => {
-          tableData.push(row.map(cell => `# ${cell}`)) // Add comment prefix for CSV
+          tableDataArr.push(row.map(cell => `# ${cell}`))
         })
       }
 
-      // Convert to CSV format manually for better control
-      const csvRows = tableData.map((row) =>
+      const csvRows = tableDataArr.map((row) =>
         row
           .map((cell) => {
-            // Escape cells containing separator, quotes, or newlines
-            const cleanCell = (cell || "").toString().trim()
+            // Используем новую функцию для форматирования дат
+            const formattedCell = formatCellForCSV(String(cell || "").trim())
             if (
-              cleanCell.includes(separator) ||
-              cleanCell.includes('"') ||
-              cleanCell.includes("\n")
+              formattedCell.includes(separator) ||
+              formattedCell.includes('"') ||
+              formattedCell.includes("\n")
             ) {
-              return `"${cleanCell.replace(/"/g, '""')}"`
+              return `"${formattedCell.replace(/"/g, '""')}"`
             }
-            return cleanCell
+            return formattedCell
           })
           .join(separator)
       )
@@ -363,31 +368,18 @@ export const exportCombinedCSV = async (
       csvSections.push(...csvRows)
     })
 
-    // Join all sections
     const combinedCSV = csvSections.join("\n")
-
-    // Generate filename
     const baseFilename = options.combinedFileName || "Combined_Tables"
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
     const filename = `${baseFilename}_${timestamp}.csv`
 
-    console.log(`💾 Generated filename: ${filename}`)
-
-    // Create data URL
-    const base64 = btoa(unescape(encodeURIComponent(combinedCSV)))
+    const bom = "\uFEFF"
+    const base64 = btoa(unescape(encodeURIComponent(bom + combinedCSV)))
     const dataUrl = `data:text/csv;charset=utf-8;base64,${base64}`
 
-    console.log(`✅ Combined CSV export completed successfully`)
-    console.log(`📊 Total lines: ${csvSections.length}`)
-    console.log(`📋 Sections created: ${tables.length}`)
-
-    return {
-      success: true,
-      filename,
-      downloadUrl: dataUrl
-    }
+    return { success: true, filename, downloadUrl: dataUrl }
   } catch (error) {
-    console.error("💥 Error in combined CSV export:", error)
+    console.error("Error in combined CSV export:", error)
     return {
       success: false,
       error:
@@ -402,7 +394,6 @@ export const exportCombinedCSV = async (
  * Generates a section title for combined exports
  */
 const generateSectionTitle = (tableData: TableData, index: number): string => {
-  // Try to use chat title or meaningful name
   if (
     tableData.chatTitle &&
     tableData.chatTitle !== `${tableData.source}_Chat`
@@ -417,7 +408,6 @@ const generateSectionTitle = (tableData: TableData, index: number): string => {
     }
   }
 
-  // Fallback to source + number
   const sourceName =
     tableData.source.charAt(0).toUpperCase() + tableData.source.slice(1)
   return `Table ${index + 1}: ${sourceName} Data`
@@ -489,33 +479,16 @@ const createDocxTable = (
 
   // Add analytics summary rows if available
   if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
-    console.log("📊 Combined DOCX: Adding analytics summary rows")
-    
-    // Add empty separator row
     const emptyRow = new TableRow({
-      children: new Array(tableData.headers.length).fill("").map(() => 
+      children: new Array(Math.max(1, tableData.headers.length)).fill("").map(() => 
         new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "",
-                  font: "Calibri",
-                  size: 22
-                })
-              ]
-            })
-          ],
-          width: {
-            size: 100 / tableData.headers.length,
-            type: WidthType.PERCENTAGE
-          }
+          children: [new Paragraph({ children: [new TextRun({ text: "", font: "Calibri", size: 22 })] })],
+          width: { size: 100 / Math.max(1, tableData.headers.length), type: WidthType.PERCENTAGE }
         })
       )
     })
     rows.push(emptyRow)
-    
-    // Add summary rows
+
     tableData.analytics.summaryRows.forEach(row => {
       const summaryRow = new TableRow({
         children: row.map(
@@ -526,32 +499,24 @@ const createDocxTable = (
                   children: [
                     new TextRun({
                       text: cell || "",
-                      bold: true, // Make summary rows bold
+                      bold: true,
                       font: "Calibri",
-                      size: 22 // 11pt
+                      size: 22
                     })
                   ]
                 })
               ],
-              width: {
-                size: 100 / row.length,
-                type: WidthType.PERCENTAGE
-              }
+              width: { size: 100 / Math.max(1, row.length), type: WidthType.PERCENTAGE }
             })
         )
       })
       rows.push(summaryRow)
     })
-    
-    console.log(`📊 Combined DOCX: Added ${tableData.analytics.summaryRows.length} summary rows`)
   }
 
   return new Table({
     rows,
-    width: {
-      size: 100,
-      type: WidthType.PERCENTAGE
-    },
+    width: { size: 100, type: WidthType.PERCENTAGE },
     borders: {
       top: { style: BorderStyle.SINGLE, size: 1 },
       bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -580,8 +545,8 @@ const createSectionTitle = (
       })
     ],
     spacing: {
-      before: isFirst ? 0 : 400, // Extra space before (except first)
-      after: 200 // Space after
+      before: isFirst ? 0 : 400,
+      after: 200
     }
   })
 }
@@ -594,16 +559,9 @@ export const exportCombinedDOCX = async (
   options: CombinedExportOptions
 ): Promise<ExportResult> => {
   try {
-    console.log(`🔄 Starting combined DOCX export for ${tables.length} tables`)
-
-    // Validate table count
     if (tables.length === 0) {
-      return {
-        success: false,
-        error: "No tables to export"
-      }
+      return { success: false, error: "No tables to export" }
     }
-
     if (tables.length > COMBINED_LIMITS.MAX_TABLES) {
       return {
         success: false,
@@ -611,118 +569,64 @@ export const exportCombinedDOCX = async (
       }
     }
 
-    console.log(`📝 Creating combined DOCX with ${tables.length} tables...`)
-
     const documentElements: (Paragraph | Table)[] = []
 
-    // Add main document title
     const mainTitle = options.combinedFileName || "Combined Tables Report"
     documentElements.push(
       new Paragraph({
-        children: [
-          new TextRun({
-            text: mainTitle,
-            bold: true,
-            size: 36, // 18pt
-            font: "Calibri"
-          })
-        ],
-        spacing: {
-          after: 400
-        }
+        children: [new TextRun({ text: mainTitle, bold: true, size: 36, font: "Calibri" })],
+        spacing: { after: 400 }
       })
     )
 
-    // Process each table
     tables.forEach((table, index) => {
-      console.log(`📋 Processing table ${index + 1}/${tables.length}`)
-
-      // Generate section title
       const sectionTitle = generateSectionTitle(table, index)
-      console.log(`📝 Section title: "${sectionTitle}"`)
-
-      // Add section title
       documentElements.push(createSectionTitle(sectionTitle, index === 0))
-
-      // Add table
       const docxTable = createDocxTable(table, options.includeHeaders)
       documentElements.push(docxTable)
 
-      // Add page break between tables (except for last one)
       if (index < tables.length - 1) {
-        documentElements.push(
-          new Paragraph({
-            children: [new PageBreak()]
-          })
-        )
+        documentElements.push(new Paragraph({ children: [new PageBreak()] }))
       }
     })
 
-    // Add footer information
     documentElements.push(
       new Paragraph({
         children: [
           new TextRun({
             text: `\nDocument generated at ${new Date().toLocaleString()}`,
             italics: true,
-            size: 18, // 9pt
+            size: 18,
             color: "666666",
             font: "Calibri"
           })
         ],
-        spacing: {
-          before: 400
-        }
+        spacing: { before: 400 }
       })
     )
 
-    // Create document
     const doc = new Document({
       styles: {
         default: {
-          document: {
-            run: {
-              font: "Calibri",
-              size: 22 // 11pt
-            }
-          }
+          document: { run: { font: "Calibri", size: 22 } }
         }
       },
-      sections: [
-        {
-          properties: {},
-          children: documentElements
-        }
-      ]
+      sections: [{ properties: {}, children: documentElements }]
     })
 
-    console.log(`🔄 Generating DOCX buffer...`)
-
-    // Generate file buffer
     const buffer = await Packer.toBuffer(doc)
 
-    // Generate filename
     const baseFilename = options.combinedFileName || "Combined_Tables"
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
     const filename = `${baseFilename}_${timestamp}.docx`
 
-    console.log(`💾 Generated filename: ${filename}`)
-
-    // Convert to data URL
     const base64 = arrayBufferToBase64(buffer)
-    const dataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
+    const dataUrl =
+      `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
 
-    console.log(`✅ Combined DOCX export completed successfully`)
-    console.log(`📊 File size: ${buffer.byteLength} bytes`)
-    console.log(`📋 Tables included: ${tables.length}`)
-
-    return {
-      success: true,
-      filename,
-      downloadUrl: dataUrl
-    }
+    return { success: true, filename, downloadUrl: dataUrl }
   } catch (error) {
-    console.error("💥 Error in combined DOCX export:", error)
+    console.error("Error in combined DOCX export:", error)
     return {
       success: false,
       error:
@@ -738,142 +642,130 @@ export const exportCombinedDOCX = async (
  */
 const encodeTextForPDF = (text: string): string => {
   if (!text) return ""
-
-  // Basic text cleaning and encoding
-  const cleanText = text
+  return text
     .replace(/[\u200B-\u200D\uFEFF]/g, "") // Remove invisible characters
     .replace(/\u00A0/g, " ") // Replace non-breaking spaces
     .normalize("NFKC")
     .trim()
-
-  // Simple transliteration for Cyrillic characters
-  return cleanText.replace(/[\u0400-\u04FF]/g, (char) => {
-    const cyrillicMap: Record<string, string> = {
-      а: "a",
-      б: "b",
-      в: "v",
-      г: "g",
-      д: "d",
-      е: "e",
-      ж: "zh",
-      з: "z",
-      и: "i",
-      к: "k",
-      л: "l",
-      м: "m",
-      н: "n",
-      о: "o",
-      п: "p",
-      р: "r",
-      с: "s",
-      т: "t",
-      у: "u",
-      ф: "f",
-      х: "h",
-      ц: "ts",
-      ч: "ch",
-      ш: "sh",
-      ы: "y",
-      э: "e",
-      ю: "yu",
-      я: "ya",
-      А: "A",
-      Б: "B",
-      В: "V",
-      Г: "G",
-      Д: "D",
-      Е: "E",
-      Ж: "Zh",
-      З: "Z",
-      И: "I",
-      К: "K",
-      Л: "L",
-      М: "M",
-      Н: "N",
-      О: "O",
-      П: "P",
-      Р: "R",
-      С: "S",
-      Т: "T",
-      У: "U",
-      Ф: "F",
-      Х: "H",
-      Ц: "Ts",
-      Ч: "Ch",
-      Ш: "Sh",
-      Ы: "Y",
-      Э: "E",
-      Ю: "Yu",
-      Я: "Ya"
-    }
-    return cyrillicMap[char] || char
-  })
 }
 
 /**
- * Adds a table to PDF document
+ * Adds a table to PDF document with robust normalization against AutoTable "widths" errors
  */
 const addTableToPDF = (
   doc: jsPDF,
   tableData: TableData,
   options: CombinedExportOptions,
   startY: number,
-  tableIndex: number
+  tableIndex: number,
+  fontName: string = "helvetica"
 ): number => {
-  // Add section title
+  // Section title
   const sectionTitle = generateSectionTitle(tableData, tableIndex)
   const encodedTitle = encodeTextForPDF(sectionTitle)
 
-  doc.setFont("helvetica", "bold")
+  doc.setFont(fontName, "bold")
   doc.setFontSize(14)
   doc.setTextColor(40, 40, 40)
 
   const pageWidth = doc.internal.pageSize.getWidth()
   const titleWidth = doc.getTextWidth(encodedTitle)
   const titleX = (pageWidth - titleWidth) / 2
-
   doc.text(encodedTitle, titleX, startY)
 
   const tableStartY = startY + 15
 
-  // Prepare table data
-  const tableHeaders = options.includeHeaders
-    ? tableData.headers.map((header) => encodeTextForPDF(header))
-    : []
+  // Валидация данных таблицы
+  if (!tableData || (!tableData.headers && !tableData.rows)) {
+    console.warn("Empty table data, skipping table", tableIndex)
+    doc.setFont(fontName, "normal") // Заменено ROBOTO_FONT_NAME на fontName
+    doc.setFontSize(10)
+    doc.setTextColor(180, 0, 0)
+    doc.text("No data available for this table.", 14, tableStartY + 10)
+    return tableStartY + 30
+  }
 
-  const tableRows = tableData.rows.map((row) =>
-    row.map((cell) => encodeTextForPDF(cell))
-  )
+  // Безопасная инициализация headers и rows
+  const safeHeaders = Array.isArray(tableData.headers) ? tableData.headers : []
+  const safeRows = Array.isArray(tableData.rows) ? tableData.rows : []
 
-  // Add analytics summary rows if available
+  // 1) Determine unified column count across headers + rows + analytics
+  let columnCount = 0
+  if (options.includeHeaders && safeHeaders.length > 0) {
+    columnCount = Math.max(columnCount, safeHeaders.length)
+  }
+  if (safeRows.length > 0) {
+    columnCount = Math.max(columnCount, ...safeRows.map(r => (Array.isArray(r) ? r.length : 1)), 0)
+  }
+  if (tableData.analytics?.summaryRows?.length) {
+    columnCount = Math.max(
+      columnCount,
+      ...tableData.analytics.summaryRows.map(r => (Array.isArray(r) ? r.length : 1))
+    )
+  }
+  if (columnCount <= 0) columnCount = 1
+
+  // 2) Headers: create empty if needed
+  const headersToUse = options.includeHeaders
+    ? (safeHeaders.length > 0
+        ? safeHeaders
+        : new Array(columnCount).fill(""))
+    : undefined
+
+  const tableHeaders = headersToUse
+    ? headersToUse.map((h) => encodeTextForPDF(String(h || "")))
+    : undefined
+
+  // 3) Rows: normalize each row length and encode
+  let tableRows: string[][] = safeRows.map((row) => {
+    const safe = Array.isArray(row) ? row : [String(row ?? "")]
+    const padded = [...safe, ...new Array(Math.max(0, columnCount - safe.length)).fill("")]
+    return padded.slice(0, columnCount).map((cell) => encodeTextForPDF(String(cell ?? "")))
+  })
+
+  // If there are no data rows at all — add a single empty row to avoid AutoTable errors
+  if (tableRows.length === 0) {
+    tableRows.push(new Array(columnCount).fill(""))
+  }
+
+  // 4) Analytics summary rows
   let summaryStartIndex = -1
   if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
-    console.log(`📊 Combined PDF: Adding analytics to table ${tableIndex + 1}`)
-    // Add empty separator row
-    tableRows.push(new Array(tableData.headers.length).fill(""))
+    tableRows.push(new Array(columnCount).fill("")) // separator
     summaryStartIndex = tableRows.length
-    // Add summary rows
     tableData.analytics.summaryRows.forEach(row => {
-      tableRows.push(row.map(encodeTextForPDF))
+      const safe = Array.isArray(row) ? row : [String(row ?? "")]
+      const padded = [...safe, ...new Array(Math.max(0, columnCount - safe.length)).fill("")]
+      tableRows.push(padded.slice(0, columnCount).map(cell => encodeTextForPDF(String(cell ?? ""))))
     })
   }
 
-  // Table configuration
-  const tableConfig = {
+  // Финальная валидация перед autoTable
+  if (tableRows.length === 0 || (tableRows.length === 1 && tableRows[0].every(cell => cell === ""))) {
+    console.warn("No valid table data to render for table", tableIndex)
+    doc.setFont(ROBOTO_FONT_NAME, "normal")
+    doc.setFontSize(10)
+    doc.setTextColor(180, 0, 0)
+    doc.text("Table contains no data to display.", 14, tableStartY + 10)
+    return tableStartY + 30
+  }
+
+  // 5) Table config
+  const tableConfig: Parameters<typeof autoTable>[1] = {
     startY: tableStartY,
-    head: options.includeHeaders ? [tableHeaders] : undefined,
+    head: tableHeaders ? [tableHeaders] : undefined,
     body: tableRows,
     theme: "grid" as const,
     headStyles: {
-      fillColor: [27, 147, 88] as [number, number, number], // Brand green
+      fillColor: [27, 147, 88] as [number, number, number],
       textColor: [255, 255, 255] as [number, number, number],
-      fontStyle: "bold" as "bold",
+      fontStyle: "bold",
       fontSize: 10,
-      font: "helvetica"
+      font: fontName
     },
     bodyStyles: {
       fontSize: 9,
-      font: "helvetica",
+      font: fontName,
       textColor: [40, 40, 40] as [number, number, number]
     },
     styles: {
@@ -881,26 +773,32 @@ const addTableToPDF = (
       lineColor: [128, 128, 128] as [number, number, number],
       cellPadding: 3,
       fontSize: 9,
-      font: "helvetica"
+      font: fontName
     },
-    margin: {
-      left: 14,
-      right: 14
-    },
-    didParseCell: function(data: any) {
-      // Style summary rows
-      if (summaryStartIndex >= 0 && data.row.index >= summaryStartIndex) {
-        data.cell.styles.fontStyle = 'bold'
+    margin: { left: 14, right: 14 },
+    didParseCell: (data: any) => {
+      if (summaryStartIndex >= 0 && data.row?.index >= summaryStartIndex) {
+        data.cell.styles.fontStyle = "bold"
         data.cell.styles.fillColor = [245, 245, 245]
       }
     }
   }
 
-  // Add table to document
-  autoTable(doc, tableConfig)
+  // 6) Render with safety
+  try {
+    autoTable(doc, tableConfig)
+  } catch (err) {
+    console.error("autoTable failed, falling back:", err)
+    // Fallback text
+    doc.setFont(fontName, "normal")
+    doc.setFontSize(10)
+    doc.setTextColor(180, 0, 0)
+    doc.text("Failed to render table (see console).", 14, tableStartY + 10)
+    return tableStartY + 20
+  }
 
-  // Return the Y position after the table
-  return (doc as any).lastAutoTable.finalY || tableStartY + 50
+  const finalY = (doc as any)?.lastAutoTable?.finalY
+  return typeof finalY === "number" ? finalY : tableStartY + 50
 }
 
 /**
@@ -911,16 +809,9 @@ export const exportCombinedPDF = async (
   options: CombinedExportOptions
 ): Promise<ExportResult> => {
   try {
-    console.log(`🔄 Starting combined PDF export for ${tables.length} tables`)
-
-    // Validate table count
     if (tables.length === 0) {
-      return {
-        success: false,
-        error: "No tables to export"
-      }
+      return { success: false, error: "No tables to export" }
     }
-
     if (tables.length > COMBINED_LIMITS.MAX_TABLES) {
       return {
         success: false,
@@ -928,9 +819,6 @@ export const exportCombinedPDF = async (
       }
     }
 
-    console.log(`📋 Creating combined PDF with ${tables.length} tables...`)
-
-    // Create PDF document
     const doc = new jsPDF({
       orientation: "landscape",
       unit: "mm",
@@ -938,91 +826,63 @@ export const exportCombinedPDF = async (
       compress: true
     })
 
+    // Enable Cyrillic font with safe fallback
+    const fontName = registerRobotoCyrillicOrFallback(doc)
+    doc.setFont(fontName, "normal")
+
     const pageHeight = doc.internal.pageSize.getHeight()
+    const pageWidth = doc.internal.pageSize.getWidth()
     let currentY = 20
 
-    // Add main document title
+    // Main title
     const mainTitle = options.combinedFileName || "Combined Tables Report"
     const encodedMainTitle = encodeTextForPDF(mainTitle)
 
-    doc.setFont("helvetica", "bold")
+    doc.setFont(fontName, "bold")
     doc.setFontSize(18)
     doc.setTextColor(40, 40, 40)
 
-    const pageWidth = doc.internal.pageSize.getWidth()
     const mainTitleWidth = doc.getTextWidth(encodedMainTitle)
     const mainTitleX = (pageWidth - mainTitleWidth) / 2
-
     doc.text(encodedMainTitle, mainTitleX, currentY)
     currentY += 25
 
-    // Process each table
+    // Tables
     tables.forEach((table, index) => {
-      console.log(`📋 Processing table ${index + 1}/${tables.length}`)
-
-      // Check if we need a new page
       if (currentY > pageHeight - 60) {
         doc.addPage()
         currentY = 20
       }
 
-      // Add table to PDF
-      const endY = addTableToPDF(doc, table, options, currentY, index)
-      currentY = endY + 20 // Add space after table
+      currentY = addTableToPDF(doc, table, options, currentY, index, fontName)
+      currentY += 20
+    }) // Добавлена отсутствующая закрывающая скобка
 
-      // Add page break between tables (except for last one)
-      if (index < tables.length - 1) {
-        doc.addPage()
-        currentY = 20
-      }
-    })
-
-    // Add footer on all pages
+    // Footer
     const pageCount = doc.getNumberOfPages()
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i)
-
-      doc.setFont("helvetica", "normal")
+      doc.setFont(fontName, "normal")
       doc.setFontSize(9)
       doc.setTextColor(100, 100, 100)
 
-      const footerText = `Generated at ${new Date().toLocaleString()} • Page ${i} of ${pageCount} • TabXport`
+      const footerText = `Generated at ${new Date().toLocaleString()} • Page ${i} of ${pageCount} • TableXport`
       const encodedFooterText = encodeTextForPDF(footerText)
-
       const footerWidth = doc.getTextWidth(encodedFooterText)
       const footerX = (pageWidth - footerWidth) / 2
-
       doc.text(encodedFooterText, footerX, pageHeight - 10)
     }
 
-    console.log(`🔄 Generating PDF buffer...`)
-
-    // Get PDF as ArrayBuffer
     const pdfArrayBuffer = doc.output("arraybuffer")
-
-    // Generate filename
     const baseFilename = options.combinedFileName || "Combined_Tables"
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
     const filename = `${baseFilename}_${timestamp}.pdf`
-
-    console.log(`💾 Generated filename: ${filename}`)
-
-    // Convert to data URL
     const base64 = arrayBufferToBase64(pdfArrayBuffer)
     const dataUrl = `data:application/pdf;base64,${base64}`
 
-    console.log(`✅ Combined PDF export completed successfully`)
-    console.log(`📊 File size: ${pdfArrayBuffer.byteLength} bytes`)
-    console.log(`📋 Pages created: ${pageCount}`)
-    console.log(`📊 Tables included: ${tables.length}`)
-
-    return {
-      success: true,
-      filename,
-      downloadUrl: dataUrl
-    }
+    return { success: true, filename, downloadUrl: dataUrl }
   } catch (error) {
-    console.error("💥 Error in combined PDF export:", error)
+    console.error("Error in combined PDF export:", error)
     return {
       success: false,
       error:
@@ -1041,16 +901,9 @@ export const exportCombinedGoogleSheets = async (
   options: CombinedExportOptions
 ): Promise<ExportResult> => {
   try {
-    console.log(`🔄 Starting combined Google Sheets export for ${tables.length} tables`)
-
-    // Validate table count
     if (tables.length === 0) {
-      return {
-        success: false,
-        error: "No tables to export"
-      }
+      return { success: false, error: "No tables to export" }
     }
-
     if (tables.length > COMBINED_LIMITS.MAX_TABLES) {
       return {
         success: false,
@@ -1058,26 +911,16 @@ export const exportCombinedGoogleSheets = async (
       }
     }
 
-    console.log(`📊 Creating Google Spreadsheet with ${tables.length} sheets...`)
-
-    // Generate spreadsheet title
     const baseTitle = options.combinedFileName || "Combined_Tables"
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-")
     const spreadsheetTitle = `${baseTitle}_${timestamp}`
 
-    console.log(`📝 Spreadsheet title: "${spreadsheetTitle}"`)
-
-    // Use the Google Sheets API service to export multiple tables
     const result = await googleSheetsService.exportMultipleTables(tables, {
-      spreadsheetTitle: spreadsheetTitle,
+      spreadsheetTitle,
       includeHeaders: options.includeHeaders
     })
 
     if (result.success) {
-      console.log(`✅ Combined Google Sheets export completed successfully`)
-      console.log(`📊 Spreadsheet ID: ${result.spreadsheetId}`)
-      console.log(`🔗 Spreadsheet URL: ${result.spreadsheetUrl}`)
-
       return {
         success: true,
         filename: spreadsheetTitle,
@@ -1086,19 +929,19 @@ export const exportCombinedGoogleSheets = async (
         googleSheetsUrl: result.spreadsheetUrl
       }
     } else {
-      console.error("💥 Error in combined Google Sheets export:", result.error)
       return {
         success: false,
         error: result.error || "Failed to export to Google Sheets"
       }
     }
   } catch (error) {
-    console.error("💥 Error in combined Google Sheets export:", error)
+    console.error("Error in combined Google Sheets export:", error)
     return {
       success: false,
-      error: error instanceof Error 
-        ? error.message 
-        : "Unknown error occurred during combined Google Sheets export"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error occurred during combined Google Sheets export"
     }
   }
 }

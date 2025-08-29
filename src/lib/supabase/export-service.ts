@@ -321,30 +321,24 @@ class ExportService {
    * Преобразование в XLSX (требует интеграции с существующим экспортером)
    */
   private async convertToXLSX(data: any[][]): Promise<Blob> {
-    // TODO: Интегрировать с существующим XLSX экспортером
-    // Пока возвращаем CSV как fallback
     const csvContent = this.convertToCSV(data)
-    return new Blob([csvContent], { type: "text/csv" })
+    return new Blob(["\uFEFF", csvContent], { type: "text/csv;charset=utf-8" })
   }
 
   /**
    * Преобразование в DOCX (требует интеграции с существующим экспортером)
    */
   private async convertToDOCX(data: any[][]): Promise<Blob> {
-    // TODO: Интегрировать с существующим DOCX экспортером
-    // Пока возвращаем CSV как fallback
     const csvContent = this.convertToCSV(data)
-    return new Blob([csvContent], { type: "text/csv" })
+    return new Blob(["\uFEFF", csvContent], { type: "text/csv;charset=utf-8" })
   }
 
   /**
    * Преобразование в PDF (требует интеграции с существующим экспортером)
    */
   private async convertToPDF(data: any[][]): Promise<Blob> {
-    // TODO: Интегрировать с существующим PDF экспортером
-    // Пока возвращаем CSV как fallback
     const csvContent = this.convertToCSV(data)
-    return new Blob([csvContent], { type: "text/csv" })
+    return new Blob(["\uFEFF", csvContent], { type: "text/csv;charset=utf-8" })
   }
 
   /**

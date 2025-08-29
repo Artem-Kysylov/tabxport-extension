@@ -57,7 +57,44 @@ export const tableDataToWorksheet = (
 
   data.push(...tableData.rows)
 
-  return XLSX.utils.aoa_to_sheet(data)
+  const worksheet = XLSX.utils.aoa_to_sheet(data)
+
+  // Автоматическое вычисление ширины столбцов
+  const colWidths: { wch: number }[] = []
+  
+  // Определяем количество столбцов
+  const maxCols = Math.max(
+    includeHeaders ? (tableData.headers?.length || 0) : 0,
+    ...tableData.rows.map(row => row?.length || 0)
+  )
+
+  // Вычисляем максимальную ширину для каждого столбца
+  for (let col = 0; col < maxCols; col++) {
+    let maxWidth = 8 // Минимальная ширина
+
+    // Проверяем заголовок
+    if (includeHeaders && tableData.headers[col]) {
+      maxWidth = Math.max(maxWidth, String(tableData.headers[col]).length)
+    }
+
+    // Проверяем все строки данных
+    for (const row of tableData.rows) {
+      if (row[col] !== undefined && row[col] !== null) {
+        const cellValue = String(row[col])
+        maxWidth = Math.max(maxWidth, cellValue.length)
+      }
+    }
+
+    // Ограничиваем максимальную ширину для производительности
+    maxWidth = Math.min(maxWidth, 50)
+    
+    colWidths.push({ wch: maxWidth })
+  }
+
+  // Применяем ширину столбцов
+  worksheet['!cols'] = colWidths
+
+  return worksheet
 }
 
 // Конвертация ArrayBuffer в base64
@@ -195,15 +232,101 @@ export const exportToXLSX = async (
 }
 
 // Экспорт в CSV формат
+// Функция для определения и форматирования дат в CSV
+const formatCellForCSV = (cell: string): string => {
+  const cellStr = String(cell || "").trim()
+  
+  // Проверяем, является ли строка датой/временем
+  const datePatterns = [
+    /^\d{4}-\d{2}-\d{2}$/,                    // YYYY-MM-DD
+    /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/,      // YYYY-MM-DD HH:MM
+    /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/, // YYYY-MM-DD HH:MM:SS
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,  // ISO format
+    /^\d{2}\/\d{2}\/\d{4}$/,                 // MM/DD/YYYY
+    /^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}/,     // MM/DD/YYYY HH:MM
+    /^\d{2}\.\d{2}\.\d{4}$/,                 // DD.MM.YYYY
+    /^\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}/      // DD.MM.YYYY HH:MM
+  ]
+  
+  const isDate = datePatterns.some(pattern => pattern.test(cellStr))
+  
+  if (isDate) {
+    // Преобразуем дату в понятный Excel формат и оборачиваем в кавычки
+    // Это заставит Excel интерпретировать как текст, а не автоматически форматировать
+    return `"${cellStr}"`
+  }
+  
+  return cellStr
+}
+
+// Функция для создания CSV из данных таблицы с правильным форматированием дат
+const createCSVFromTableData = (
+  tableData: TableData,
+  includeHeaders: boolean,
+  separator: string
+): string => {
+  const rows: string[] = []
+  
+  // Добавляем заголовки если нужно
+  if (includeHeaders && tableData.headers.length > 0) {
+    const headerRow = tableData.headers
+      .map(header => {
+        const cleanHeader = String(header || "").trim()
+        if (cleanHeader.includes(separator) || cleanHeader.includes('"') || cleanHeader.includes("\n")) {
+          return `"${cleanHeader.replace(/"/g, '""')}"`
+        }
+        return cleanHeader
+      })
+      .join(separator)
+    rows.push(headerRow)
+  }
+  
+  // Добавляем основные данные
+  tableData.rows.forEach(row => {
+    const csvRow = row
+      .map(cell => {
+        const formattedCell = formatCellForCSV(cell)
+        if (formattedCell.includes(separator) || formattedCell.includes('"') || formattedCell.includes("\n")) {
+          return `"${formattedCell.replace(/"/g, '""')}"`
+        }
+        return formattedCell
+      })
+      .join(separator)
+    rows.push(csvRow)
+  })
+  
+  // Добавляем аналитические строки если есть
+  if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
+    rows.push("") // Пустая строка-разделитель
+    tableData.analytics.summaryRows.forEach(row => {
+      const csvRow = row
+        .map(cell => {
+          const formattedCell = formatCellForCSV(cell)
+          const prefixedCell = `# ${formattedCell}` // Добавляем префикс для аналитики
+          if (prefixedCell.includes(separator) || prefixedCell.includes('"') || prefixedCell.includes("\n")) {
+            return `"${prefixedCell.replace(/"/g, '""')}"`
+          }
+          return prefixedCell
+        })
+        .join(separator)
+      rows.push(csvRow)
+    })
+  }
+  
+  return rows.join("\n")
+}
+
+
 export const exportToCSV = async (
   tableData: TableData,
   options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
-    const worksheet = tableDataToWorksheet(tableData, options.includeHeaders)
     // Автоопределение разделителя по локали
     const separator = getDefaultCsvSeparator()
-    const csv = XLSX.utils.sheet_to_csv(worksheet, { FS: separator })
+    
+    // Используем новую функцию для создания CSV с правильным форматированием дат
+    const csv = createCSVFromTableData(tableData, options.includeHeaders, separator)
 
     const filename = generateFilename(
       tableData,
@@ -213,7 +336,8 @@ export const exportToCSV = async (
     )
 
     // Создаем data URL для CSV
-    const base64 = btoa(unescape(encodeURIComponent(csv)))
+    const bom = "\uFEFF"
+    const base64 = btoa(unescape(encodeURIComponent(bom + csv)))
     const dataUrl = `data:text/csv;charset=utf-8;base64,${base64}`
 
     // Handle Google Drive upload if needed

@@ -1,20 +1,12 @@
 import JSZip from "jszip"
 
-import { cleanTableData, validateTableData } from "../../../lib/export"
 import { ExportService } from "../../../services/export"
-import { googleDriveService } from "../../../lib/google-drive-api"
-import { safeStorageOperation, logExtensionError, createErrorNotification } from "../../../lib/error-handlers"
 import type { ExportOptions, ChromeMessage } from "../../../types"
 import { ChromeMessageType } from "../../../types"
-import type {
-  BatchTableDetectionResult,
-  TableDetectionResult
-} from "../../../utils/table-detection/types"
 import { COMBINED_EXPORT_LIMITS, MODAL_ID } from "./constants"
 import { createModalContent, createProgressIndicator } from "./html-generators"
 import { FormatPreferences } from "./preferences"
-import type { BatchModalState, ExportFormat, ExportMode } from "./types"
-import { EXPORT_FORMATS } from "./types"
+import type { BatchModalState, ExportFormat } from "./types"
 import { showNotification } from "../export-button"
 
 // Google Drive service is imported as a singleton instance
@@ -24,10 +16,6 @@ const exportService = new ExportService()
 // Global flag to prevent multiple simultaneous exports across all instances
 let globalExportInProgress = false
 let globalExportId: string | null = null
-
-/**
- * Converts data URL to array buffer for ZIP processing
- */
 
 /**
  * Enhanced authentication check using background script
@@ -55,7 +43,7 @@ export const checkGoogleDriveAuthentication = async (): Promise<{
       }
     }
     
-    const authData = response.authState // ← Исправлено: используем authState вместо data
+    const authData = response.authState // ← используем authState
     if (!authData || !authData.isAuthenticated) {
       return {
         success: false,
@@ -80,8 +68,8 @@ export const checkGoogleDriveAuthentication = async (): Promise<{
     console.error("❌ Authentication check failed:", errorMessage)
     
     // Check if it's a context invalidation error
-    if (errorMessage.toLowerCase().includes('extension context') || 
-        errorMessage.toLowerCase().includes('chrome.runtime')) {
+    if (errorMessage.toLowerCase().includes("extension context") || 
+        errorMessage.toLowerCase().includes("chrome.runtime")) {
       return {
         success: false,
         error: "Extension context was invalidated. Please reload the extension or refresh the page.",
@@ -103,7 +91,7 @@ export const checkGoogleDriveAuthentication = async (): Promise<{
 export const uploadToGoogleDriveViaBackground = async (
   filename: string,
   dataUrl: string,
-  format: ExportFormat | 'zip'
+  format: ExportFormat | "zip"
 ): Promise<{ success: boolean; error?: string; webViewLink?: string }> => {
   try {
     console.log(`🔍 [FIXED] Uploading ready file to Google Drive via background: ${filename}`)
@@ -120,9 +108,9 @@ export const uploadToGoogleDriveViaBackground = async (
           id: `batch-${Date.now()}`
         },
         options: {
-          format: format === 'zip' ? 'xlsx' : format,
+          format: format === "zip" ? "xlsx" : format,
           includeHeaders: true,
-          destination: 'google_drive',
+          destination: "google_drive",
           filename: filename,
           // NEW: Add ready file data for direct upload
           isBatchUpload: true,
@@ -146,14 +134,14 @@ export const uploadToGoogleDriveViaBackground = async (
       console.error(`❌ [FIXED] Ready file upload failed: ${response.error}`)
       return {
         success: false,
-        error: response.error || 'Upload failed'
+        error: response.error || "Upload failed"
       }
     }
   } catch (error) {
-    console.error('💥 Error uploading ready file via background:', error)
+    console.error("💥 Error uploading ready file via background:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Upload failed'
+      error: error instanceof Error ? error.message : "Upload failed"
     }
   }
 }
@@ -446,16 +434,22 @@ export const handleBatchExport = async (
           `❌ ${errorMessage}`
         )
 
+        // Закрыть спиннер и показать ошибку
+        setTimeout(() => {
+          showNotification(errorMessage, "error")
+          hideModalFn()
+        }, 500)
+
         setTimeout(() => {
           modalState.isExporting = false
           globalExportInProgress = false
           globalExportId = null
-          updateModalContent(modalState, () => {}).catch(console.error) // Empty callback since we don't have access to attachEventListeners here
+          updateModalContent(modalState, () => {}).catch(console.error)
         }, 3000)
         return
       }
 
-      const destinationText = modalState.config.destination === 'google_drive' ? 'to Google Drive' : ''
+      const destinationText = modalState.config.destination === "google_drive" ? "to Google Drive" : ""
       updateProgressWithMessage(
         modalState,
         0,
@@ -481,7 +475,7 @@ export const handleBatchExport = async (
       if (result.success && result.downloadUrl) {
         console.log(`✅ Combined export successful: ${result.filename}`)
 
-        if (modalState.config.destination === 'google_drive') {
+        if (modalState.config.destination === "google_drive") {
           // Upload to Google Drive
           updateProgressWithMessage(
             modalState,
@@ -491,7 +485,7 @@ export const handleBatchExport = async (
           )
           
           const uploadResult = await uploadToGoogleDriveViaBackground(
-            result.filename || 'combined_export.xlsx',
+            result.filename || "combined_export.xlsx",
             result.downloadUrl,
             modalState.config.format
           )
@@ -504,22 +498,10 @@ export const handleBatchExport = async (
               `✅ Uploaded to Google Drive: ${result.filename}`
             )
             
-            // Show success toast and close modal
+            // Показать успех и закрыть модалку/спиннер
             setTimeout(() => {
-              showNotification("Combined file exported to Google Drive successfully!", "success")
+              showNotification("Combined file uploaded to Google Drive successfully!", "success")
               hideModalFn()
-              
-              // Trigger post-export survey
-              import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
-                const exportContext = createExportContext(
-                  modalState.config.format,
-                  modalState.config.selectedTables.size,
-                  'google_drive',
-                  'batch',
-                  window.location.hostname
-                )
-                triggerPostExportSurvey(exportContext)
-              }).catch(console.error)
             }, 1500)
           } else {
             updateProgressWithMessage(
@@ -528,6 +510,11 @@ export const handleBatchExport = async (
               1,
               `❌ Upload failed: ${uploadResult.error}`
             )
+            // Закрыть спиннер и показать ошибку
+            setTimeout(() => {
+              showNotification(`Failed to upload to Google Drive: ${uploadResult.error}`, "error")
+              hideModalFn()
+            }, 1000)
           }
         } else {
           // Regular download
@@ -545,22 +532,10 @@ export const handleBatchExport = async (
             `✅ Combined file downloaded: ${result.filename}`
           )
           
-          // Show success toast and close modal for local download
+          // Показать успех и закрыть модалку
           setTimeout(() => {
             showNotification("Combined file downloaded successfully!", "success")
             hideModalFn()
-            
-            // Trigger post-export survey
-            import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
-              const exportContext = createExportContext(
-                modalState.config.format,
-                modalState.config.selectedTables.size,
-                'download',
-                'batch',
-                window.location.hostname
-              )
-              triggerPostExportSurvey(exportContext)
-            }).catch(console.error)
           }, 1500)
         }
 
@@ -570,7 +545,7 @@ export const handleBatchExport = async (
           console.log(`🧠 Saved format preference: ${modalState.config.format}`)
         }
 
-        // Close modal after delay
+        // Дополнительное закрытие через время (на случай, если UI ещё открыт)
         setTimeout(() => {
           hideModalFn()
         }, 3000)
@@ -583,11 +558,17 @@ export const handleBatchExport = async (
           `❌ Export failed: ${result.error}`
         )
 
+        // Закрыть спиннер и показать ошибку
+        setTimeout(() => {
+          showNotification(`Combined export failed: ${result.error}`, "error")
+          hideModalFn()
+        }, 1000)
+
         setTimeout(() => {
           modalState.isExporting = false
           globalExportInProgress = false
           globalExportId = null
-          updateModalContent(modalState, () => {}).catch(console.error) // Empty callback
+          updateModalContent(modalState, () => {}).catch(console.error)
         }, 3000)
       }
     } catch (error) {
@@ -599,11 +580,20 @@ export const handleBatchExport = async (
         `💥 Critical error: ${error instanceof Error ? error.message : "Unknown error"}`
       )
 
+      // Закрыть спиннер и показать ошибку
+      setTimeout(() => {
+        showNotification(
+          `Critical error during combined export: ${error instanceof Error ? error.message : String(error)}`,
+          "error"
+        )
+        hideModalFn()
+      }, 1000)
+
       setTimeout(() => {
         modalState.isExporting = false
         globalExportInProgress = false
         globalExportId = null
-        updateModalContent(modalState, () => {}).catch(console.error) // Empty callback
+        updateModalContent(modalState, () => {}).catch(console.error)
       }, 3000)
     }
 
@@ -649,7 +639,7 @@ export const handleBatchExport = async (
         tableIndex: i // Add table index for unique filenames
       }
 
-      const destinationText = modalState.config.destination === 'google_drive' ? ' to Google Drive' : ''
+      const destinationText = modalState.config.destination === "google_drive" ? " to Google Drive" : ""
       updateProgressWithMessage(
         modalState,
         exportedCount,
@@ -658,7 +648,7 @@ export const handleBatchExport = async (
       )
 
       // For Google Drive destination (but NOT ZIP mode), use background script
-      if (modalState.config.destination === 'google_drive' && modalState.config.exportMode !== 'zip') {
+      if (modalState.config.destination === "google_drive" && modalState.config.exportMode !== "zip") {
         console.log(`🔄 Exporting table ${tableNumber} to Google Drive via background...`)
         
         const message: ChromeMessage = {
@@ -668,7 +658,7 @@ export const handleBatchExport = async (
             options: {
               format: modalState.config.format,
               includeHeaders: modalState.config.includeHeaders,
-              destination: 'google_drive',
+              destination: "google_drive",
               filename: customName || `table_${tableNumber}`,
               analytics: modalState.config.analytics
             }
@@ -682,7 +672,7 @@ export const handleBatchExport = async (
           
           if (result.success) {
             // Handle different result types based on format
-            if (modalState.config.format === 'google_sheets') {
+            if (modalState.config.format === "google_sheets") {
               if (result.googleSheetsUrl) {
                 googleDriveLinks.push(result.googleSheetsUrl)
                 console.log(`✅ Table ${tableNumber} exported to Google Sheets successfully`)
@@ -714,7 +704,7 @@ export const handleBatchExport = async (
           }
         } catch (error) {
           console.error(`💥 Table ${tableNumber} export error:`, error)
-          errors.push(`Table ${tableNumber}: ${error instanceof Error ? error.message : 'Export failed'}`)
+          errors.push(`Table ${tableNumber}: ${error instanceof Error ? error.message : "Export failed"}`)
           failedCount++
         }
 
@@ -728,7 +718,7 @@ export const handleBatchExport = async (
           // Временно изменяем destination для корректного экспорта через exportTable
           const localExportOptions = {
             ...exportOptions,
-            destination: 'download' as const // Принудительно устанавливаем локальный экспорт
+            destination: "download" as const // Принудительно устанавливаем локальный экспорт
           }
           
           const result = await exportService.exportTable(table.data, localExportOptions)
@@ -835,7 +825,7 @@ export const handleBatchExport = async (
 
       const zipFilename = generateZipFilename(modalState)
 
-      if (modalState.config.destination === 'google_drive') {
+      if (modalState.config.destination === "google_drive") {
         // Upload ZIP to Google Drive
         updateProgressWithMessage(
           modalState,
@@ -854,7 +844,7 @@ export const handleBatchExport = async (
         const uploadResult = await uploadToGoogleDriveViaBackground(
           zipFilename,
           dataUrl,
-          'zip' as ExportFormat  // ZIP is not in our ExportFormat type, but we handle it in getMimeType
+          "zip" as ExportFormat  // ZIP is not in our ExportFormat type, but we handle it in getMimeType
         )
         
         if (uploadResult.success) {
@@ -864,18 +854,6 @@ export const handleBatchExport = async (
           setTimeout(() => {
             showNotification("ZIP archive exported to Google Drive successfully!", "success")
             hideModalFn()
-            
-            // Trigger post-export survey
-            import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
-              const exportContext = createExportContext(
-                modalState.config.format,
-                selectedTables.length,
-                'google_drive',
-                'batch',
-                window.location.hostname
-              )
-              triggerPostExportSurvey(exportContext)
-            }).catch(console.error)
           }, 1500)
           
           // Save format preference if remember checkbox is checked
@@ -917,18 +895,6 @@ export const handleBatchExport = async (
         setTimeout(() => {
           showNotification("ZIP archive downloaded successfully!", "success")
           hideModalFn()
-          
-          // Trigger post-export survey
-          import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
-            const exportContext = createExportContext(
-              modalState.config.format,
-              selectedTables.length,
-              'download',
-              'batch',
-              window.location.hostname
-            )
-            triggerPostExportSurvey(exportContext)
-          }).catch(console.error)
         }, 1500)
         
         // Save format preference if remember checkbox is checked
@@ -958,7 +924,7 @@ export const handleBatchExport = async (
   if (modalState.config.exportMode === "separate") {
     // For separate files, show success message only if there were successful exports
     if (exportedCount > 0) {
-      const isGoogleDrive = modalState.config.destination === 'google_drive'
+      const isGoogleDrive = modalState.config.destination === "google_drive"
       const message = isGoogleDrive 
         ? `${exportedCount} files exported to Google Drive successfully!`
         : `${exportedCount} files downloaded successfully!`
@@ -974,18 +940,6 @@ export const handleBatchExport = async (
       setTimeout(() => {
         showNotification(message, "success")
         hideModalFn()
-        
-        // Trigger post-export survey
-        import("../../../utils/survey-integration").then(({ triggerPostExportSurvey, createExportContext }) => {
-          const exportContext = createExportContext(
-            modalState.config.format,
-            exportedCount,
-            modalState.config.destination,
-            'batch',
-            window.location.hostname
-          )
-          triggerPostExportSurvey(exportContext)
-        }).catch(console.error)
       }, 1500)
     } else {
       // Show error message if no files were exported

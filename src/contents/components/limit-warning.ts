@@ -195,6 +195,7 @@ const addWarningStyles = (): void => {
 }
 
 // Создание HTML для предупреждения
+// Внутри функции createWarningHTML (заменяем кнопку на ссылку)
 const createWarningHTML = (data: LimitWarningData): string => {
   const isWarning = data.exports_remaining <= 2 && data.exports_remaining > 0
   const isError = data.exports_remaining === 0
@@ -236,7 +237,10 @@ const createWarningHTML = (data: LimitWarningData): string => {
       </div>
       
       <div class="tablexport-limit-warning-actions">
-        ${data.plan_type === 'free' ? '<button class="tablexport-limit-warning-button tablexport-limit-warning-button-primary" onclick="window.open(\'https://www.tablexport.com/payment?source=extension\', \'_blank\')">Upgrade to Pro</button>' : ''}
+        ${data.plan_type === 'free'
+          ? '<a class="tablexport-limit-warning-button tablexport-limit-warning-button-primary" href="https://www.tablexport.com/payment?source=extension" target="_blank" rel="noopener noreferrer">Upgrade to Pro</a>'
+          : ''
+        }
         <button class="tablexport-limit-warning-button tablexport-limit-warning-dismiss">Dismiss</button>
       </div>
     </div>
@@ -332,24 +336,69 @@ export const checkAndShowLimitWarning = async (): Promise<void> => {
   }
 }
 
-// Показ окна с ошибкой, когда экспорт уже заблокирован
-export const showLimitExceededWarning = async (): Promise<void> => {
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: "GET_USAGE_STATS"
-    })
+// Хелпер для значения reset_time по умолчанию
+const getDefaultResetTimeISO = (): string => {
+  const now = new Date()
+  const nextMidnight = new Date(now)
+  nextMidnight.setHours(24, 0, 0, 0)
+  return nextMidnight.toISOString()
+}
 
-    if (response?.success && response.stats) {
-      showLimitWarning(response.stats, { force: true })
-    } else {
-      console.error(
-        "TabXport: Could not show limit exceeded warning, stats unavailable."
-      )
-    }
-  } catch (error) {
-    console.error("Error showing limit exceeded warning:", error)
-  }
+// Форматирование текста времени сброса (используется выше)
+const formatResetText = (raw?: string): string => {
+  if (!raw) return 'midnight'
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return 'midnight'
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return sameDay ? time : `${d.toLocaleDateString()} ${time}`
 }
 
 // Экспорт функций для использования в других модулях
 export { hideLimitWarning }
+
+// Заменяем прежнюю неэкспортируемую функцию на экспортируемую версию.
+// Вызывать можно без аргументов: подтянет usage stats или покажет дефолт.
+export const showLimitExceededWarning = async (
+  data?: Partial<LimitWarningData> | null
+): Promise<void> => {
+  try {
+    let stats: LimitWarningData | null = null
+
+    if (data && typeof data === 'object') {
+      const daily_limit =
+        typeof data.daily_limit === 'number' && Number.isFinite(data.daily_limit) ? data.daily_limit : 5
+      const exports_remaining =
+        typeof data.exports_remaining === 'number' && Number.isFinite(data.exports_remaining) ? data.exports_remaining : 0
+      const plan_type = (data.plan_type as string) || 'free'
+      const reset_time = data.reset_time || getDefaultResetTimeISO()
+      stats = { daily_limit, exports_remaining, plan_type, reset_time }
+    } else {
+      const response = await chrome.runtime.sendMessage({ type: "GET_USAGE_STATS" })
+      if (response?.success && response.stats) {
+        stats = response.stats as LimitWarningData
+      }
+    }
+
+    if (!stats) {
+      stats = {
+        daily_limit: 5,
+        exports_remaining: 0,
+        plan_type: 'free',
+        reset_time: getDefaultResetTimeISO()
+      }
+    }
+
+    // Насильно показываем предупреждение (после блокировки экспорта)
+    showLimitWarning(stats, { force: true })
+  } catch {
+    const fallback: LimitWarningData = {
+      daily_limit: 5,
+      exports_remaining: 0,
+      plan_type: 'free',
+      reset_time: getDefaultResetTimeISO()
+    }
+    showLimitWarning(fallback, { force: true })
+  }
+}

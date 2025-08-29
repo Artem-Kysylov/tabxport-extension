@@ -31,14 +31,16 @@ const ExportLimitIndicator: React.FC<ExportLimitIndicatorProps> = ({
         const response = await chrome.runtime.sendMessage({ type: "CHECK_AUTH_STATUS" });
         if (response?.success) {
           setAuthState(response.authState);
+          console.debug("[ExportLimitIndicator] Auth status:", response.authState);
           if (response.authState.isAuthenticated) {
             await loadUsageStats(response.authState.user.id);
           }
         } else {
+          console.debug("[ExportLimitIndicator] CHECK_AUTH_STATUS failed or no response");
           setAuthState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
-        console.error("Failed to check auth status:", error);
+        console.error("[ExportLimitIndicator] Failed to check auth status:", error);
         setAuthState(prev => ({ ...prev, isLoading: false }));
       }
     };
@@ -55,16 +57,17 @@ const ExportLimitIndicator: React.FC<ExportLimitIndicatorProps> = ({
       const { data, error: rpcError } = await supabase.rpc('get_usage_stats', {
         user_uuid: userId
       });
-
       if (rpcError) throw rpcError;
-      
       if (data && data.length > 0) {
-        setUsageStats(data[0] as DailyUsageStats);
+        const stats = data[0] as DailyUsageStats;
+        setUsageStats(stats);
+        console.debug("[ExportLimitIndicator] Usage stats loaded:", stats);
       } else {
         setError('No usage data found');
+        console.warn("[ExportLimitIndicator] No usage data found");
       }
     } catch (err) {
-      console.error('Error loading usage stats:', err);
+      console.error('[ExportLimitIndicator] Error loading usage stats:', err);
       setError('Failed to load usage statistics');
     } finally {
       setLoadingStats(false);
@@ -141,9 +144,20 @@ const ExportLimitIndicator: React.FC<ExportLimitIndicatorProps> = ({
   }
 
   const isProPlan = usageStats.plan_type === 'pro';
-
+  console.debug("[ExportLimitIndicator] Render:", {
+    isAuthenticated: authState.isAuthenticated,
+    plan_type: usageStats?.plan_type,
+    exports_remaining: usageStats?.exports_remaining,
+    daily_limit: usageStats?.daily_limit
+  });
   return (
-    <div className={`flex items-center space-x-2 ${className}`}>
+    <div
+      className={`flex items-center space-x-2 ${className}`}
+      data-testid="export-limit-indicator"
+      data-plan-type={usageStats?.plan_type ?? 'unknown'}
+      data-exports-remaining={usageStats?.exports_remaining ?? -1}
+      data-daily-limit={usageStats?.daily_limit ?? -1}
+    >
       <div className={`w-2 h-2 rounded-full ${getIndicatorColor()}`}></div>
       <div className="flex flex-col">
         {isProPlan ? (

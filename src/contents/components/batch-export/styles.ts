@@ -656,6 +656,11 @@ input[type="checkbox"]:checked::after {
   font-size: 14px;
   margin-bottom: 12px;
   background: white !important;
+  color: #062013 !important; /* ensure readable text in dark mode */
+}
+
+.combined-filename-input::placeholder {
+  color: #6b7280 !important; /* subtle placeholder */
 }
 
 .combined-filename-input:focus {

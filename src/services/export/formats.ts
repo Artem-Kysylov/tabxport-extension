@@ -73,7 +73,8 @@ export const exportToCSV = async (
     const filename = generateFilename(tableData, "csv", options.filename)
 
     // Создаем data URL для CSV
-    const base64 = btoa(unescape(encodeURIComponent(csv)))
+    const bom = "\uFEFF"
+    const base64 = btoa(unescape(encodeURIComponent(bom + csv)))
     const dataUrl = `data:text/csv;charset=utf-8;base64,${base64}`
 
     return {

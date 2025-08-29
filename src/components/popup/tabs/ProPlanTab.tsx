@@ -20,11 +20,19 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
     error: null
   })
 
-  const isPro = useMemo(() => subscription?.planType === "pro", [subscription])
+  // ===== добавлено: дневная статистика для синхронизации счетчиков =====
+  const [usageStats, setUsageStats] = useState<import("../../../lib/supabase/types").DailyUsageStats | null>(null)
+
+  const isPro = useMemo(() => {
+    if (usageStats?.plan_type) return usageStats.plan_type === "pro"
+    return subscription?.planType === "pro"
+  }, [usageStats, subscription])
+
   const exportsLeft = useMemo(() => {
+    if (usageStats) return usageStats.exports_remaining
     if (!subscription) return 0
     return Math.max(0, subscription.exportsLimit - subscription.exportsUsed)
-  }, [subscription])
+  }, [usageStats, subscription])
 
   // Тихая проверка подписки (без глобального лоадера) — обновляем состояние только при изменениях
   const refreshSubscription = async (withLoader = false) => {
@@ -54,15 +62,37 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
     }
   }
 
+  // ===== добавлено: загрузка дневной статистики из background (GET_USAGE_STATS) =====
+  const refreshUsageStats = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: "GET_USAGE_STATS" })
+      if (response?.success && response.stats) {
+        setUsageStats(response.stats)
+      }
+    } catch (e) {
+      console.error("Failed to refresh usage stats:", e)
+    }
+  }
+
   useEffect(() => {
     // Первичная загрузка с лоадером
     refreshSubscription(true)
+    // загрузим и дневные лимиты
+    refreshUsageStats()
   }, [])
 
   useEffect(() => {
     // Периодическое тихое обновление без лоадера (без “мигания”)
     const interval = setInterval(() => {
       refreshSubscription(false)
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // ===== добавлено: периодическое обновление usage stats =====
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshUsageStats()
     }, 10000)
     return () => clearInterval(interval)
   }, [])
@@ -234,7 +264,7 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
           ) : (
             <>
               {/* Для Free показываем прогресс и CTA */}
-              {subscription && (
+              { (usageStats || subscription) && (
                 <div style={{ marginBottom: "12px" }}>
                   <div
                     style={{
@@ -248,7 +278,7 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
                   >
                     <span>Exports Left</span>
                     <span>
-                      {exportsLeft} / {subscription.exportsLimit}
+                      {exportsLeft} / {usageStats?.daily_limit ?? subscription?.exportsLimit ?? 0}
                     </span>
                   </div>
                   <div
@@ -264,12 +294,14 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
                       style={{
                         height: "100%",
                         width: `${
-                          subscription.exportsLimit > 0
-                            ? Math.min(
-                                100,
-                                (subscription.exportsUsed / subscription.exportsLimit) * 100
-                              )
-                            : 0
+                          (() => {
+                            const limit = usageStats?.daily_limit ?? subscription?.exportsLimit ?? 0
+                            if (limit <= 0) return 0
+                            const used = usageStats
+                              ? (limit - usageStats.exports_remaining)
+                              : (subscription ? subscription.exportsUsed : 0)
+                            return Math.min(100, (used / limit) * 100)
+                          })()
                         }%`,
                         backgroundColor: "#1B9358"
                       }}
@@ -504,23 +536,6 @@ export const ProPlanTab: React.FC<ProPlanTabProps> = ({ onUpgradeClick }) => {
     <div style={{ padding: "20px" }}>
       {renderHeader()}
       {renderCurrentPlanCard()}
-      {!isPro && (
-        <button
-          onClick={onUpgradeClick}
-          style={{
-            backgroundColor: "#1B9358",
-            color: "white",
-            border: "1px solid #157347",
-            borderRadius: "8px",
-            fontSize: "12px",
-            padding: "10px 12px",
-            cursor: "pointer",
-            marginBottom: "16px"
-          }}
-        >
-          Upgrade to Pro
-        </button>
-      )}
       {renderComparisonTable()}
       {renderWhyUpgrade()}
       {renderSupport()}

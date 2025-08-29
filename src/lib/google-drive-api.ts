@@ -300,7 +300,7 @@ class GoogleDriveService {
 
     switch (format) {
       case "csv":
-        content = this.convertToCSV(tableData)
+        content = "\uFEFF" + this.convertToCSV(tableData)
         mimeType = "text/csv"
         fileExtension = ".csv"
         break

@@ -91,7 +91,6 @@ const Popup: React.FC = () => {
   return (
     <div className="w-80 bg-white">
       <Header isSupported={isSupported} />
-
       {isAuthenticated ? (
         <>
           {authUser && <AuthDetails user={authUser} onSignOut={handleSignOut} />}
@@ -102,16 +101,15 @@ const Popup: React.FC = () => {
             <SettingsTab onSettingsChange={handleSettingsChange} />
           )}
 
-          {activeTab === "proPlan" && (
+          {/* {activeTab === "proPlan" && (
             <ProPlanTab onUpgradeClick={handleUpgradeClick} />
-          )}
+          )} */}
 
-          {activeTab === "help" && <HelpTab />}
+          {/* {activeTab === "help" && <HelpTab />} */}
         </>
       ) : (
         <AuthStatus onAuthChange={handleAuthChange} />
       )}
-
       <Footer />
     </div>
   )

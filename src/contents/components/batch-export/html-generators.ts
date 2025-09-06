@@ -117,9 +117,14 @@ export const createCustomFormatSelector = (modalState: BatchModalState): string 
 /**
  * Кастомный radio-group для выбора формата с иконками
  */
-export const createFormatRadioGroup = async (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): Promise<string> => {
-  // По умолчанию выбран Excel, если не выбран другой
-  const currentKey = modalState.config.format || "xlsx"
+export const createFormatRadioGroup = async (
+  modalState: BatchModalState,
+  isGoogleDriveAuthenticated: boolean
+): Promise<string> => {
+  // Safety: если в настройках сохранён запрещённый формат — тихо переключаем на xlsx
+  if (modalState.config.format === "google_sheets") {
+    modalState.config.format = "xlsx"
+  }
   const hasPreference = FormatPreferences.exists()
   // Короткие тайтлы
   const shortTitles: Record<string, string> = {
@@ -129,6 +134,9 @@ export const createFormatRadioGroup = async (modalState: BatchModalState, isGoog
     pdf: "PDF",
     google_sheets: "Google Sheets"
   }
+
+  // ТЕКУЩИЙ ВЫБРАННЫЙ ФОРМАТ (фикс ошибки "Cannot find name 'currentKey'")
+  const currentKey: ExportFormat = modalState.config.format
 
   // Разделяем форматы на основные (сетка 2x2) и Google Sheets (отдельно)
   const mainFormats: ExportFormat[] = ['xlsx', 'csv', 'docx', 'pdf']
@@ -148,10 +156,10 @@ export const createFormatRadioGroup = async (modalState: BatchModalState, isGoog
   const createFormatOption = (key: ExportFormat, isGridItem: boolean = false) => {
     const format = EXPORT_FORMATS[key]
     const isGoogleSheets = key === 'google_sheets'
-    
+
     // Google Sheets требует и аутентификации Google Drive, и премиум-подписки
     const isDisabled = isGoogleSheets && (!isGoogleDriveAuthenticated || !isPremium)
-    
+
     // Определяем причину отключения
     let disabledReason = ''
     if (isGoogleSheets) {
@@ -191,7 +199,7 @@ export const createFormatRadioGroup = async (modalState: BatchModalState, isGoog
           ${mainFormats.map(key => createFormatOption(key, true)).join('')}
         </div>
         <!-- Google Sheets отдельно на всю ширину -->
-        ${createFormatOption(googleSheetsFormat, false)}
+        ${/* createFormatOption(google_sheets, false) — скрыто */''}
       </div>
       <div class="format-preferences" style="margin-top: 18px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
@@ -435,9 +443,17 @@ export const createProgressIndicator = (
 /**
  * Creates destination selector HTML
  */
-export const createDestinationSelector = async (modalState: BatchModalState, isGoogleDriveAuthenticated: boolean = false): Promise<string> => {
+export const createDestinationSelector = async (
+  modalState: BatchModalState,
+  isGoogleDriveAuthenticated: boolean
+): Promise<string> => {
   const currentDestination = modalState.config.destination || "download"
   const isGoogleSheets = modalState.config.format === 'google_sheets'
+
+  // Safety: если сохранено google_drive — тихо переключаем на download
+  if (modalState.config.destination === "google_drive") {
+    modalState.config.destination = "download"
+  }
   
   // Проверка премиум-статуса пользователя
   let isPremium = false
@@ -481,18 +497,13 @@ export const createDestinationSelector = async (modalState: BatchModalState, isG
             </div>
           </div>
         </label>
-
-        <label class="destination-radio-option${currentDestination === 'google_drive' ? ' selected' : ''}${isGoogleDriveDisabled ? ' disabled' : ''}">
-          <input type="radio" name="export-destination" value="google_drive" ${currentDestination === 'google_drive' ? 'checked' : ''} ${isGoogleDriveDisabled ? 'disabled' : ''} class="destination-radio-input">
-          <div class="destination-radio-content">
-            <div class="destination-icon">${destinationIcons.google_drive}</div>
-            <div class="destination-text">
-              <div class="destination-name">Google Drive</div>
-              <div class="destination-desc">Export tables directly to your Google Drive</div>
-              ${isGoogleDriveDisabled ? '<div class="destination-login-required"><span class="login-required-icon">' + formatIcons.padlock + '</span><span class="login-required-text">' + googleDriveDisabledReason + '</span></div>' : ''}
-            </div>
-          </div>
+        <!-- СКРЫТО: Google Drive -->
+        <!--
+        <label class="tx-radio">
+          <input id="destination-google_drive" type="radio" name="destination" value="google_drive" />
+          <span class="tx-radio-label">Google Drive</span>
         </label>
+        -->
       </div>
     </div>
   `

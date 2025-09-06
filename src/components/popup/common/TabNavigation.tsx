@@ -1,6 +1,6 @@
 import React from "react"
 
-export type TabId = "settings" | "proPlan" | "help"
+export type TabId = "settings" // "proPlan" | "help" закомментированы
 
 interface Tab {
   id: TabId
@@ -14,8 +14,8 @@ interface TabNavigationProps {
 
 const tabs: Tab[] = [
   { id: "settings", label: "Settings" },
-  { id: "proPlan", label: "Pro Plan" },
-  { id: "help", label: "Help" }
+  // { id: "proPlan", label: "Pro Plan" },
+  // { id: "help", label: "Help" }
 ]
 
 export const TabNavigation: React.FC<TabNavigationProps> = ({

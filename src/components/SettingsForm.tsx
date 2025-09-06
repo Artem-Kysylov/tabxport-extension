@@ -2,15 +2,12 @@ import React, { useEffect, useState } from "react"
 
 import { getUserSettings, saveUserSettings } from "../lib/storage"
 import type { UserSettings, AnalyticsSettings } from "../types"
-import ExportLimitIndicator from "./ExportLimitIndicator"
 import {
   iconExcel,
   iconCsv,
   iconWord,
   iconPdf,
-  iconGoogleSheets,
   iconDevice,
-  iconGoogleDrive,
   iconPadlock
 } from "../contents/components/batch-export/svg-icons"
 
@@ -368,7 +365,6 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
             <h3 className="text-base font-semibold text-gray-800">
               Default Export Format
             </h3>
-            <ExportLimitIndicator />
           </div>
           <div className="grid grid-cols-2 gap-3">
             {/* Excel Button */}
@@ -550,76 +546,8 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
 
           {/* Google Sheets option - full width, always visible */}
           <div style={{ width: "100%", marginBottom: "8px" }}>
-            <button
-              onClick={() => {
-                if (isGoogleDriveAuthenticated && isPremium) {
-                  handleSettingChange("defaultFormat", "google_sheets")
-                }
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "12px 16px",
-                backgroundColor: (!isGoogleDriveAuthenticated || !isPremium) 
-                  ? "#f8f9fa" 
-                  : (settings.defaultFormat === "google_sheets" ? "#D2F2E2" : "white"),
-                border: settings.defaultFormat === "google_sheets" ? "none" : "1.5px solid #CDD2D0",
-                borderRadius: "8px",
-                cursor: (isGoogleDriveAuthenticated && isPremium) ? "pointer" : "not-allowed",
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "#062013",
-                width: "100%",
-                boxSizing: "border-box",
-                gap: "12px",
-                userSelect: "none",
-                opacity: (isGoogleDriveAuthenticated && isPremium) ? 1 : 0.5
-              }}
-              onMouseEnter={(e) => {
-                if (isGoogleDriveAuthenticated && isPremium && settings.defaultFormat !== "google_sheets") {
-                  e.currentTarget.style.opacity = "0.5"
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (isGoogleDriveAuthenticated && isPremium) {
-                  e.currentTarget.style.opacity = "1"
-                }
-              }}
-              disabled={isSaving || !isGoogleDriveAuthenticated || !isPremium}
-            >
-              <span
-                style={{ 
-                  width: "16px", 
-                  height: "16px", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center" 
-                }}
-                dangerouslySetInnerHTML={{ __html: iconGoogleSheets }}
-              />
-              <span>Google Sheets</span>
-            </button>
-            
-            {/* Info text under Google Sheets button */}
-            {(!isGoogleDriveAuthenticated || !isPremium) && (
-              <div style={{
-                fontSize: "12px",
-                fontWeight: "normal",
-                color: "#062013",
-                marginTop: "4px",
-                lineHeight: "1.4"
-              }}>
-                {!isGoogleDriveAuthenticated && !isPremium
-                  ? "Google Sheets requires Google Drive connection and Premium subscription"
-                  : !isGoogleDriveAuthenticated
-                    ? "Google Sheets requires Google Drive connection"
-                    : "Google Sheets requires Premium subscription"}
-              </div>
-            )}
-            
-            {/* Format Memory Toggle - moved up */}
-            <div style={{ marginTop: !isGoogleDriveAuthenticated ? "8px" : "4px" }}>
+            {/* Format Memory Toggle */}
+            <div style={{ marginTop: "4px" }}>
               <label 
                 onClick={() => handleRememberFormatChange(!rememberFormat)}
                 style={{
@@ -807,119 +735,6 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
               </div>
             </label>
 
-            {/* Google Drive */}
-            <label 
-              onClick={() => {
-                if (isGoogleDriveAuthenticated && isPremium) {
-                  handleSettingChange("defaultDestination", "google_drive")
-                }
-              }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                padding: "16px",
-                borderRadius: "8px",
-                border: settings.defaultDestination === "google_drive" ? "none" : "1px solid #CDD2D0",
-                background: settings.defaultDestination === "google_drive" ? "#D2F2E2" : 
-                          (!isGoogleDriveAuthenticated || !isPremium) ? "#F3F4F3" : "white",
-                cursor: (isGoogleDriveAuthenticated && isPremium) ? "pointer" : "not-allowed",
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                fontSize: "14px",
-                fontWeight: "400",
-                color: "#062013",
-                margin: "0",
-                opacity: (!isGoogleDriveAuthenticated || !isPremium) ? "0.7" : "1",
-                userSelect: "none"
-              }}
-              onMouseEnter={(e) => {
-                if (isGoogleDriveAuthenticated && isPremium && settings.defaultDestination !== "google_drive") {
-                  e.currentTarget.style.opacity = "0.5"
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = (!isGoogleDriveAuthenticated || !isPremium) ? "0.7" : "1"
-              }}
-            >
-              <input
-                type="radio"
-                name="destination"
-                value="google_drive"
-                checked={settings.defaultDestination === "google_drive"}
-                onChange={() => handleSettingChange("defaultDestination", "google_drive")}
-                disabled={!isGoogleDriveAuthenticated || !isPremium}
-                style={{ display: "none" }}
-              />
-              <div style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "12px",
-                width: "100%"
-              }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "24px",
-                  height: "24px",
-                  marginTop: "2px"
-                }}>
-                  <span dangerouslySetInnerHTML={{ __html: iconGoogleDrive }} />
-                </div>
-                <div style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px"
-                }}>
-                  <div style={{
-                    fontSize: "14px",
-                    fontWeight: "400",
-                    color: "#062013",
-                    lineHeight: "20px"
-                  }}>
-                    Google Drive
-                  </div>
-                  <div style={{
-                    fontSize: "12px",
-                    fontWeight: "400",
-                    color: "#062013",
-                    lineHeight: "16px",
-                    opacity: "0.6"
-                  }}>
-                    Export tables directly to your Google Drive
-                  </div>
-                </div>
-              </div>
-              {(!isGoogleDriveAuthenticated || !isPremium) && (
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  marginTop: "8px",
-                  marginLeft: "0px"
-                }}>
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      width: "14px",
-                      height: "14px"
-                    }}
-                    dangerouslySetInnerHTML={{ __html: iconPadlock }}
-                  />
-                  <span style={{
-                    fontSize: "12px",
-                    fontWeight: "400",
-                    color: "#829089"
-                  }}>
-                    {!isGoogleDriveAuthenticated && !isPremium
-                      ? "Google Drive requires connection and Premium subscription"
-                      : !isGoogleDriveAuthenticated
-                        ? "Google Drive requires connection"
-                        : "Google Drive requires Premium subscription"}
-                  </span>
-                </div>
-              )}
-            </label>
           </div>
         </div>
 

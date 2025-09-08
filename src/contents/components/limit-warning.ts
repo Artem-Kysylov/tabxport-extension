@@ -314,26 +314,8 @@ const hideLimitWarning = (): void => {
 
 // Основная функция для проверки и показа предупреждений
 export const checkAndShowLimitWarning = async (): Promise<void> => {
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: "GET_USAGE_STATS"
-    })
-
-    if (response?.success && response.stats) {
-      const stats: LimitWarningData = response.stats
-      // Показываем предупреждение только если достигнут лимит экспортов (0 оставшихся)
-      if (stats.plan_type === "free" && stats.exports_remaining === 0) {
-        showLimitWarning(stats)
-      }
-    } else {
-      // Не показываем ошибку в консоли, если юзер просто не залогинен
-      if (response?.error !== "User not authenticated") {
-        console.error("TabXport: Failed to get usage stats:", response?.error)
-      }
-    }
-  } catch (error) {
-    console.error("Error checking export limits:", error)
-  }
+  // Лимиты отключены: не делаем никаких запросов и ничего не показываем
+  return
 }
 
 // Хелпер для значения reset_time по умолчанию
@@ -363,42 +345,6 @@ export { hideLimitWarning }
 export const showLimitExceededWarning = async (
   data?: Partial<LimitWarningData> | null
 ): Promise<void> => {
-  try {
-    let stats: LimitWarningData | null = null
-
-    if (data && typeof data === 'object') {
-      const daily_limit =
-        typeof data.daily_limit === 'number' && Number.isFinite(data.daily_limit) ? data.daily_limit : 5
-      const exports_remaining =
-        typeof data.exports_remaining === 'number' && Number.isFinite(data.exports_remaining) ? data.exports_remaining : 0
-      const plan_type = (data.plan_type as string) || 'free'
-      const reset_time = data.reset_time || getDefaultResetTimeISO()
-      stats = { daily_limit, exports_remaining, plan_type, reset_time }
-    } else {
-      const response = await chrome.runtime.sendMessage({ type: "GET_USAGE_STATS" })
-      if (response?.success && response.stats) {
-        stats = response.stats as LimitWarningData
-      }
-    }
-
-    if (!stats) {
-      stats = {
-        daily_limit: 5,
-        exports_remaining: 0,
-        plan_type: 'free',
-        reset_time: getDefaultResetTimeISO()
-      }
-    }
-
-    // Насильно показываем предупреждение (после блокировки экспорта)
-    showLimitWarning(stats, { force: true })
-  } catch {
-    const fallback: LimitWarningData = {
-      daily_limit: 5,
-      exports_remaining: 0,
-      plan_type: 'free',
-      reset_time: getDefaultResetTimeISO()
-    }
-    showLimitWarning(fallback, { force: true })
-  }
+  // Лимиты отключены: не показываем поп-ап
+  return
 }

@@ -578,9 +578,9 @@ export const showBatchExportModal = async (
   // Load user settings first
   await loadUserSettingsForModal()
 
-  // Load preferred format if available (overrides user settings)
+  // Load preferred format if enabled via toggle
   const preferredFormat = FormatPreferences.load()
-  if (preferredFormat) {
+  if (modalState.rememberFormat && preferredFormat) {
     modalState.config.format = preferredFormat
     console.log(`🧠 Using remembered format: ${preferredFormat}`)
   }

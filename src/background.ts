@@ -197,7 +197,10 @@ const handleTableExport = async (
       userId: userId.substring(0, 8) + "..."
     })
 
-    // === Новая жесткая проверка лимитов до выполнения экспорта ===
+    // === Проверка лимитов отключена: экспорт всегда разрешен ===
+    console.log("ℹ️ Background: Export limit checks are disabled (free & unlimited mode).")
+    // Ранее здесь блокировался экспорт при исчерпании лимитов:
+    /*
     try {
       const limitCheck = await userService.checkExportLimits(userId, normalizedDestination)
       console.log("🔒 Background: Limit check:", limitCheck)
@@ -230,7 +233,7 @@ const handleTableExport = async (
       })
       return
     }
-    // === Конец блока проверки лимитов ===
+    */
 
     // Обработка экспорта в Google Drive
     if (normalizedDestination === "google_drive") {

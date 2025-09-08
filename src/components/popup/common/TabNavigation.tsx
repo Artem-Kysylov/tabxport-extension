@@ -12,11 +12,12 @@ interface TabNavigationProps {
   onTabChange: (tabId: TabId) => void
 }
 
-const tabs: Tab[] = [
-  { id: "settings", label: "Settings" },
-  // { id: "proPlan", label: "Pro Plan" },
-  // { id: "help", label: "Help" }
-]
+// Скрываем таб-бар: массив tabs закомментирован
+// const tabs: Tab[] = [
+//   { id: "settings", label: "Settings" },
+//   // { id: "proPlan", label: "Pro Plan" },
+//   // { id: "help", label: "Help" }
+// ]
 
 export const TabNavigation: React.FC<TabNavigationProps> = ({
   activeTab,
@@ -29,6 +30,8 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
         backgroundColor: "white"
       }}
     >
+      {/* Таб-бар скрыт по требованию: заголовок "Settings", подчёркивание и hover не рендерим */}
+      {/* 
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -72,6 +75,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
           )}
         </button>
       ))}
+      */}
     </div>
   )
 }

@@ -623,14 +623,19 @@ const handleExport = async (
     } else {
       console.error("❌ TabXport: Export failed:", result)
       
-      // Проверяем, если это ошибка лимита – показываем поп-ап
+      // Логика предупреждения о лимитах отключена
+      const limitsEnabled = false
+
       if (
-        result?.limitExceeded ||
-        result?.error?.includes("daily limit") ||
-        result?.error?.includes("Daily export")
+        limitsEnabled &&
+        (
+          result?.limitExceeded ||
+          result?.error?.includes("daily limit") ||
+          result?.error?.includes("Daily export")
+        )
       ) {
-        console.log("⚠️ TabXport: Limit exceeded, showing upgrade prompt")
-        showLimitExceededWarning()
+        console.log("⚠️ TabXport: Limit exceeded, showing upgrade prompt (disabled)")
+        // showLimitExceededWarning() // отключено
       } 
       // Проверяем, если это ошибка аутентификации
       else if (result?.error?.includes("Authentication required")) {

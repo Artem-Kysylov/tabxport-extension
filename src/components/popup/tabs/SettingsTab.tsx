@@ -17,6 +17,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         fontWeight: 600,
         color: "#062013",
         marginBottom: "0",
+        marginTop: "0",
       }}>
         Settings
       </h2>

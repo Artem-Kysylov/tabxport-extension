@@ -1261,6 +1261,7 @@ export const addModalStyles = (): void => {
   style.id = styleId
   style.textContent = `
     ${MODAL_STYLES}
+    ${SPINNER_STYLES}
     ${iconStyles}
     ${customFormatSelectorStyles}
     ${formatRadioGroupStyles}
@@ -1592,6 +1593,20 @@ export const addModalStyles = (): void => {
       color: #062013 !important;
       line-height: 1.4 !important;
       margin-bottom: 16px !important;
+    }
+
+    /* Force label color for Export format across platforms (incl. DeepSeek) */
+    #tablexport-batch-modal .format-label {
+      color: #062013 !important;
+    }
+
+    /* Spinner overrides to avoid platform theming (DeepSeek pink) */
+    #tablexport-export-spinner .spinner-content {
+      background: white !important;
+    }
+    #tablexport-export-spinner .spinner-text,
+    #tablexport-export-spinner .spinner-subtext {
+      color: #062013 !important;
     }
   `
   document.head.appendChild(overrideStyle)

@@ -6,6 +6,7 @@ import { exportToPDF } from "./exporters/pdf-exporter"
 import { googleDriveService } from "./google-drive-api"
 import { googleSheetsService } from "./google-sheets-api"
 import { getDefaultCsvSeparator } from "../services/export/utils"
+import { GOOGLE_DRIVE_ENABLED, GOOGLE_SHEETS_ENABLED } from "../services/feature-flags"
 
 // Генерация имени файла
 export const generateFilename = (
@@ -150,10 +151,14 @@ const uploadToGoogleDrive = async (
   format: "xlsx" | "csv" | "docx" | "pdf"
 ): Promise<{ success: boolean; error?: string; webViewLink?: string }> => {
   try {
+    if (!GOOGLE_DRIVE_ENABLED) {
+      return { success: false, error: "Google Drive export is disabled in this version" }
+    }
+
     const blob = dataUrlToBlob(dataUrl)
     const mimeType = getMimeTypeForFormat(format)
-    
-    // удалён лишний console.log: Uploading to Google Drive
+
+    const { googleDriveService } = await import("./google-drive-api")
 
     const result = await googleDriveService.uploadFile({
       filename,
@@ -202,6 +207,9 @@ export const exportToXLSX = async (
 
     // Handle Google Drive upload if needed
     if (options.destination === 'google_drive') {
+      if (!GOOGLE_DRIVE_ENABLED) {
+        return { success: false, error: "Google Drive destination is disabled in this version" }
+      }
       const uploadResult = await uploadToGoogleDrive(filename, dataUrl, 'xlsx')
       
       if (uploadResult.success) {
@@ -244,9 +252,9 @@ const formatCellForCSV = (cell: string): string => {
     /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/, // YYYY-MM-DD HH:MM:SS
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,  // ISO format
     /^\d{2}\/\d{2}\/\d{4}$/,                 // MM/DD/YYYY
-    /^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}/,     // MM/DD/YYYY HH:MM
+    /^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}$/,     // MM/DD/YYYY HH:MM
     /^\d{2}\.\d{2}\.\d{4}$/,                 // DD.MM.YYYY
-    /^\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}/      // DD.MM.YYYY HH:MM
+    /^\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}$/      // DD.MM.YYYY HH:MM
   ]
   
   const isDate = datePatterns.some(pattern => pattern.test(cellStr))
@@ -343,6 +351,9 @@ export const exportToCSV = async (
 
     // Handle Google Drive upload if needed
     if (options.destination === 'google_drive') {
+      if (!GOOGLE_DRIVE_ENABLED) {
+        return { success: false, error: "Google Drive destination is disabled in this version" }
+      }
       const uploadResult = await uploadToGoogleDrive(filename, dataUrl, 'csv')
       
       if (uploadResult.success) {
@@ -379,41 +390,32 @@ export const exportToGoogleSheets = async (
   options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
-    const title = generateFilename(
-      tableData,
-      "google_sheets",
-      options.filename,
-      options.tableIndex
-    )
-
-    // удалён лишний console.log: Exporting table to Google Sheets
+    if (!GOOGLE_SHEETS_ENABLED) {
+      return { success: false, error: "Google Sheets export is disabled in this version" }
+    }
+    const includeHeaders = options.includeHeaders !== false
+    const { googleSheetsService } = await import("./google-sheets-api")
 
     const result = await googleSheetsService.exportTable(tableData, {
-      spreadsheetTitle: title,
-      sheetTitle: "Table_Data",
-      includeHeaders: options.includeHeaders
+      includeHeaders,
+      spreadsheetTitle: options.filename,
+      sheetTitle: "Table_Data"
     })
 
     if (result.success) {
       return {
         success: true,
-        filename: title,
-        downloadUrl: result.spreadsheetUrl || "",
+        filename: options.filename || "Google_Sheets_Export",
+        downloadUrl: result.spreadsheetUrl,
         googleSheetsId: result.spreadsheetId,
         googleSheetsUrl: result.spreadsheetUrl
       }
     } else {
-      return {
-        success: false,
-        error: result.error || "Failed to export to Google Sheets"
-      }
+      return { success: false, error: result.error || "Failed to export to Google Sheets" }
     }
   } catch (error) {
     console.error("Error exporting to Google Sheets:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error occurred"
-    }
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
 

@@ -20,6 +20,7 @@ import { analyticsService } from "../analytics"
 import { getUserSettings } from "../../lib/storage"
 import { exportCombinedTables } from "../../lib/exporters/combined-exporter"
 import { registerRobotoCyrillicOrFallback } from "../../assets/fonts/roboto-cyrillic"
+import { GOOGLE_DRIVE_ENABLED, GOOGLE_SHEETS_ENABLED } from "../feature-flags"
 
 export class ExportService {
   /**

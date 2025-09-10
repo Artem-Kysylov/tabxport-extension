@@ -1,5 +1,6 @@
 import { authService } from "./supabase/auth-service"
 import { logExtensionError, safeStorageOperation, createErrorNotification } from "./error-handlers"
+import { ensureGoogleApisHostPermissions } from "../services/permissions"
 
 export interface DriveUploadOptions {
   filename: string
@@ -117,6 +118,14 @@ class GoogleDriveService {
    * Загрузка файла в Google Drive с улучшенной обработкой ошибок
    */
   async uploadFile(options: DriveUploadOptions): Promise<DriveUploadResult> {
+    const granted = await ensureGoogleApisHostPermissions()
+    if (!granted) {
+      return {
+        success: false,
+        error: "Требуется разрешение на доступ к Google API (optional host permissions не выданы)"
+      }
+    }
+
     const token = await this.getValidToken()
 
     if (!token) {

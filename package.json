@@ -16,7 +16,9 @@
     "lint": "prettier --check .",
     "get-extension-id": "node scripts/get-extension-id.js",
     "test-oauth": "node scripts/test-oauth.js",
-    "clean-manifest": "node scripts/fix-manifest-oauth.js"
+    "clean-manifest": "node scripts/fix-manifest-oauth.js",
+    "build:prod:lite": "cp src/manifest.json src/manifest.backup.json && cp src/manifest.lite.json src/manifest.json && NODE_ENV=production plasmo build --target=chrome-mv3 --no-dev && rm -rf build/prod-lite && cp -r build/chrome-mv3-prod build/prod-lite && rm -rf build/chrome-mv3-prod && mv src/manifest.backup.json src/manifest.json",
+    "package:lite": "npm run build:prod:lite && plasmo package --source=build/prod-lite"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.4",
@@ -49,18 +51,18 @@
   "manifest": {
     "host_permissions": [
       "https://chat.openai.com/*",
+      "https://chatgpt.com/*",
       "https://claude.ai/*",
       "https://gemini.google.com/*",
+      "https://bard.google.com/*",
       "https://chat.deepseek.com/*",
       "https://deepseek.com/*",
-      "https://www.googleapis.com/*",
-      "https://*.chromiumapp.org/*",
-      "file:///*"
+      "https://*.supabase.co/*",
+      "https://*.chromiumapp.org/*"
     ],
     "permissions": [
       "storage",
       "downloads",
-      "scripting",
       "notifications",
       "identity"
     ]

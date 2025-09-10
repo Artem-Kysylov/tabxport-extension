@@ -58,10 +58,6 @@
     "https://*.supabase.co/*",
     "https://*.chromiumapp.org/*"
   ],
-  "optional_host_permissions": [
-    "https://www.googleapis.com/*",
-    "https://sheets.googleapis.com/*"
-  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'"
   },

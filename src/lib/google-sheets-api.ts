@@ -1,6 +1,7 @@
 import { authService } from "./supabase/auth-service"
 import { logExtensionError } from "./error-handlers"
 import type { TableData } from "../types"
+import { ensureGoogleApisHostPermissions } from "../services/permissions"
 
 /**
  * Google Sheets API integration for creating native spreadsheets
@@ -494,6 +495,12 @@ class GoogleSheetsService {
         sheetTitle = "Table_Data",
         includeHeaders = true
       } = options
+
+      const granted = await ensureGoogleApisHostPermissions()
+      if (!granted) {
+        return { success: false, error: "Требуется разрешение на доступ к Google API (optional host permissions не выданы)" }
+      }
+
       // удалён лишний console.log
       const createResult = await this.createSpreadsheet({
         title: spreadsheetTitle,
@@ -566,6 +573,12 @@ class GoogleSheetsService {
         spreadsheetTitle = "Combined_Tables",
         includeHeaders = true
       } = options
+
+      const granted = await ensureGoogleApisHostPermissions()
+      if (!granted) {
+        return { success: false, error: "Требуется разрешение на доступ к Google API (optional host permissions не выданы)" }
+      }
+
       if (tables.length === 0) {
         return { success: false, error: "No tables to export" }
       }

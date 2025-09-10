@@ -9,22 +9,16 @@ export const triggerPostExportSurvey = (exportContext?: {
   platform?: string
 }) => {
   try {
-    console.log('📊 Triggering post-export survey with context:', exportContext)
-    
     // Проверяем есть ли глобальная функция опроса
     if (typeof window !== 'undefined' && (window as any).tablexportShowSurvey) {
-      console.log('✅ Global survey function found, triggering...')
       ;(window as any).tablexportShowSurvey(exportContext)
     } else {
-      console.log('⚠️ Global survey function not found, trying alternative methods...')
-      
       // Альтернативный метод через событие
       if (typeof window !== 'undefined') {
         const event = new CustomEvent('tablexport:survey-trigger', {
           detail: exportContext
         })
         window.dispatchEvent(event)
-        console.log('📡 Survey trigger event dispatched')
       }
     }
   } catch (error) {
@@ -59,14 +53,10 @@ export const initSurveyEventListener = () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('tablexport:survey-trigger', (event: Event) => {
       const customEvent = event as CustomEvent
-      console.log('📡 Survey trigger event received:', customEvent.detail)
-      
       // Если глобальная функция доступна, используем её
       if ((window as any).tablexportShowSurvey) {
         ;(window as any).tablexportShowSurvey(customEvent.detail)
       }
     })
-    
-    console.log('✅ Survey event listener initialized')
   }
 }

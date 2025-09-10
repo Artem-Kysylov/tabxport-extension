@@ -41,14 +41,11 @@ export class AnalyticsService {
   ): Promise<{ success: boolean; data?: TableData; error?: AnalysisError }> {
     try {
       if (!settings.enabled) {
-        console.log("📊 AnalyticsService: Analytics disabled, returning original data")
+        // удалён лишний console.log
         return { success: true, data: tableData }
       }
 
-      console.log("📊 AnalyticsService: Starting table analysis...")
-      console.log("📊 Table headers:", tableData.headers)
-      console.log("📊 Table rows count:", tableData.rows.length)
-      console.log("📊 Analytics settings:", settings)
+      // удалены лишние console.log: старт анализа, заголовки, количество строк, настройки
 
       // Validate settings first
       const warnings = validateAnalyticsSettings(settings)
@@ -58,47 +55,45 @@ export class AnalyticsService {
 
       // Step 1: Detect column data types
       const columnMetadata = this.detectColumnTypes(tableData)
-      console.log("📊 Column metadata:", columnMetadata)
+      // удалён лишний console.log: Column metadata
 
       // Step 2: Calculate summaries based on settings
       const summaryRows = this.calculateSummaries(tableData, columnMetadata, settings)
-      console.log("📊 Generated summary rows:", summaryRows)
+      // удалён лишний console.log: Generated summary rows
 
-             // Step 3: Create enhanced table data with analytics
-       const columnTypes: Record<string, ColumnDataType> = {}
-       columnMetadata.forEach(meta => {
-         columnTypes[meta.name] = meta.dataType
-       })
+      // Step 3: Create enhanced table data with analytics
+      const columnTypes: Record<string, ColumnDataType> = {}
+      columnMetadata.forEach(meta => {
+        columnTypes[meta.name] = meta.dataType
+      })
 
-       // Convert SummaryRow[] to string[][] for TableData.analytics
-       const summaryRowData: string[][] = summaryRows.map(row => row.values)
+      // Convert SummaryRow[] to string[][] for TableData.analytics
+      const summaryRowData: string[][] = summaryRows.map(row => row.values)
 
-       const enhancedTableData: TableData = {
-         ...tableData,
-         analytics: {
-           columnTypes,
-           summaryRows: summaryRowData,
-           errors: [] // Will be populated if validation errors occur
-         }
-       }
+      const enhancedTableData: TableData = {
+        ...tableData,
+        analytics: {
+          columnTypes,
+          summaryRows: summaryRowData,
+          errors: [] // Will be populated if validation errors occur
+        }
+      }
 
-             // Generate analytics summary for logging
-       const summary = generateAnalyticsSummary(columnTypes, summaryRowData, settings)
-       console.log(summary)
+      // Generate analytics summary for logging
+      // заменено: вместо логирования просто вызываем функцию (без сохранения результата)
+      generateAnalyticsSummary(columnTypes, summaryRowData, settings)
 
-       console.log("✅ AnalyticsService: Analysis completed successfully")
-       return { success: true, data: enhancedTableData }
+      // удалён лишний console.log: Analysis completed successfully
+      return { success: true, data: enhancedTableData }
 
     } catch (error) {
       console.error("❌ AnalyticsService: Analysis failed:", error)
-      
-             const analysisError: AnalysisError = {
-         type: "calculation_error",
-         columnName: "general",
-         message: error instanceof Error ? error.message : "Unknown analysis error",
-         severity: "high"
-       }
-
+      const analysisError: AnalysisError = {
+        type: "calculation_error",
+        columnName: "general",
+        message: error instanceof Error ? error.message : "Unknown analysis error",
+        severity: "high"
+      }
       return { success: false, error: analysisError }
     }
   }
@@ -107,22 +102,18 @@ export class AnalyticsService {
    * Detects the data type of each column based on its values
    */
   private detectColumnTypes(tableData: TableData): ColumnMetadata[] {
-    console.log("🔍 AnalyticsService: Detecting column types...")
-    
+    // удалён лишний console.log: Detecting column types...
     const metadata: ColumnMetadata[] = tableData.headers.map((header, columnIndex) => {
       const columnValues = tableData.rows.map(row => row[columnIndex] || "")
       const dataType = this.inferColumnDataType(columnValues)
-      
-      console.log(`🔍 Column "${header}" (index ${columnIndex}): ${dataType}`)
-      
-             return {
-         name: header,
-         dataType,
-         hasErrors: false, // Will be updated if errors are detected
-         sampleValues: columnValues.slice(0, 3) // First 3 values for reference
-       }
+      // удалён лишний console.log по каждой колонке
+      return {
+        name: header,
+        dataType,
+        hasErrors: false,
+        sampleValues: columnValues.slice(0, 3)
+      }
     })
-
     return metadata
   }
 
@@ -228,35 +219,28 @@ export class AnalyticsService {
     columnMetadata: ColumnMetadata[],
     settings: AnalyticsSettings
   ): SummaryRow[] {
-    console.log("🧮 AnalyticsService: Calculating summaries...")
-    
+    // удалён лишний console.log: Calculating summaries...
     const summaryRows: SummaryRow[] = []
 
     // Calculate sums for numeric columns
     if (settings.calculateSums) {
       const sumRow = this.calculateSumRow(tableData, columnMetadata)
-      if (sumRow) {
-        summaryRows.push(sumRow)
-      }
+      if (sumRow) summaryRows.push(sumRow)
     }
 
     // Calculate averages for numeric columns
     if (settings.calculateAverages) {
       const avgRow = this.calculateAverageRow(tableData, columnMetadata)
-      if (avgRow) {
-        summaryRows.push(avgRow)
-      }
+      if (avgRow) summaryRows.push(avgRow)
     }
 
     // Count unique values for text columns
     if (settings.countUnique) {
       const countRow = this.calculateUniqueCountRow(tableData, columnMetadata)
-      if (countRow) {
-        summaryRows.push(countRow)
-      }
+      if (countRow) summaryRows.push(countRow)
     }
 
-    console.log(`🧮 Generated ${summaryRows.length} summary rows`)
+    // удалён лишний console.log: Generated X summary rows
     return summaryRows
   }
 
@@ -382,4 +366,4 @@ export class AnalyticsService {
 }
 
 // Export singleton instance
-export const analyticsService = new AnalyticsService() 
+export const analyticsService = new AnalyticsService()

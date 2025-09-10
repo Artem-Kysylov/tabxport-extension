@@ -6,12 +6,14 @@
 import { clearAllBatchTables } from "./batch-manager"
 import { detectAllTables } from "./batch-detector"
 import { updateBatchButton } from "../../contents/components/batch-export-button"
+import { logger } from "./common/logging";
 
 /**
  * Force complete refresh of table detection
  */
 export const forceRefreshTableDetection = async (): Promise<void> => {
-  console.log("🔄 TabXport: Force refreshing table detection...")
+    // console.log("🔄 TabXport: Force refreshing table detection...")
+    logger.info("🔄 TabXport: Force refreshing table detection...");
   
   // Clear all existing batch tables
   clearAllBatchTables()
@@ -25,8 +27,6 @@ export const forceRefreshTableDetection = async (): Promise<void> => {
   // Update batch button
   updateBatchButton(batchResult)
   
-  console.log(`✅ TabXport: Force refresh complete - found ${batchResult.count} tables`)
-  
   return Promise.resolve()
 }
 
@@ -35,5 +35,4 @@ export const forceRefreshTableDetection = async (): Promise<void> => {
  */
 if (typeof window !== 'undefined') {
   (window as any).TabXportForceRefresh = forceRefreshTableDetection
-  console.log("🔄 Added global function: window.TabXportForceRefresh()")
-} 
+}

@@ -12,7 +12,6 @@ export const claudeDetector: PlatformDetector = {
 
   findTables: (): HTMLElement[] => {
     logger.debug("Searching for tables in Claude interface")
-    console.log("TabXport Claude: Starting table search")
 
     const elements: HTMLElement[] = []
     const processedElements = new Set<HTMLElement>()
@@ -36,9 +35,7 @@ export const claudeDetector: PlatformDetector = {
     // Collect all potential message containers
     messageSelectors.forEach((selector) => {
       const found = document.querySelectorAll(selector)
-      console.log(
-        `TabXport Claude: Found ${found.length} elements with selector: ${selector}`
-      )
+      // удалён console.log количества найденных по селектору
       found.forEach((element) => {
         if (element instanceof HTMLElement) {
           allMessages.add(element)
@@ -47,15 +44,9 @@ export const claudeDetector: PlatformDetector = {
     })
 
     logger.debug(`Found ${allMessages.size} unique Claude messages`)
-    console.log(
-      `TabXport Claude: Found ${allMessages.size} unique Claude messages`
-    )
 
     // If no specific message containers found, scan the entire page
     if (allMessages.size === 0) {
-      console.log(
-        "TabXport Claude: No message containers found, scanning entire page"
-      )
       const mainContent = document.querySelector(
         'main, [role="main"], .chat-container, .conversation'
       )
@@ -68,24 +59,17 @@ export const claudeDetector: PlatformDetector = {
 
     allMessages.forEach((message, messageIndex) => {
       logger.debug(`Processing Claude message ${messageIndex}`)
-      console.log(`TabXport Claude: Processing message ${messageIndex}`)
 
       // Find HTML tables in the message
       const htmlTables = message.querySelectorAll("table")
       logger.debug(
         `Found ${htmlTables.length} HTML tables in message ${messageIndex}`
       )
-      console.log(
-        `TabXport Claude: Found ${htmlTables.length} HTML tables in message ${messageIndex}`
-      )
 
       htmlTables.forEach((table) => {
         const htmlTable = table as HTMLElement
         if (table.rows.length > 0 && !processedElements.has(htmlTable)) {
           logger.debug(`Adding HTML table from message ${messageIndex}`)
-          console.log(
-            `TabXport Claude: Adding HTML table from message ${messageIndex} (${table.rows.length} rows)`
-          )
           elements.push(htmlTable)
           processedElements.add(htmlTable)
         }
@@ -97,9 +81,6 @@ export const claudeDetector: PlatformDetector = {
       )
       logger.debug(
         `Found ${codeBlocks.length} code blocks in message ${messageIndex}`
-      )
-      console.log(
-        `TabXport Claude: Found ${codeBlocks.length} code blocks in message ${messageIndex}`
       )
 
       codeBlocks.forEach((block, blockIndex) => {
@@ -128,9 +109,6 @@ export const claudeDetector: PlatformDetector = {
             logger.debug(
               `Adding markdown table from code block ${blockIndex} in message ${messageIndex}`
             )
-            console.log(
-              `TabXport Claude: Adding markdown table from code block ${blockIndex} in message ${messageIndex} (${tableLines.length} lines)`
-            )
             elements.push(htmlBlock)
             processedElements.add(htmlBlock)
             processedTableContent.add(contentHash)
@@ -143,22 +121,13 @@ export const claudeDetector: PlatformDetector = {
       logger.debug(
         `Claude message ${messageIndex} text length: ${textContent.length}`
       )
-      console.log(
-        `TabXport Claude: Message ${messageIndex} text length: ${textContent.length}`
-      )
 
       if (textContent.includes("|") && textContent.split("\n").length > 2) {
         logger.debug(`Message ${messageIndex} contains potential table markers`)
-        console.log(
-          `TabXport Claude: Message ${messageIndex} contains potential table markers`
-        )
 
         const textElements = message.querySelectorAll("div, p, span")
         logger.debug(
           `Checking ${textElements.length} text containers in message ${messageIndex}`
-        )
-        console.log(
-          `TabXport Claude: Checking ${textElements.length} text containers in message ${messageIndex}`
         )
 
         textElements.forEach((element, elementIndex) => {
@@ -213,9 +182,6 @@ export const claudeDetector: PlatformDetector = {
               logger.debug(
                 `Adding text table element ${elementIndex} from message ${messageIndex}`
               )
-              console.log(
-                `TabXport Claude: Adding text table element ${elementIndex} from message ${messageIndex} (${validLines.length} lines)`
-              )
               elements.push(htmlElement)
               processedElements.add(htmlElement)
               processedTableContent.add(contentHash)
@@ -231,12 +197,10 @@ export const claudeDetector: PlatformDetector = {
 
     for (const element of elements) {
       const content = domUtils.getTextContent(element).trim()
-      // Create a content hash from first 100 characters
       const contentHash = content.substring(0, 100).replace(/\s+/g, ' ')
-      
-      // Skip if we've seen this content before
+
       if (finalProcessedContent.has(contentHash)) {
-        console.log(`TabXport Claude: Skipping duplicate content: ${contentHash.substring(0, 50)}...`)
+        // удалён console.log про дубликаты
         continue
       }
       
@@ -250,7 +214,14 @@ export const claudeDetector: PlatformDetector = {
         if (domUtils.isVisible(element)) {
           uniqueElements.push(element)
           finalProcessedContent.add(contentHash)
-          console.log(`TabXport Claude: Added unique table: ${contentHash.substring(0, 50)}...`)
+          // console.log(`TabXport Claude: Added unique table: ${contentHash.substring(0, 50)}...`)
+          logger.debug(`TabXport Claude: Added unique table: ${contentHash.substring(0, 50)}...`);
+          // console.log(`TabXport Claude: Skipping invisible element: ${contentHash.substring(0, 50)}...`)
+          logger.debug(`TabXport Claude: Skipping invisible element: ${contentHash.substring(0, 50)}...`);
+          // console.log(`TabXport Claude: Skipping nested element: ${contentHash.substring(0, 50)}...`)
+          logger.debug(`TabXport Claude: Skipping nested element: ${contentHash.substring(0, 50)}...`);
+          // console.log(/* details */)
+          logger.debug("TabXport Claude: Element details", { /* existing variables */ });
         } else {
           console.log(`TabXport Claude: Skipping invisible element: ${contentHash.substring(0, 50)}...`)
         }

@@ -16,10 +16,8 @@ const USE_IMPROVED_CLAUDE_DETECTOR = true // ✅ ВКЛЮЧЕН после ди�
  */
 const getClaudeDetector = (): PlatformDetector => {
   if (USE_IMPROVED_CLAUDE_DETECTOR) {
-    console.log("🔬 Using IMPROVED Claude detector")
     return claudeDetectorImproved
   } else {
-    console.log("📊 Using original Claude detector")
     return claudeDetector
   }
 }

@@ -22,7 +22,8 @@ export const geminiDetector: PlatformDetector = {
 
   findTables: (): HTMLElement[] => {
     logger.debug("Searching for tables in Gemini interface")
-    console.log("TabXport Gemini: Starting table search")
+    // console.log("TabXport Gemini: Starting table search")
+    logger.info("TabXport Gemini: Starting table search");
 
     const elements: HTMLElement[] = []
     const processedElements = new Set<HTMLElement>()
@@ -39,7 +40,6 @@ export const geminiDetector: PlatformDetector = {
       logger.debug(`Checking HTML table ${index}`)
       logger.debug(`Table rows: ${(table as HTMLTableElement).rows.length}`)
       logger.debug(`Table visible: ${htmlTable.offsetParent !== null}`)
-
       if (
         (table as HTMLTableElement).rows.length > 0 &&
         htmlTable.offsetParent !== null
@@ -209,37 +209,20 @@ export const geminiDetector: PlatformDetector = {
 
     for (const element of elements) {
       const content = domUtils.getTextContent(element).trim()
-      // Create a content hash from first 100 characters
       const contentHash = content.substring(0, 100).replace(/\s+/g, ' ')
-      
-      // Skip if we've seen this content before
       if (processedContent.has(contentHash)) {
-        console.log(`TabXport Gemini: Skipping duplicate content: ${contentHash.substring(0, 50)}...`)
         continue
       }
-      
-      // Skip if this element is contained within another element we already have
       const isContainedInExisting = uniqueElements.some(existing => 
         existing.contains(element) || element.contains(existing)
       )
-      
       if (!isContainedInExisting) {
-        // Additional check - ensure element is visible
         if (domUtils.isVisible(element)) {
           uniqueElements.push(element)
           processedContent.add(contentHash)
-          console.log(`TabXport Gemini: Added unique table: ${contentHash.substring(0, 50)}...`)
-        } else {
-          console.log(`TabXport Gemini: Skipping invisible element: ${contentHash.substring(0, 50)}...`)
         }
-      } else {
-        console.log(`TabXport Gemini: Skipping nested element: ${contentHash.substring(0, 50)}...`)
       }
     }
-
-    console.log(
-      `TabXport Gemini: Final result - found ${uniqueElements.length} unique table elements (was ${elements.length} before deduplication)`
-    )
     return uniqueElements
   },
 

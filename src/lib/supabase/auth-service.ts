@@ -28,9 +28,8 @@ class AuthService {
     isAuthenticated: false,
     hasGoogleAccess: false
   }
-
   constructor() {
-    console.log("AuthService: Initializing...")
+    // удалён лишний console.log
     this.checkEnvironmentVariables()
     this.initialize()
   }
@@ -39,25 +38,16 @@ class AuthService {
    * Проверка переменных окружения
    */
   private checkEnvironmentVariables() {
-    // Проверяем переменные напрямую через process.env
     const supabaseUrl = process.env.PLASMO_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.PLASMO_PUBLIC_SUPABASE_ANON_KEY  
     const googleClientId = process.env.PLASMO_PUBLIC_GOOGLE_CLIENT_ID
-
-    console.log('🔍 Environment check:')
-    console.log('- SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing')
-    console.log('- SUPABASE_ANON_KEY:', supabaseKey ? '✅ Set' : '❌ Missing')
-    console.log('- GOOGLE_CLIENT_ID:', googleClientId ? '✅ Set' : '❌ Missing')
-
+    // удалены лишние console.log
     const allSet = !!(supabaseUrl && supabaseKey && googleClientId)
-    
     if (!allSet) {
       console.error('❌ Some environment variables are missing')
-      // Не блокируем инициализацию, просто предупреждаем
       return false
     }
-
-    console.log('✅ All environment variables are set')
+    // удалён лишний console.log
     return true
   }
 
@@ -66,7 +56,6 @@ class AuthService {
    */
   private async initialize() {
     try {
-      console.log("AuthService: Getting current session...")
       // Получаем текущую сессию
       const {
         data: { session },
@@ -75,8 +64,6 @@ class AuthService {
 
       if (error) {
         console.error("AuthService: Error getting session:", error)
-      } else {
-        console.log("AuthService: Session retrieved:", !!session)
       }
 
       this.updateAuthState(session)
@@ -84,7 +71,6 @@ class AuthService {
       // Подписываемся на изменения аутентификации
       supabase.auth.onAuthStateChange(
         (event: AuthChangeEvent, session: Session | null) => {
-          console.log("Auth state changed:", event, session?.user?.email)
           this.updateAuthState(session)
         }
       )
@@ -157,30 +143,19 @@ class AuthService {
   }> {
     try {
       const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
-
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Failed to get user info:', errorText)
+        console.error("Failed to get user info:", errorText)
         return { success: false, error: `Failed to get user info: ${response.status}` }
       }
-
       const userInfo = await response.json()
-      console.log('User info received:', userInfo.email)
-      
-      return {
-        success: true,
-        userInfo
-      }
+      // удалён лишний console.log
+      return { success: true, userInfo }
     } catch (error) {
       console.error('Get user info error:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 
@@ -192,6 +167,7 @@ class AuthService {
     error?: string
   }> {
     try {
+      // удалён лишний console.log
       console.log('Creating manual session with Google user info...')
       
       // Создаем "фейковую" сессию для локального хранения состояния  
@@ -249,15 +225,11 @@ class AuthService {
 
       // Обновляем состояние аутентификации напрямую
       this.updateAuthState(session as any)
-
-      console.log('Manual session created successfully for user:', userInfo.email)
+      // удалён лишний console.log
       return { data: { session, user } }
-
     } catch (error) {
       console.error('Create manual session error:', error)
-      return {
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }
+      return { error: error instanceof Error ? error.message : 'Unknown error' }
     }
   }
 
@@ -266,8 +238,7 @@ class AuthService {
    */
   private async createUserInDatabase(userInfo: any, googleToken: string): Promise<void> {
     try {
-      console.log('Creating user in Supabase database...')
-      
+      // удалён лишний console.log
       const googleId = userInfo.id.toString()
       
       // Создаем административный клиент для обхода RLS
@@ -286,9 +257,8 @@ class AuthService {
         .select('*')
         .eq('preferences->>google_id', googleId)
         .single()
-      
       if (existingUser) {
-        console.log('User already exists, skipping creation')
+        // удалён лишний console.log
         return
       }
       
@@ -319,26 +289,23 @@ class AuthService {
       }
 
       // Создаем начальные квоты для пользователя с админским клиентом
-      const { error: quotaError } = await adminClient
-        .from('usage_quotas')
-        .insert({
-          id: crypto.randomUUID(), // UUID для primary key
-          user_id: userId, // Используем UUID
-          exports_used: 0,
-          exports_limit: 50, // Free plan limit
-          google_drive_uploads: 0,
-          period_start: new Date().toISOString(),
-          period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-        })
+      const { error: quotaError } = await adminClient.from("usage_quotas").insert({
+        id: crypto.randomUUID(), // UUID для primary key
+        user_id: userId, // Используем UUID
+        exports_used: 0,
+        exports_limit: 50, // Free plan limit
+        google_drive_uploads: 0,
+        period_start: new Date().toISOString(),
+        period_end: new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000
+        ).toISOString() // 30 days
+      })
 
       if (quotaError) {
-        console.warn('Warning creating usage quota:', quotaError)
+        console.warn("Warning creating usage quota:", quotaError)
       }
-
-      console.log('✅ User created in Supabase database:', userInfo.email)
-
     } catch (error) {
-      console.error('Failed to create user in database:', error)
+      console.error("Failed to create user in database:", error)
       // Не блокируем авторизацию, если создание в БД не удалось
     }
   }
@@ -356,18 +323,13 @@ class AuthService {
    */
   async signInWithGoogle(): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
-      console.log("AuthService: Starting Chrome Extension Google OAuth...")
-      
-      // Проверяем, что мы в Chrome расширении
+      // удалён лишний console.log
       if (!chrome?.identity?.launchWebAuthFlow) {
         console.error("Chrome Identity API not available")
         return { success: false, error: "Chrome Identity API not available" }
       }
-      
-      // Получаем OAuth URL от Supabase
       const chromeRedirectUri = this.getChromeExtensionRedirectUri()
-      console.log("Chrome redirect URI:", chromeRedirectUri)
-      
+      // удалён лишний console.log
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -377,32 +339,21 @@ class AuthService {
             "https://www.googleapis.com/auth/drive.file"
           ].join(" "),
           redirectTo: chromeRedirectUri,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent"
-          }
+          queryParams: { access_type: "offline", prompt: "consent" }
         }
       })
-
       if (error) {
         console.error("Supabase OAuth error:", error)
         return { success: false, error: error.message }
       }
-
       if (!data?.url) {
         console.error("No OAuth URL returned")
         return { success: false, error: "Failed to generate OAuth URL" }
       }
-
-      console.log("OAuth URL generated:", data.url)
-      
-      // Используем chrome.identity.launchWebAuthFlow для OAuth
+      // удалён лишний console.log
       const responseUrl = await new Promise<string>((resolve, reject) => {
         chrome.identity.launchWebAuthFlow(
-          {
-            url: data.url,
-            interactive: true
-          },
+          { url: data.url, interactive: true },
           (responseUrl) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
@@ -414,48 +365,30 @@ class AuthService {
           }
         )
       })
-
-      console.log("OAuth response URL:", responseUrl)
-      
-      // Извлекаем код авторизации из URL
       const url = new URL(responseUrl)
       const code = url.searchParams.get('code')
-      
       if (!code) {
         const error = url.searchParams.get('error')
         const errorDescription = url.searchParams.get('error_description')
         console.error("OAuth error in response:", error, errorDescription)
         return { success: false, error: error || "No authorization code received" }
       }
-
-      console.log("Authorization code received, exchanging for session...")
-      
-      // Обмениваем код на сессию через Supabase
+      // удалён лишний console.log
       const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
-      
       if (sessionError) {
         console.error("Failed to exchange code for session:", sessionError)
         return { success: false, error: sessionError.message }
       }
-
       if (!sessionData?.session) {
         console.error("No session data received")
         return { success: false, error: "Failed to create session" }
       }
-
-      console.log("Session created successfully!")
-      
-      // Обновляем состояние аутентификации
+      // удалён лишний console.log
       this.updateAuthState(sessionData.session)
-
       return { success: true, data: sessionData }
-
     } catch (error) {
       console.error("Chrome Extension Google OAuth error:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      }
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
     }
   }
 
@@ -464,46 +397,29 @@ class AuthService {
    */
   async signInWithGoogleChromeIdentity(): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
-      console.log("AuthService: Trying Chrome Identity API...")
-      
-      // Проверяем, что мы в Chrome расширении
+      // удалён лишний console.log
       if (!chrome?.identity?.getAuthToken) {
         console.error("Chrome Identity API not available")
         return { success: false, error: "Chrome Identity API not available" }
       }
-
-      // Используем встроенный Chrome OAuth2 (из manifest.json)
-      console.log("Using Chrome built-in OAuth2...")
       const token = await new Promise<string>((resolve, reject) => {
-        chrome.identity.getAuthToken(
-          { interactive: true },
-          (token) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message))
-            } else if (token) {
-              resolve(token)
-            } else {
-              reject(new Error("No token received"))
-            }
+        chrome.identity.getAuthToken({ interactive: true }, (token) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+          } else if (token) {
+            resolve(token)
+          } else {
+            reject(new Error("No token received"))
           }
-        )
+        })
       })
-
-      console.log("Google token received:", token ? "✅" : "❌")
-
-      // Получаем информацию о пользователе
       const userInfo = await this.getUserInfo(token)
       if (!userInfo.success) {
         console.error("Failed to get user info:", userInfo.error)
         return { success: false, error: userInfo.error }
       }
-
-      console.log("User info:", userInfo.userInfo)
-
-      // Создаем пользователя в базе данных
+      // удалён лишний console.log
       await this.createUserInDatabase(userInfo.userInfo, token)
-
-      // Создаем "фейковую" сессию для нашего состояния
       const fakeSession = {
         access_token: token,
         refresh_token: "",
@@ -518,19 +434,12 @@ class AuthService {
           }
         }
       }
-
-      // Обновляем состояние аутентификации
       this.updateAuthState(fakeSession as any)
-
-      console.log("Google OAuth successful!")
+      // удалён лишний console.log
       return { success: true, data: fakeSession }
-
     } catch (error) {
       console.error("Chrome Identity API error:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      }
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
     }
   }
 
@@ -582,7 +491,7 @@ class AuthService {
 
       if (error) {
         console.error("Sign out error:", error)
-        return { success: false, error: error.message }
+        return { error: error.message }
       }
 
       return { success: true }

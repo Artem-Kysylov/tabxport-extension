@@ -21,7 +21,8 @@ export const claudeDetectorImproved: PlatformDetector = {
 
   findTables: (): HTMLElement[] => {
     logger.debug("Starting Claude table detection (IMPROVED)")
-    console.log("TabXport Claude IMPROVED: Starting wrapper-aware table search")
+    // console.log("TabXport Claude IMPROVED: Starting wrapper-aware table search")
+    logger.info("TabXport Claude IMPROVED: Starting wrapper-aware table search");
 
     const candidates: TableCandidate[] = [];
     
@@ -36,22 +37,9 @@ export const claudeDetectorImproved: PlatformDetector = {
     
     // 4. Фильтруем wrapper'ы и дублирования
     const filteredCandidates = filterWrappersAndDuplicates(candidates);
-    
-    // 5. Финальная валидация
     const validTables = filteredCandidates
       .filter(candidate => candidate.confidence >= 0.6)
       .map(candidate => candidate.element as HTMLElement);
-    
-    console.log('🔍 Claude Improved: Анализ кандидатов');
-    candidates.forEach((candidate, i) => {
-      console.log(`${i + 1}. ${candidate.confidence.toFixed(2)} - ${candidate.reason}`, {
-        element: candidate.element,
-        isWrapper: candidate.isWrapper,
-        containedTables: candidate.containedTables.length
-      });
-    });
-    console.log(`✅ Итого найдено валидных таблиц: ${validTables.length} из ${candidates.length} кандидатов`);
-    
     return validTables;
   },
 
@@ -204,26 +192,17 @@ function analyzeTextTable(element: Element): { confidence: number; reason: strin
 
 function filterWrappersAndDuplicates(candidates: TableCandidate[]): TableCandidate[] {
   const filtered: TableCandidate[] = [];
-  
   for (const candidate of candidates) {
-    // Пропускаем wrapper'ы
     if (candidate.isWrapper) {
-      console.log(`🚫 Skipping wrapper with ${candidate.containedTables.length} contained tables:`, candidate.element);
       continue;
     }
-    
-    // Проверяем на дублирование с уже добавленными
     const isDuplicate = filtered.some(existing => {
       return areElementsEquivalent(candidate.element, existing.element);
     });
-    
     if (!isDuplicate) {
       filtered.push(candidate);
-    } else {
-      console.log(`🚫 Skipping duplicate:`, candidate.element);
     }
   }
-  
   return filtered;
 }
 
@@ -262,4 +241,4 @@ function isVisible(element: Element): boolean {
   }
   
   return true;
-} 
+}

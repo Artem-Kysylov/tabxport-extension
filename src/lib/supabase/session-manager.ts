@@ -23,11 +23,8 @@ export class SessionManager {
         expires_at: Date.now() + (session.expires_in || 3600) * 1000,
         user: session.user
       }
-
       await chrome.storage.local.set({ [this.STORAGE_KEY]: storedSession })
-      console.log('✅ Session saved to storage')
-
-      // Настраиваем автообновление токена за 5 минут до истечения
+      // удалён лишний console.log
       this.scheduleTokenRefresh(session.expires_in || 3600)
     } catch (error) {
       console.error('❌ Failed to save session:', error)
@@ -41,19 +38,14 @@ export class SessionManager {
     try {
       const result = await chrome.storage.local.get(this.STORAGE_KEY)
       const storedSession: StoredSession = result[this.STORAGE_KEY]
-
       if (!storedSession) {
-        console.log('📭 No stored session found')
+        // удалён лишний console.log
         return null
       }
-
-      // Проверяем, не истекла ли сессия
       if (Date.now() >= storedSession.expires_at) {
-        console.log('⏰ Session expired, attempting refresh...')
+        // удалён лишний console.log
         return await this.refreshSession(storedSession.refresh_token)
       }
-
-      // Сессия актуальна
       const session: Session = {
         access_token: storedSession.access_token,
         refresh_token: storedSession.refresh_token,
@@ -61,12 +53,8 @@ export class SessionManager {
         token_type: 'bearer',
         user: storedSession.user
       }
-
-      console.log('✅ Valid session loaded from storage')
-      
-      // Настраиваем автообновление
+      // удалён лишний console.log
       this.scheduleTokenRefresh(session.expires_in)
-      
       return session
     } catch (error) {
       console.error('❌ Failed to load session:', error)
@@ -79,24 +67,20 @@ export class SessionManager {
    */
   static async refreshSession(refreshToken: string): Promise<Session | null> {
     try {
-      console.log('🔄 Refreshing session...')
-      
+      // удалён лишний console.log
       const { data, error } = await supabase.auth.refreshSession({
         refresh_token: refreshToken
       })
-
       if (error) {
         console.error('❌ Token refresh failed:', error)
         await this.clearSession()
         return null
       }
-
       if (data.session) {
-        console.log('✅ Session refreshed successfully')
+        // удалён лишний console.log
         await this.saveSession(data.session)
         return data.session
       }
-
       return null
     } catch (error) {
       console.error('❌ Failed to refresh session:', error)
@@ -111,13 +95,11 @@ export class SessionManager {
   static async clearSession(): Promise<void> {
     try {
       await chrome.storage.local.remove(this.STORAGE_KEY)
-      
       if (this.refreshTimeout) {
         clearTimeout(this.refreshTimeout)
         this.refreshTimeout = null
       }
-      
-      console.log('🗑️ Session cleared from storage')
+      // удалён лишний console.log
     } catch (error) {
       console.error('❌ Failed to clear session:', error)
     }
@@ -130,20 +112,15 @@ export class SessionManager {
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout)
     }
-
-    // Обновляем токен за 5 минут до истечения (но не менее чем через 1 минуту)
     const refreshIn = Math.max(60, expiresIn - 300) * 1000
-    
     this.refreshTimeout = setTimeout(async () => {
-      console.log('⏰ Auto-refreshing token...')
+      // удалён лишний console.log
       const currentSession = await this.loadSession()
-      
       if (currentSession && currentSession.refresh_token) {
         await this.refreshSession(currentSession.refresh_token)
       }
     }, refreshIn)
-
-    console.log(`⏰ Token refresh scheduled in ${Math.floor(refreshIn / 1000 / 60)} minutes`)
+    // удалён лишний console.log
   }
 
   /**
@@ -161,4 +138,4 @@ export class SessionManager {
     const session = await this.loadSession()
     return session?.user || null
   }
-} 
+}

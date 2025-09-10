@@ -18,7 +18,6 @@ export const addRobotoCyrillicToJsPDF = (doc: any): void => {
     doc.addFileToVFS(fontFileName, base64)
     doc.addFont(fontFileName, ROBOTO_FONT_NAME, "normal")
     doc.addFont(fontFileName, ROBOTO_FONT_NAME, "bold")
-    console.log("TabXport: Roboto Cyrillic font registered for jsPDF")
   } catch (error) {
     console.error("TabXport: Failed to register Roboto Cyrillic font:", error)
   }
@@ -38,7 +37,6 @@ export const registerRobotoCyrillicOrFallback = (doc: any): string => {
     doc.addFont(fontFileName, ROBOTO_FONT_NAME, "bold")
     const list = typeof doc.getFontList === "function" ? doc.getFontList() : {}
     const ok = !!list && Object.prototype.hasOwnProperty.call(list, ROBOTO_FONT_NAME)
-    console.log("TabXport: Roboto Cyrillic font registered for jsPDF")
     return ok ? ROBOTO_FONT_NAME : "helvetica"
   } catch (error) {
     console.error("TabXport: Failed to register Roboto Cyrillic font:", error)

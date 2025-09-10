@@ -23,25 +23,14 @@ class GoogleDriveService {
    * Проверка и получение действующего Google токена через authService
    */
   private async getValidToken(): Promise<string | null> {
-    console.log("🔐 GoogleDriveService: Getting valid token via authService...")
-    
+    // удалены отладочные console.log
     try {
-      // Получаем токен из authService
       let token = authService.getGoogleToken()
-      console.log("📋 AuthService token status:", {
-        hasToken: !!token,
-        tokenLength: token?.length || 0
-      })
 
       if (!token) {
-        console.log("🔄 No token found, attempting refresh...")
         // Попытка обновить токен
         try {
           token = await authService.refreshGoogleToken()
-          console.log("✅ Token refresh result:", {
-            success: !!token,
-            newTokenLength: token?.length || 0
-          })
         } catch (error) {
           const categorizedError = logExtensionError(
             error as Error,
@@ -49,7 +38,7 @@ class GoogleDriveService {
           )
           
           if (categorizedError.type === 'AUTH_ERROR') {
-            console.log("📝 User needs to re-authenticate with Google Drive")
+            // пользователь должен переавторизоваться — подавляем лишний лог
           }
           
           return null
@@ -137,11 +126,9 @@ class GoogleDriveService {
       }
     }
 
-    // Перенесено сюда, чтобы было доступно и в catch
     let originalSize = 0
 
     try {
-      // Получаем ID папки TableXport
       const folderId = options.folderId || (await this.createTableXportFolder())
 
       const metadata = {
@@ -149,32 +136,28 @@ class GoogleDriveService {
         parents: folderId ? [folderId] : undefined
       }
 
-      // Подготавливаем multipart upload
       const delimiter = "-------314159265358979323846"
       const delimiter_line = `\r\n--${delimiter}\r\n`
       const close_delim = `\r\n--${delimiter}--`
 
       const contentType = options.mimeType
       
-      // 🔧 ИСПРАВЛЕНИЕ: Правильная обработка Blob данных
       let content: string | ArrayBuffer
       
       if (typeof options.content === "string") {
         content = options.content
         originalSize = content.length
-        console.log(`📄 String content: ${originalSize} characters`)
+        // удален console.log размера строкового контента
       } else {
         const blob = options.content as Blob
         originalSize = blob.size
         content = await blob.arrayBuffer()
-        console.log(`📦 Blob content: ${originalSize} bytes → ArrayBuffer: ${content.byteLength} bytes`)
+        // удален console.log размеров Blob/ArrayBuffer
       }
 
-      // Для multipart upload нужно правильно сформировать body
       let multipartRequestBody: string | Uint8Array
 
       if (typeof content === "string") {
-        // Текстовые файлы (CSV и т.д.)
         multipartRequestBody =
           delimiter_line +
           "Content-Type: application/json\r\n\r\n" +
@@ -184,7 +167,6 @@ class GoogleDriveService {
           content +
           close_delim
       } else {
-        // Бинарные файлы (XLSX, ZIP, PDF, DOCX) - НЕ используем строки!
         const encoder = new TextEncoder()
         
         const headerPart = 
@@ -196,12 +178,10 @@ class GoogleDriveService {
         
         const footerPart = close_delim
         
-        // Конвертируем заголовки в байты
         const headerBytes = encoder.encode(headerPart)
         const footerBytes = encoder.encode(footerPart)
         const contentBytes = new Uint8Array(content)
         
-        // Собираем multipart body как чистые байты БЕЗ строковых конвертаций
         const totalLength = headerBytes.length + contentBytes.length + footerBytes.length
         multipartRequestBody = new Uint8Array(totalLength)
         
@@ -212,7 +192,7 @@ class GoogleDriveService {
         offset += contentBytes.length
         multipartRequestBody.set(footerBytes, offset)
         
-        console.log(`🔧 Binary upload: header=${headerBytes.length} + content=${contentBytes.length} + footer=${footerBytes.length} = ${totalLength} bytes (NO STRING CONVERSIONS)`)
+        // удален console.log "Binary upload: ..."
       }
 
       const response = await fetch(`${this.uploadUrl}?uploadType=multipart`, {
@@ -228,7 +208,6 @@ class GoogleDriveService {
         const errorText = await response.text()
         const error = new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`)
         
-        // Log detailed error for debugging
         logExtensionError(
           error,
           "Google Drive file upload",
@@ -247,22 +226,10 @@ class GoogleDriveService {
 
       const result = await response.json()
 
-      // Генерируем webViewLink если его нет в ответе
       const webViewLink = result.webViewLink || `https://drive.google.com/file/d/${result.id}/view`
 
-      console.log("✅ Google Drive upload successful:", {
-        fileId: result.id,
-        name: result.name,
-        webViewLink: webViewLink,
-        originalWebViewLink: result.webViewLink,
-        generatedLink: !result.webViewLink,
-        uploadStats: {
-          originalSize,
-          uploadSize: typeof multipartRequestBody === 'string' ? multipartRequestBody.length : multipartRequestBody.byteLength,
-          contentType
-        }
-      })
-
+      // удален подробный console.log об успешной загрузке
+      
       return {
         success: true,
         fileId: result.id,

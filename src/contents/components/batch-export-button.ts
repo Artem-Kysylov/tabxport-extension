@@ -31,17 +31,25 @@ const showNotification = (
   type: "info" | "success" | "error"
 ): void => {
   // TODO: Implement proper notification system in Phase 2
-  console.log(`[${type.toUpperCase()}] ${message}`)
+  switch (type) {
+    case "error":
+      logger.error(message)
+      break
+    case "success":
+      logger.info(message)
+      break
+    default:
+      logger.info(message)
+  }
 }
 
 /**
  * Loads user settings from storage
  */
-const loadUserSettings = async (): Promise<UserSettings> => {
+async function loadUserSettings(): Promise<UserSettings> {
   try {
     const settings = await getUserSettings()
     
-    // Check Google Drive authentication if user prefers Google Drive
     if (settings.defaultDestination === "google_drive") {
       try {
         const authResult = await chrome.runtime.sendMessage({
@@ -49,7 +57,7 @@ const loadUserSettings = async (): Promise<UserSettings> => {
         })
         
         if (!authResult?.success || !authResult?.authState?.isAuthenticated || !authResult?.authState?.hasGoogleAccess) {
-          console.log("📋 Google Drive not authenticated for batch button, defaulting to download")
+          logger.debug("Google Drive not authenticated for batch button, defaulting to download")
           settings.defaultDestination = "download"
         }
       } catch (error) {
@@ -82,25 +90,19 @@ const handleBatchExport = async (): Promise<void> => {
   logger.debug(`Batch export clicked for ${buttonState.count} tables`)
 
   if (currentBatchResult && currentBatchResult.tables.length > 0) {
-    // Проверяем, нужна ли аутентификация для Google Drive
     if (currentSettings && currentSettings.defaultDestination === "google_drive") {
       try {
-        // Проверяем статус аутентификации
         const authResult = await chrome.runtime.sendMessage({
           type: "CHECK_AUTH_STATUS"
         })
         
-        // Если пользователь не авторизован или у него нет доступа к Google Drive
         if (!authResult?.success || 
             !authResult?.authState?.isAuthenticated || 
             !authResult?.authState?.hasGoogleAccess) {
           
-          console.log("📋 User not authenticated for Google Drive, showing auth modal")
+          logger.info("User not authenticated for Google Drive, showing auth modal")
           
-          // Импортируем функцию showAuthModal из export-button.ts
           const { showAuthModal } = await import("./export-button")
-          
-          // Показываем модальное окно аутентификации
           showAuthModal()
           return
         }
@@ -109,8 +111,6 @@ const handleBatchExport = async (): Promise<void> => {
       }
     }
     
-    // Если аутентификация не требуется или пользователь уже авторизован,
-    // показываем модальное окно пакетного экспорта
     showBatchExportModal(currentBatchResult)
   } else {
     showNotification("No tables available for batch export", "error")

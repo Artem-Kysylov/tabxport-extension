@@ -50,7 +50,7 @@ const Popup: React.FC = () => {
   }, [])
 
   const handleSettingsChange = (settings: UserSettings) => {
-    console.log("Settings updated:", settings)
+    // удален console.log "Settings updated"
     // TODO: Implement settings update through messaging service
   }
 
@@ -68,9 +68,9 @@ const Popup: React.FC = () => {
   }
 
   const handleAuthChange = (authState: any) => {
-    console.log("Auth state changed:", authState); // Добавим логирование для отладки
+    // удален console.log "Auth state changed"
     setIsAuthenticated(authState.isAuthenticated);
-    setAuthUser(authState.user); // Сохраняем данные пользователя
+    setAuthUser(authState.user);
   }
 
   const handleSignOut = async () => {

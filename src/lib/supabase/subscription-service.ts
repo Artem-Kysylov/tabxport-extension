@@ -517,7 +517,7 @@ export class SubscriptionService {
     message?: string
   }> {
     try {
-      console.log('📋 Canceling subscription for user:', userId.substring(0, 8) + "...")
+      // удалён лишний console.log: '📋 Canceling subscription for user: ...'
 
       // Вызываем Edge Function для отмены подписки
       const { data, error } = await this.supabase.functions.invoke('cancel-subscription', {
@@ -532,7 +532,7 @@ export class SubscriptionService {
         }
       }
 
-      console.log('✅ Subscription canceled successfully:', data)
+      // удалён лишний console.log: '✅ Subscription canceled successfully:'
       return { 
         success: true, 
         message: data?.message || 'Subscription canceled successfully'

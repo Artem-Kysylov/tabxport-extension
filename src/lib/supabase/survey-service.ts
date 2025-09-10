@@ -22,7 +22,7 @@ export class SurveyService {
    */
   async submitSurveyResponse(response: SurveyResponse): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('📧 Submitting survey response...', response)
+      // удалён лишний console.log: '📧 Submitting survey response...'
 
       // Получаем информацию о пользователе
       const authState = authService.getCurrentState()
@@ -50,7 +50,7 @@ export class SurveyService {
         return { success: false, error: error.message }
       }
 
-      console.log('✅ Survey response submitted successfully:', data)
+      // удалён лишний console.log: '✅ Survey response submitted successfully'
       return { success: true }
 
     } catch (error) {

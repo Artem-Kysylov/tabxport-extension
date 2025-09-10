@@ -92,34 +92,22 @@ export class ExportService {
     includeHeaders: boolean = true
   ): XLSX.WorkSheet {
     const data: string[][] = []
-
     if (includeHeaders && tableData.headers.length > 0) {
       data.push(tableData.headers)
     }
-
-    // Add regular table rows
     data.push(...tableData.rows)
 
-    // Add analytics summary rows if available
     if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
-      console.log("📊 ExportService: Adding analytics summary rows to worksheet")
-      
-      // Add empty row for separation
+      // удалён информационный лог про добавление summary rows
       data.push(new Array(tableData.headers.length).fill(""))
-      
-      // Add summary rows with analytics data
       data.push(...tableData.analytics.summaryRows)
-      
-      console.log(`📊 ExportService: Added ${tableData.analytics.summaryRows.length} summary rows`)
+      // удалён лог количества summary rows
     }
 
     const worksheet = XLSX.utils.aoa_to_sheet(data)
-
-    // Apply styling to summary rows if analytics data exists
     if (tableData.analytics?.summaryRows && tableData.analytics.summaryRows.length > 0) {
       this.applySummaryRowStyling(worksheet, tableData, includeHeaders)
     }
-
     return worksheet
   }
 
@@ -135,48 +123,26 @@ export class ExportService {
       const headerOffset = includeHeaders ? 1 : 0
       const dataRowsCount = tableData.rows.length
       const summaryRowsCount = tableData.analytics?.summaryRows?.length || 0
-      
-      // Calculate row indices for summary rows
-      const summaryStartRow = headerOffset + dataRowsCount + 1 // +1 for empty separator row
-      
-      console.log(`📊 ExportService: Applying styling to summary rows starting at row ${summaryStartRow}`)
-      
-      // Initialize worksheet style object if not exists
-      if (!worksheet['!rows']) {
-        worksheet['!rows'] = []
-      }
-      
-      // Apply bold formatting and borders to summary rows
+      const summaryStartRow = headerOffset + dataRowsCount + 1
+
+      // удалён информационный лог про начало стилизации
+
+      if (!worksheet['!rows']) worksheet['!rows'] = []
       for (let i = 0; i < summaryRowsCount; i++) {
         const rowIndex = summaryStartRow + i
-        
-        // Set row style properties
-        if (!worksheet['!rows'][rowIndex]) {
-          worksheet['!rows'][rowIndex] = {}
-        }
-        
-        // Apply styles to each cell in the summary row
+        if (!worksheet['!rows'][rowIndex]) worksheet['!rows'][rowIndex] = {}
         for (let col = 0; col < tableData.headers.length; col++) {
           const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: col })
-          
-          if (!worksheet[cellAddress]) {
-            worksheet[cellAddress] = { v: "", t: "s" }
-          }
-          
-          // Apply bold font and border styling
+          if (!worksheet[cellAddress]) worksheet[cellAddress] = { v: "", t: "s" }
           worksheet[cellAddress].s = {
             font: { bold: true },
-            border: {
-              top: { style: "medium", color: { rgb: "000000" } }
-            },
-            fill: {
-              fgColor: { rgb: "F0F0F0" }
-            }
+            border: { top: { style: "medium", color: { rgb: "000000" } } },
+            fill: { fgColor: { rgb: "F0F0F0" } }
           }
         }
       }
-      
-      console.log("✅ ExportService: Summary row styling applied successfully")
+
+      // удалён лог «успешно применено»
     } catch (error) {
       console.warn("⚠️ ExportService: Failed to apply summary row styling:", error)
     }
@@ -358,7 +324,7 @@ export class ExportService {
     options: ExportOptions
   ): Promise<ExportResult> {
     try {
-      console.log("📄 ExportService: Starting DOCX export...")
+      // удалён лог «Starting DOCX export...»
 
       // Create document header
       const title = tableData.chatTitle && 
@@ -485,7 +451,7 @@ export class ExportService {
     options: ExportOptions
   ): Promise<ExportResult> {
     try {
-      console.log("📄 ExportService: Starting PDF export...")
+      // удалён лог «Starting PDF export...»
 
       // Create PDF document
       const doc = new jsPDF({

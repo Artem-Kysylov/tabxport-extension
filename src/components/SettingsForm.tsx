@@ -45,11 +45,6 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
                              authResult?.authState?.isAuthenticated &&
                              authResult?.authState?.hasGoogleAccess
       
-      console.log("🔄 [SettingsForm] Auth state refreshed:", {
-        authResult,
-        isAuthenticated
-      })
-      
       setIsGoogleDriveAuthenticated(isAuthenticated)
       return isAuthenticated
     } catch (error) {
@@ -71,7 +66,6 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
         // If user prefers Google Drive but not authenticated or not premium, switch to download
         if (userSettings.defaultDestination === "google_drive" && (!isAuthenticated || !isPremium)) {
           userSettings.defaultDestination = "download"
-          console.log("📋 Google Drive not available (auth or premium), defaulting to download in settings")
         }
         
         // Check premium status
@@ -82,12 +76,12 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
           if (response.success && response.subscription) {
             const isPremiumUser = response.subscription.planType === 'pro'
             setIsPremium(isPremiumUser)
-            console.log('👑 User premium status:', isPremiumUser ? 'Premium' : 'Free')
+            // удален лишний console.log о премиум-статусе
             
             // If user prefers Google Sheets but is not premium, switch to Excel
             if (userSettings.defaultFormat === "google_sheets" && !isPremiumUser) {
               userSettings.defaultFormat = "xlsx"
-              console.log("📋 Google Sheets requires Premium, defaulting to Excel in settings")
+              // удален лишний console.log о переключении на Excel
             }
           }
         } catch (error) {
@@ -167,7 +161,6 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
     // Listen for auth state changes
     const handleMessage = (message: any): void => {
       if (message.type === "AUTH_STATE_CHANGED" || message.type === "GOOGLE_AUTH_SUCCESS") {
-        console.log("🔄 [SettingsForm] Auth state changed, refreshing...")
         refreshAuthState()
       }
     }
@@ -245,24 +238,22 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
               value,
               settings: newSettings
             })
-            console.log(`📤 Notified content script about ${key} change:`, value)
+            // удален лишний console.log об уведомлении
           }
         } catch (error) {
-          console.log("Content script not available (expected on non-supported sites)")
+          // удален лишний console.log об отсутствии content script
         }
       }
 
       // If Google Sheets format is selected, automatically set destination to google_drive
       if (key === "defaultFormat" && value === "google_sheets") {
-        // Автоматически переключаем на Google Drive при выборе Google Sheets
         if (settings.defaultDestination !== "google_drive") {
-          console.log("📊 Google Sheets selected, auto-switching to Google Drive destination")
+          // удален лишний console.log об автопереключении
           const updatedSettings = { ...newSettings, defaultDestination: "google_drive" as const }
           setSettings(updatedSettings)
           await saveUserSettings(updatedSettings)
           onSettingsChange?.(updatedSettings)
           
-          // Также уведомляем content script об изменении destination
           try {
             const [tab] = await chrome.tabs.query({
               active: true,
@@ -276,10 +267,10 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
                 value: "google_drive",
                 settings: updatedSettings
               })
-              console.log("🚀 Notified content script about auto-switched destination: google_drive")
+              // удален лишний console.log об уведомлении при автопереключении
             }
           } catch (error) {
-            console.log("Content script not available (expected on non-supported sites)")
+            // удален лишний console.log об отсутствии content script
           }
         }
       }
@@ -287,7 +278,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
       // If format changed and remember is enabled, save it
       if (key === "defaultFormat" && rememberFormat) {
         localStorage.setItem("tablexport-preferred-format", value)
-        console.log(`🧠 Auto-saved format preference: ${value}`)
+        // удален лишний console.log об автосохранении
       }
     } catch (error) {
       console.error("Failed to save settings:", error)
@@ -310,13 +301,10 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onSettingsChange }) => {
         "tablexport-preferred-format",
         settings.defaultFormat
       )
-      console.log(
-        `🧠 Enabled format memory with current format: ${settings.defaultFormat}`
-      )
+      // удален лишний console.log при включении памяти формата
     } else {
-      // Clear saved format when disabling
       localStorage.removeItem("tablexport-preferred-format")
-      console.log("🧠 Disabled format memory and cleared saved preference")
+      // удален лишний console.log при отключении памяти формата
     }
   }
 

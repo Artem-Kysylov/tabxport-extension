@@ -249,7 +249,7 @@ export const scanAndProcessTables = async (): Promise<void> => {
       console.log("🔬 ДИАГНОСТИКА: Сравнение алгоритмов обнаружения таблиц для Claude...")
       try {
         const diagnosis = await runCompleteTableDiagnosis()
-        console.log("📊 РЕЗУЛЬТАТ ДИАГНОСТИКИ:", diagnosis)
+        console.log("📊 РЕЗУЛЬТАТА ДИАГНОСТИКИ:", diagnosis)
         
         // Если есть расхождения, покажем дополнительную информацию
         if (diagnosis.discrepancies.extraInNew.length > 0) {

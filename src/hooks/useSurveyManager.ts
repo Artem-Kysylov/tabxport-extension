@@ -116,11 +116,11 @@ export const useSurveyManager = (): UseSurveyManagerReturn => {
 
     // Отправляем на сервер (асинхронно, не блокируем UI)
     try {
-      console.log('📧 Sending survey response to server...')
+      // удалён лишний console.log: '📧 Sending survey response to server...'
       const result = await surveyService.submitSurveyResponse(response)
       
       if (result.success) {
-        console.log('✅ Survey response sent successfully')
+        // удалён лишний console.log: '✅ Survey response sent successfully'
       } else {
         console.error('❌ Failed to send survey response:', result.error)
         // Не показываем ошибку пользователю, чтобы не портить UX

@@ -2,6 +2,7 @@ import { getUserSettings } from "../../lib/storage"
 import { ChromeMessage, ChromeMessageType, TableData } from "../../types"
 import { createTooltip } from "./tooltip"
 import { showLimitExceededWarning } from "./limit-warning"
+import { logger } from "../../utils/table-detection/common/logging";
 
 interface ButtonPosition {
   x: number

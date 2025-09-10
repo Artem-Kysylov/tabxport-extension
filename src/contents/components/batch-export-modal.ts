@@ -395,18 +395,13 @@ const attachEventListeners = (): void => {
       const target = e.target as HTMLInputElement
       modalState.config.format = target.value as ExportFormat
       
-      // For Google Sheets, only combined mode is allowed
       if (modalState.config.format === 'google_sheets') {
         modalState.config.exportMode = "combined"
-        console.log('🔄 Switched to combined mode for Google Sheets format')
         // Automatically switch to Google Drive destination for Google Sheets
         if (modalState.config.destination !== 'google_drive') {
           modalState.config.destination = 'google_drive'
-          console.log('🔄 Automatically switched to Google Drive for Google Sheets format')
         }
-      }
-      // Reset to separate mode if format doesn't support combined
-      else if (
+      } else if (
         modalState.config.exportMode === "combined" &&
         !EXPORT_FORMATS[modalState.config.format].supportsCombined
       ) {
@@ -425,7 +420,6 @@ const attachEventListeners = (): void => {
     radio.addEventListener("change", (e) => {
       const target = e.target as HTMLInputElement
       modalState.config.destination = target.value as "download" | "google_drive"
-      console.log(`🎯 Destination changed to: ${modalState.config.destination}`)
       updateModalContent(modalState, attachEventListeners).catch(console.error)
     })
   })
@@ -523,13 +517,9 @@ const attachEventListeners = (): void => {
       }
     }
     modalState.config.analytics.enabled = isEnabled
-    
-    // If disabling analytics, clear all summary types
     if (!isEnabled) {
       modalState.config.analytics.summaryTypes = []
     }
-    
-    console.log(`📊 Analytics ${isEnabled ? "enabled" : "disabled"}`)
     updateModalContent(modalState, attachEventListeners).catch(console.error)
   })
 

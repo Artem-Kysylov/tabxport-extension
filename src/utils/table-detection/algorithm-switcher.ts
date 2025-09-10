@@ -57,7 +57,6 @@ let currentConfig: AlgorithmConfig = {
 export const setDetectionMode = (mode: DetectionMode): void => {
   currentConfig.mode = mode
   logger.debug(`Detection mode changed to: ${mode}`)
-  console.log(`TabXport Algorithm Switcher: Mode changed to ${mode}`)
 }
 
 /**
@@ -73,7 +72,6 @@ export const getDetectionMode = (): DetectionMode => {
 export const updateConfig = (config: Partial<AlgorithmConfig>): void => {
   currentConfig = { ...currentConfig, ...config }
   logger.debug("Algorithm configuration updated:", currentConfig)
-  console.log("TabXport Algorithm Switcher: Configuration updated:", currentConfig)
 }
 
 /**
@@ -101,13 +99,11 @@ export const smartTableDetection = async (): Promise<{
     newTime?: number
     improvedTime?: number
   } = {}
-  
   const currentUrl = window.location.href
   const isClaudeAI = currentUrl.includes("claude.ai")
-  
+
   logger.debug(`Smart table detection starting for URL: ${currentUrl}`)
-  console.log(`TabXport Smart Detection: Starting detection, mode: ${currentConfig.mode}`)
-  
+
   switch (currentConfig.mode) {
     case "legacy-only":
       return await runLegacyOnly(performance)
@@ -139,14 +135,7 @@ const runLegacyOnly = async (performance: any): Promise<any> => {
   const startTime = Date.now()
   const elements = findAllTables()
   performance.oldTime = Date.now() - startTime
-  
-  console.log(`TabXport Legacy: Found ${elements.length} elements in ${performance.oldTime}ms`)
-  
-  return {
-    elements,
-    mode: "legacy-only" as DetectionMode,
-    performance
-  }
+  return { elements, mode: "legacy-only" as DetectionMode, performance }
 }
 
 /**
@@ -156,16 +145,8 @@ const runNewOnly = async (performance: any): Promise<any> => {
   const startTime = Date.now()
   const batchResult = await detectAllTables()
   performance.newTime = Date.now() - startTime
-  
   const elements = batchResult.tables.map(t => t.element)
-  console.log(`TabXport New: Found ${elements.length} elements in ${performance.newTime}ms`)
-  
-  return {
-    elements,
-    batchResult: batchResult.tables,
-    mode: "new-only" as DetectionMode,
-    performance
-  }
+  return { elements, batchResult: batchResult.tables, mode: "new-only" as DetectionMode, performance }
 }
 
 /**
@@ -175,14 +156,7 @@ const runImprovedOnly = async (performance: any): Promise<any> => {
   const startTime = Date.now()
   const elements = claudeDetectorImproved.findTables()
   performance.improvedTime = Date.now() - startTime
-  
-  console.log(`TabXport Improved: Found ${elements.length} elements in ${performance.improvedTime}ms`)
-  
-  return {
-    elements,
-    mode: "improved-only" as DetectionMode,
-    performance
-  }
+  return { elements, mode: "improved-only" as DetectionMode, performance }
 }
 
 /**
@@ -190,38 +164,22 @@ const runImprovedOnly = async (performance: any): Promise<any> => {
  */
 const runHybrid = async (performance: any): Promise<any> => {
   const isClaudeAI = window.location.href.includes("claude.ai")
-  
-  // Run both algorithms in parallel
   const [legacyResult, newResult, improvedResult] = await Promise.all([
     runLegacyOnly({}),
     runNewOnly({}),
     isClaudeAI ? runImprovedOnly({}) : Promise.resolve(null)
   ])
-  
   performance.oldTime = legacyResult.performance.oldTime
   performance.newTime = newResult.performance.newTime
-  if (improvedResult) {
-    performance.improvedTime = improvedResult.performance.improvedTime
-  }
-  
-  // Merge results with deduplication
+  if (improvedResult) performance.improvedTime = improvedResult.performance.improvedTime
+
   const allElements = [
     ...legacyResult.elements,
     ...newResult.elements,
     ...(improvedResult ? improvedResult.elements : [])
   ]
-  
   const uniqueElements = deduplicateElements(allElements)
-  
-  console.log(`TabXport Hybrid: Merged ${allElements.length} → ${uniqueElements.length} unique elements`)
-  console.log(`TabXport Hybrid: Performance - Legacy: ${performance.oldTime}ms, New: ${performance.newTime}ms${performance.improvedTime ? `, Improved: ${performance.improvedTime}ms` : ''}`)
-  
-  return {
-    elements: uniqueElements,
-    batchResult: newResult.batchResult,
-    mode: "hybrid" as DetectionMode,
-    performance
-  }
+  return { elements: uniqueElements, batchResult: newResult.batchResult, mode: "hybrid" as DetectionMode, performance }
 }
 
 /**
@@ -229,23 +187,13 @@ const runHybrid = async (performance: any): Promise<any> => {
  */
 const runAuto = async (performance: any, isClaudeAI: boolean): Promise<any> => {
   if (isClaudeAI && currentConfig.claude.useImproved) {
-    console.log("TabXport Auto: Using improved Claude algorithm")
-    
     const result = await runImprovedOnly(performance)
-    
-    // If improved algorithm finds no tables and fallback is enabled, try legacy
     if (result.elements.length === 0 && currentConfig.claude.fallbackToOld) {
-      console.log("TabXport Auto: Improved found no tables, falling back to legacy")
+      console.warn("TabXport: Improved mode only available for Claude, falling back to new algorithm")
       const fallbackResult = await runLegacyOnly({})
       performance.oldTime = fallbackResult.performance.oldTime
-      
-      return {
-        elements: fallbackResult.elements,
-        mode: "auto" as DetectionMode,
-        performance
-      }
+      return { elements: fallbackResult.elements, mode: "auto" as DetectionMode, performance }
     }
-    
     return { ...result, mode: "auto" as DetectionMode }
   } else {
     // For non-Claude sites or when improved is disabled, use new algorithm
@@ -376,4 +324,4 @@ export const testAllAlgorithms = async (): Promise<{
   console.log("TabXport Testing: Algorithm comparison completed:", result.comparison)
   
   return result
-} 
+}

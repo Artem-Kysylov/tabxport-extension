@@ -54,8 +54,6 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
     // Слушаем сообщения об успешной авторизации
     const messageListener = (message: any) => {
       if (message.type === "AUTH_SUCCESS") {
-        console.log("✅ Received AUTH_SUCCESS message:", message)
-        
         // Немедленно обновляем состояние, если есть данные пользователя
         if (message.user) {
           const newAuthState: AuthState = {
@@ -71,7 +69,6 @@ export const AuthStatus: React.FC<AuthStatusProps> = ({ onAuthChange }) => {
             hasGoogleAccess: !!message.user.provider_token
           }
           
-          console.log("🔄 Updating auth state from message:", newAuthState)
           setAuthState(newAuthState)
           onAuthChange?.(newAuthState)
         }

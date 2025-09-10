@@ -285,10 +285,11 @@ class UserService {
   /**
    * Проверка, нужно ли показать уведомление о лимитах
    */
+  // method shouldShowLimitWarning(quota)
   shouldShowLimitWarning(quota: UsageQuota): boolean {
-    // TESTING MODE: Never show limit warnings
-    console.log("🧪 TESTING MODE: Hiding limit warnings for testing")
-    return false
+  // TESTING MODE: Never show limit warnings
+  // удален лишний console.log тестового режима
+  return false
 
     // Original warning logic commented out for testing
     /*
@@ -303,10 +304,11 @@ class UserService {
   /**
    * Получение сообщения о статусе использования
    */
+  // method getUsageMessage(quota)
   getUsageMessage(quota: UsageQuota): string {
-    // TESTING MODE: Always show unlimited access message
-    console.log("🧪 TESTING MODE: Showing unlimited access message")
-    return "🧪 ТЕСТОВЫЙ РЕЖИМ: Неограниченные экспорты ✨"
+  // TESTING MODE: Always show unlimited access message
+  // удален лишний console.log тестового режима
+  return "🧪 ТЕСТОВЫЙ РЕЖИМ: Неограниченные экспорты ✨"
 
     // Original usage message logic commented out for testing
     /*

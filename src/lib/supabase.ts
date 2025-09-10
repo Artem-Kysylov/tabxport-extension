@@ -10,9 +10,7 @@ function createSupabaseClient(): SupabaseClient<Database> {
 const supabaseUrl = process.env.PLASMO_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.PLASMO_PUBLIC_SUPABASE_ANON_KEY
 
-  console.log('🔧 Creating Supabase client...')
-  console.log('- URL:', supabaseUrl ? '✅ Set' : '❌ Missing')
-  console.log('- Key:', supabaseAnonKey ? '✅ Set' : '❌ Missing')
+  // удалены console.log "Creating Supabase client..." и проверка переменных
 
 if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase environment variables. Please check .env file.")
@@ -24,7 +22,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: "pkce" // Рекомендуется для безопасности
+    flowType: "pkce"
   },
   global: {
     headers: {

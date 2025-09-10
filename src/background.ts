@@ -25,8 +25,6 @@ const newExportService = new ExportService()
 // Добавляем отсутствующую функцию tryAlternativeDownload
 const tryAlternativeDownload = async (downloadUrl: string, filename: string): Promise<void> => {
   try {
-    console.log("🔄 Background: Trying alternative download method...")
-    
     // Создаем временную ссылку для скачивания
     const link = document.createElement('a')
     link.href = downloadUrl
@@ -37,15 +35,12 @@ const tryAlternativeDownload = async (downloadUrl: string, filename: string): Pr
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    
-    console.log("✅ Background: Alternative download method completed")
   } catch (error) {
     console.error("❌ Background: Alternative download method failed:", error)
     
     // Последняя попытка - открыть URL в новой вкладке
     try {
       await chrome.tabs.create({ url: downloadUrl })
-      console.log("✅ Background: Opened download URL in new tab")
     } catch (tabError) {
       console.error("❌ Background: Failed to open download URL in new tab:", tabError)
     }
@@ -55,13 +50,11 @@ const tryAlternativeDownload = async (downloadUrl: string, filename: string): Pr
 // Обработчик сообщений от content scripts
 chrome.runtime.onMessage.addListener(
   (message: ChromeMessage, sender, sendResponse) => {
-    console.log("Background: Received message", message.type)
     
     // Проверка безопасности: принимаем сообщения от расширения и content scripts
     if (sender.origin && !sender.origin.startsWith(`chrome-extension://${chrome.runtime.id}`)) {
       // Разрешаем сообщения от content scripts (они не имеют sender.origin или имеют origin веб-страницы)
       if (sender.tab && sender.tab.url) {
-        console.log("Background: Message from content script on:", sender.tab.url)
       } else {
         console.warn("Background: Rejected message from untrusted origin:", sender.origin)
         sendResponse({ error: "Untrusted origin" })
@@ -150,14 +143,6 @@ const handleTableExport = async (
   payload: any,
   sendResponse: (response: any) => void
 ): Promise<void> => {
-  console.log("🔍 Background: Received message EXPORT_TABLE")
-  console.log("🔍 Background: Payload:", { 
-    hasTableData: !!payload.tableData, 
-    hasOptions: !!payload.options,
-    destination: payload.options?.destination,
-    format: payload.options?.format
-  })
-  
   try {
     const { tableData, options } = payload
     const platform = tableData?.source || "unknown"
@@ -171,7 +156,6 @@ const handleTableExport = async (
       return
     }
 
-    // Проверяем авторизацию
     const authState = authService.getCurrentState()
     if (!authState.isAuthenticated || !authState.user) {
       console.error("❌ Background: User not authenticated")
@@ -183,62 +167,12 @@ const handleTableExport = async (
     }
 
     const userId = authState.user.id
-
-    // Нормализуем destination для совместимости
     let normalizedDestination = options.destination
     if (options.destination === "google-drive") {
       normalizedDestination = "google_drive"
     }
 
-    console.log("🔍 Background: Processing export:", {
-      destination: normalizedDestination,
-      format: options.format,
-      platform,
-      userId: userId.substring(0, 8) + "..."
-    })
-
-    // === Проверка лимитов отключена: экспорт всегда разрешен ===
-    console.log("ℹ️ Background: Export limit checks are disabled (free & unlimited mode).")
-    // Ранее здесь блокировался экспорт при исчерпании лимитов:
-    /*
-    try {
-      const limitCheck = await userService.checkExportLimits(userId, normalizedDestination)
-      console.log("🔒 Background: Limit check:", limitCheck)
-
-      if (!limitCheck.canExport) {
-        console.error("❌ Background: Export blocked by daily limit")
-        sendResponse({
-          success: false,
-          error: limitCheck.limitMessage || "Daily export limit exceeded",
-          limitExceeded: true,
-          remaining: limitCheck.remainingExports
-        })
-        return
-      }
-
-      if (normalizedDestination === "google_drive" && !limitCheck.canExportToGoogleDrive) {
-        console.error("❌ Background: Google Drive export blocked by plan restrictions")
-        sendResponse({
-          success: false,
-          error: limitCheck.limitMessage || "Google Drive export is available only for Pro subscribers.",
-          limitExceeded: true
-        })
-        return
-      }
-    } catch (limitError) {
-      console.error("❌ Background: Failed to check export limits:", limitError)
-      sendResponse({
-        success: false,
-        error: "Failed to check export limits. Please try again later."
-      })
-      return
-    }
-    */
-
-    // Обработка экспорта в Google Drive
     if (normalizedDestination === "google_drive") {
-      console.log("📤 Background: Starting Google Drive export...")
-      
       if (!authState.hasGoogleAccess) {
         console.error("❌ Background: No Google access")
         sendResponse({
@@ -247,11 +181,8 @@ const handleTableExport = async (
         })
         return
       }
-
-      // Очистка данных таблицы
+      // Очистка данных
       const cleanedTableData = cleanTableData(tableData)
-      
-      // Экспорт в Google Drive
       const exportResult = await newExportService.exportTable(cleanedTableData, {
         ...options,
         destination: normalizedDestination,
@@ -263,17 +194,9 @@ const handleTableExport = async (
         }
       })
 
-      console.log("🔍 Background: Google Drive export result:", {
-        success: exportResult.success,
-        hasGoogleDriveLink: !!exportResult.googleDriveLink,
-        error: exportResult.error
-      })
-
       if (exportResult.success) {
-        // Увеличиваем счетчик экспортов
         try {
           await userService.incrementExportCount(userId)
-          console.log("✅ Background: Export count incremented for Google Drive")
         } catch (countError) {
           console.error("❌ Background: Failed to increment export count:", countError)
         }
@@ -284,7 +207,6 @@ const handleTableExport = async (
           exportId: exportResult.exportId
         })
 
-        // Показ уведомления
         chrome.notifications.create({
           type: "basic",
           iconUrl: "/icon48.plasmo.aced7582.png",
@@ -299,50 +221,28 @@ const handleTableExport = async (
         })
       }
     } else {
-      // Обработка локального скачивания
-      console.log("📥 Background: Starting local download export...")
-      
-      // Очистка данных таблицы
+      // Локальное скачивание
       const cleanedTableData = cleanTableData(tableData)
-      
-      // Экспорт таблицы через ExportService
       const result: ExportResult = await newExportService.exportTable(cleanedTableData, options)
-      console.log("🔍 Background: Download export result:", {
-        success: result.success,
-        hasDownloadUrl: !!result.downloadUrl,
-        filename: result.filename,
-        error: result.error
-      })
 
       if (result.success && result.downloadUrl) {
-        // Увеличиваем счетчик экспортов
         try {
           await userService.incrementExportCount(userId)
-          console.log("✅ Background: Export count incremented for download")
         } catch (countError) {
           console.error("❌ Background: Failed to increment export count:", countError)
         }
 
-        // Скачивание файла через Chrome Downloads API
-        console.log("🔍 Background: Starting download with Chrome Downloads API")
-        
         try {
           const downloadId = await chrome.downloads.download({
             url: result.downloadUrl,
             filename: result.filename,
             saveAs: false
           })
-          
-          console.log("✅ Background: Download initiated successfully, ID:", downloadId)
-          
-          // Проверяем статус скачивания
           setTimeout(async () => {
             try {
               const downloads = await chrome.downloads.search({ id: downloadId })
               if (downloads.length > 0) {
                 const download = downloads[0]
-                console.log("🔍 Background: Download status:", download.state)
-                
                 if (download.state === 'interrupted' || download.error) {
                   console.error("❌ Background: Download failed:", download.error)
                   if (result.downloadUrl && result.filename) {
@@ -354,7 +254,6 @@ const handleTableExport = async (
               console.error("❌ Background: Error checking download status:", statusError)
             }
           }, 2000)
-          
         } catch (downloadError) {
           console.error("❌ Background: Chrome Downloads API failed:", downloadError)
           if (result.downloadUrl && result.filename) {
@@ -362,16 +261,13 @@ const handleTableExport = async (
           }
         }
 
-        // Сохранение времени последнего экспорта
         await saveLastExportTime()
-
         sendResponse({
           success: true,
           filename: result.filename,
           analyticsApplied: result.analyticsApplied
         })
 
-        // Показ уведомления
         const analyticsMessage = result.analyticsApplied ? " with analytics" : ""
         chrome.notifications.create({
           type: "basic",
@@ -434,13 +330,8 @@ const handleCheckSubscription = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("Background: Checking subscription status...")
-    
-    // Проверяем авторизацию пользователя
     const authState = authService.getCurrentState()
     if (!authState.isAuthenticated || !authState.user) {
-      console.log("Background: User not authenticated, returning free plan")
-      // Возвращаем базовую подписку для неавторизованных пользователей
       const freeSubscription = {
         planType: "free",
         exportsLimit: 5,
@@ -452,27 +343,17 @@ const handleCheckSubscription = async (
     }
 
     const userId = authState.user.id
-    console.log("Background: Getting subscription for user:", userId.substring(0, 8) + "...")
 
-    // Создаем экземпляр SubscriptionService
     const subscriptionService = new SubscriptionService(
       process.env.PLASMO_PUBLIC_SUPABASE_URL!,
       process.env.PLASMO_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    // Получаем актуальные данные подписки из Supabase
     const { subscription, usage } = await subscriptionService.getUserSubscription(userId)
     
-    console.log("Background: Subscription data:", {
-      planType: subscription.plan_type,
-      status: subscription.status,
-      exportsToday: usage.exports_today || 0
-    })
-
-    // Формируем ответ в формате, ожидаемом компонентами
     const subscriptionResponse = {
       planType: subscription.plan_type,
-      exportsLimit: subscription.plan_type === "free" ? 5 : -1, // Free: 5/день, Pro: unlimited
+      exportsLimit: subscription.plan_type === "free" ? 5 : -1,
       exportsUsed: usage.exports_today || 0,
       isAuthenticated: true,
       status: subscription.status
@@ -481,17 +362,14 @@ const handleCheckSubscription = async (
     sendResponse({ success: true, subscription: subscriptionResponse })
   } catch (error) {
     console.error("Background: Check subscription error:", error)
-    
-    // В случае ошибки возвращаем базовую подписку
     const fallbackSubscription = {
       planType: "free",
       exportsLimit: 5,
       exportsUsed: 0,
       isAuthenticated: false
     }
-    
     sendResponse({
-      success: true, // Возвращаем success: true с fallback данными
+      success: true,
       subscription: fallbackSubscription
     })
   }
@@ -502,34 +380,16 @@ const handleCheckAuthStatus = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("Background: Checking auth status...")
-    
-    // Приоритет authService (основной)
+    // удалены console.log состояний
     const authState = authService.getCurrentState()
-    console.log("Background: AuthService state:", authState)
-    
-    // Проверяем сессию через SessionManager (дополнительно)
     const isSessionAuthenticated = await SessionManager.isAuthenticated()
     const sessionUser = await SessionManager.getCurrentUser()
-    
-    console.log("Background: SessionManager state:", { 
-      isSessionAuthenticated, 
-      sessionUser: !!sessionUser 
-    })
-    
-    // Комбинируем результаты - приоритет у authService
     const finalAuthState = {
       isAuthenticated: authState.isAuthenticated || isSessionAuthenticated,
       user: authState.user || sessionUser,
       hasGoogleAccess: authState.hasGoogleAccess
     }
-    
-    console.log("Background: Final auth state:", finalAuthState)
-    
-    sendResponse({ 
-      success: true, 
-      authState: finalAuthState
-    })
+    sendResponse({ success: true, authState: finalAuthState })
   } catch (error) {
     console.error("Check auth status error:", error)
     sendResponse({
@@ -542,41 +402,32 @@ const handleCheckAuthStatus = async (
 // Проверка и уведомление об успешной авторизации
 const checkAndNotifyAuthSuccess = async (): Promise<void> => {
   try {
-    console.log("Checking auth status after OAuth...")
-    
-    // Принудительно обновляем сессию
+    // удален console.log "Checking auth status after OAuth..."
     await supabase.auth.refreshSession()
-    
     const { data: { session }, error } = await supabase.auth.getSession()
-    console.log("Auth check result:", { session: !!session, error })
-    
+    // удалены отладочные console.log результата
     if (session && session.user) {
-      console.log("✅ User successfully authenticated:", session.user.email)
-      
-      // Уведомляем popup об успешной авторизации
+      // удален console.log об успешной авторизации
       try {
         await chrome.runtime.sendMessage({ 
           type: "AUTH_SUCCESS", 
           user: session.user 
         })
-        console.log("AUTH_SUCCESS message sent to popup")
+        // удален console.log "AUTH_SUCCESS message sent..."
       } catch (msgError) {
-        console.log("Failed to send AUTH_SUCCESS message:", msgError)
+        console.warn("Failed to send AUTH_SUCCESS message:", msgError)
       }
     } else {
-      console.log("❌ Authentication failed or incomplete")
-      
-      // Альтернативная проверка через authService
+      // удален console.log "Authentication failed..."
       setTimeout(() => {
         const authState = authService.getCurrentState()
-        console.log("AuthService state check:", authState)
-        
+        // удален console.log состояния authService
         if (authState.isAuthenticated && authState.user) {
-          console.log("✅ User authenticated via AuthService:", authState.user.email)
+          // удален console.log об успешной аутентификации
           chrome.runtime.sendMessage({ 
             type: "AUTH_SUCCESS", 
             user: authState.user 
-          }).catch(err => console.log("Message send failed:", err))
+          }).catch(err => console.warn("Message send failed:", err))
         }
       }, 2000)
     }
@@ -590,7 +441,6 @@ const handleGoogleSignIn = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    // Проверяем, настроен ли Google OAuth
     const googleClientId = process.env.PLASMO_PUBLIC_GOOGLE_CLIENT_ID
     if (!googleClientId || googleClientId === "your_google_client_id_here") {
       console.error("Google OAuth not configured")
@@ -601,10 +451,8 @@ const handleGoogleSignIn = async (
       return
     }
 
-    // Проверяем, может пользователь уже авторизован
     const authState = authService.getCurrentState()
     if (authState.isAuthenticated) {
-      console.log("✅ User is already authenticated, skipping OAuth")
       sendResponse({ 
         success: true, 
         message: "User is already authenticated",
@@ -613,64 +461,38 @@ const handleGoogleSignIn = async (
       return
     }
 
-    console.log("🔄 Starting web-based OAuth flow...")
-    
-    // Используем обычный веб-OAuth без chrome.identity
+    // удалены отладочные логи начала OAuth
     const result = await authService.signInWithGoogle()
-    
-    console.log("🔍 OAuth result:", result)
-    
+    // удалены console.log результата
+
     if (result.success) {
       if (result.data?.url) {
-        console.log("Opening OAuth URL in new tab:", result.data.url)
-      
-      // Открываем OAuth в новой вкладке
-      const tab = await chrome.tabs.create({ url: result.data.url })
-      console.log("OAuth tab created:", tab.id)
-      
-      // Отвечаем сразу, что OAuth запущен
-      sendResponse({ 
-        success: true, 
-        message: "OAuth started. Please complete authorization in the new tab." 
-      })
-      
-      // Мониторим вкладку и проверяем авторизацию
-      const checkAuthInterval = setInterval(async () => {
-        try {
-          // Проверяем, существует ли еще вкладка
-          const tabInfo = await chrome.tabs.get(tab.id!)
-          
-          // Если вкладка все еще открыта, проверяем URL
-          if (tabInfo && tabInfo.url) {
-            // Если пользователь вернулся на localhost (успешная авторизация)
-            if (tabInfo.url.includes('localhost:3000')) {
-              console.log("OAuth completed - user redirected to localhost")
-              clearInterval(checkAuthInterval)
-              
-              // Закрываем вкладку
-              chrome.tabs.remove(tab.id!)
-              
-              // Проверяем авторизацию через небольшую задержку
-              setTimeout(async () => {
-                await checkAndNotifyAuthSuccess()
-              }, 2000)
+        const tab = await chrome.tabs.create({ url: result.data.url })
+        const checkAuthInterval = setInterval(async () => {
+          try {
+            const tabInfo = await chrome.tabs.get(tab.id!)
+            if (tabInfo && tabInfo.url) {
+              if (tabInfo.url.includes('localhost:3000')) {
+                clearInterval(checkAuthInterval)
+                chrome.tabs.remove(tab.id!)
+                setTimeout(async () => {
+                  await checkAndNotifyAuthSuccess()
+                }, 2000)
+              }
             }
+          } catch (error) {
+            clearInterval(checkAuthInterval)
+            setTimeout(async () => {
+              await checkAndNotifyAuthSuccess()
+            }, 1000)
           }
-        } catch (error) {
-          // Вкладка закрыта пользователем
-          console.log("OAuth tab was closed")
-          clearInterval(checkAuthInterval)
-          
-          // Проверяем, возможно авторизация все же прошла
-          setTimeout(async () => {
-            await checkAndNotifyAuthSuccess()
-          }, 1000)
-        }
-      }, 1000)
-      
+        }, 1000)
+
+        sendResponse({ 
+          success: true, 
+          message: "OAuth started. Please complete authorization in the new tab." 
+        })
       } else {
-        // OAuth уже завершен успешно, но без URL (пользователь уже авторизован)
-        console.log("✅ OAuth completed successfully without new URL")
         sendResponse({ 
           success: true, 
           message: "Authentication completed successfully" 
@@ -678,7 +500,6 @@ const handleGoogleSignIn = async (
       }
     } else {
       console.error("❌ Failed to get OAuth URL:", result.error)
-      console.log("🔍 Full result object:", result)
       sendResponse({
         success: false,
         error: result.error || "Failed to initiate Google sign in"
@@ -716,10 +537,8 @@ const handleSignOut = async (
 
 // Обработчик установки расширения
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log("TableXport: Extension installed", details.reason)
-
+  // удален console.log "Extension installed"
   if (details.reason === "install") {
-    // Показ welcome уведомления
     chrome.notifications.create({
       type: "basic",
       iconUrl: "/icon48.plasmo.aced7582.png",
@@ -748,9 +567,7 @@ const handleOAuthSuccess = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("🎉 OAuth Success received:", sessionData)
-    
-    // Создаем сессию в формате Supabase
+    // удален console.log "OAuth Success received"
     const session = {
       access_token: sessionData.access_token,
       refresh_token: sessionData.refresh_token || "",
@@ -765,28 +582,20 @@ const handleOAuthSuccess = async (
         }
       }
     }
-    
-    // Сохраняем сессию через SessionManager (автоматически настраивает refresh)
     await SessionManager.saveSession(session as any)
-    
-    // Обновляем состояние в Supabase
     try {
       await supabase.auth.setSession(session as any)
     } catch (setError) {
       console.warn("Failed to set session via Supabase, continuing anyway:", setError)
     }
-    
-    console.log("✅ Auth state updated successfully")
+    // удален console.log "Auth state updated successfully"
     sendResponse({ success: true })
-    
-    // Уведомляем popup об успешной авторизации
     setTimeout(() => {
       chrome.runtime.sendMessage({ 
         type: "AUTH_SUCCESS", 
         user: session.user 
-      }).catch(err => console.log("Failed to send AUTH_SUCCESS:", err))
+      }).catch(err => console.warn("Failed to send AUTH_SUCCESS:", err))
     }, 500)
-    
   } catch (error) {
     console.error("Error handling OAuth success:", error)
     sendResponse({ 
@@ -808,13 +617,11 @@ const handleOAuthError = async (
     error: error,
     errorDescription: errorDescription 
   })
-  
-  // Уведомляем popup об ошибке
   chrome.runtime.sendMessage({ 
     type: "AUTH_ERROR", 
     error: error,
     errorDescription: errorDescription
-  }).catch(err => console.log("Failed to send AUTH_ERROR:", err))
+  }).catch(err => console.warn("Failed to send AUTH_ERROR:", err))
 }
 
 // Обработка authorization code
@@ -823,24 +630,19 @@ const handleOAuthCode = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("🔄 Processing authorization code...")
-    
-    // Обмениваем code на session через Supabase
+    // удален console.log "Processing authorization code..."
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-    
     if (error) {
       console.error("Code exchange error:", error)
       sendResponse({ success: false, error: error.message })
       return
     }
-    
     if (data.session) {
-      console.log("✅ Session created from authorization code")
+      // удален console.log "Session created from authorization code"
       await handleOAuthSuccess(data.session, sendResponse)
     } else {
       sendResponse({ success: false, error: "No session returned from code exchange" })
     }
-    
   } catch (error) {
     console.error("Error exchanging authorization code:", error)
     sendResponse({ 
@@ -850,7 +652,7 @@ const handleOAuthCode = async (
   }
 }
 
-// Отладочная информация о переменных окружения
+// Топ-уровень (удалены отладочные логи переменных окружения)
 console.log("TableXport: Background script loaded")
 console.log("Environment variables check:")
 console.log("- SUPABASE_URL:", process.env.PLASMO_PUBLIC_SUPABASE_URL ? "✅ Set" : "❌ Missing")
@@ -863,8 +665,7 @@ const handleChromiumAppOAuth = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("🔗 Chromiumapp OAuth data received:", message)
-    
+    // удален console.log "Chromiumapp OAuth data received"
     const { params, hash } = message
     
     // Проверяем на ошибки
@@ -908,12 +709,12 @@ const handleChromiumAppOAuth = async (
 }
 
 // Обработка создания папки TableXport в Google Drive
+// function handleCreateTableXportFolder(sendResponse)
 const handleCreateTableXportFolder = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("Background: Creating TableXport folder...")
-    
+    // удален console.log "Creating TableXport folder..."
     const authState = authService.getCurrentState()
     if (!authState.isAuthenticated || !authState.hasGoogleAccess) {
       sendResponse({
@@ -926,7 +727,7 @@ const handleCreateTableXportFolder = async (
     const folderId = await googleDriveService.createTableXportFolder()
     
     if (folderId) {
-      console.log("Background: TableXport folder created/found:", folderId)
+      // удален лишний console.log о создании/нахождении папки
       sendResponse({
         success: true,
         folderId
@@ -951,8 +752,7 @@ const handleGetGoogleToken = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("Background: Getting Google token...")
-    
+    // удален console.log "Getting Google token..."
     const authState = authService.getCurrentState()
     if (!authState.isAuthenticated) {
       sendResponse({
@@ -989,8 +789,7 @@ const handleGetExportHistory = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("Background: Getting export history...")
-    
+    // удален console.log "Getting export history..."
     const authState = authService.getCurrentState()
     if (!authState.isAuthenticated || !authState.user) {
       sendResponse({
@@ -1073,13 +872,12 @@ const handleGetUsageStats = async (
 /**
  * Handle subscription cancellation
  */
+// function handleCancelSubscription(sendResponse)
 const handleCancelSubscription = async (
   sendResponse: (response: any) => void
 ): Promise<void> => {
   try {
-    console.log("Background: Handling cancel subscription...")
-    
-    // Проверяем авторизацию
+    // удален console.log "Handling cancel subscription..."
     const authState = authService.getCurrentState()
     if (!authState.isAuthenticated || !authState.user) {
       console.error("Background: User not authenticated")
@@ -1102,8 +900,7 @@ const handleCancelSubscription = async (
     // Отменяем подписку
     const result = await subscriptionService.cancelSubscription(userId)
     
-    console.log("Background: Cancel subscription result:", result)
-
+    // удален лишний console.log о результате отмены
     sendResponse(result)
   } catch (error) {
     console.error("Background: Cancel subscription error:", error)
@@ -1117,9 +914,9 @@ const handleCancelSubscription = async (
 // Инициализация сессии при старте
 SessionManager.loadSession().then((session) => {
   if (session) {
-    console.log("🔄 Existing session restored for user:", session.user?.email)
+    // удален console.log о восстановлении сессии
   } else {
-    console.log("📭 No existing session found")
+    // удален console.log об отсутствии сессии
   }
 }).catch((error) => {
   console.error("❌ Failed to load session on startup:", error)

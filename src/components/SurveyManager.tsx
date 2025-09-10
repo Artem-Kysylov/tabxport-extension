@@ -96,7 +96,6 @@ export const initVanillaSurveyManager = () => {
         const event = new CustomEvent('tablexport:survey-show', { detail: context })
         window.dispatchEvent(event)
       }
-      
       return triggerSurvey
     } catch (error) {
       console.error('❌ Failed to create vanilla survey:', error)
@@ -116,4 +115,4 @@ export const initVanillaSurveyManager = () => {
   window.tablexportShowSurvey = globalTriggerSurvey
   
   console.log('✅ Vanilla survey manager initialized')
-} 
+}

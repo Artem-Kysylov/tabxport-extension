@@ -30,41 +30,34 @@ const DEFAULT_SETTINGS: UserSettings = {
 }
 
 // Получение настроек пользователя
+// function getUserSettings()
 export const getUserSettings = async (): Promise<UserSettings> => {
   const result = await safeStorageOperation(
     async () => {
-      console.log("🔍 Storage: Getting user settings...")
+      // удалены подробные console.log по чтению/слиянию настроек
       const result = await chrome.storage.sync.get(STORAGE_KEYS.USER_SETTINGS)
-      console.log("🔍 Storage: Raw storage result:", result)
       
       let settings = { ...DEFAULT_SETTINGS, ...result[STORAGE_KEYS.USER_SETTINGS] }
-      console.log("🔍 Storage: Settings after merge with defaults:", settings)
       
       // Миграция старого формата "google-drive" на новый "google_drive"
       if (settings.defaultDestination === "google-drive" as any) {
-        console.log("🔄 Storage: Migrating old 'google-drive' format to 'google_drive'")
+        // удалены console.log о миграции
         settings.defaultDestination = "google_drive"
-        
-        // Сохраняем исправленные настройки
         await chrome.storage.sync.set({
           [STORAGE_KEYS.USER_SETTINGS]: settings
         })
-        console.log("✅ Storage: Migration completed, settings saved:", settings)
       }
       
       // Миграция: добавление настроек аналитики для существующих пользователей
       if (!settings.analytics) {
-        console.log("🔄 Storage: Adding analytics settings for existing user")
+        // удалены console.log о миграции аналитики
         settings.analytics = DEFAULT_SETTINGS.analytics
-        
-        // Сохраняем обновленные настройки
         await chrome.storage.sync.set({
           [STORAGE_KEYS.USER_SETTINGS]: settings
         })
-        console.log("✅ Storage: Analytics settings migration completed:", settings.analytics)
       }
       
-      console.log("✅ Storage: Final settings returned:", settings)
+      // удален итоговый console.log
       return settings
     },
     "getUserSettings",
@@ -75,7 +68,7 @@ export const getUserSettings = async (): Promise<UserSettings> => {
     if (result.error?.type === 'CONTEXT_INVALIDATED') {
       createErrorNotification(result.error)
     }
-    console.log("🔄 Storage: Returning default settings due to error")
+    // удален лишний console.log о возврате значений по умолчанию
     return result.data || DEFAULT_SETTINGS
   }
   
@@ -235,6 +228,7 @@ export const getAnalyticsSettings = async () => {
 }
 
 // Сохранение настроек аналитики
+// function saveAnalyticsSettings(analyticsSettings)
 export const saveAnalyticsSettings = async (analyticsSettings: Partial<AnalyticsSettings>) => {
   const currentSettings = await getUserSettings()
   const updatedAnalytics = { 
@@ -246,7 +240,7 @@ export const saveAnalyticsSettings = async (analyticsSettings: Partial<Analytics
     analytics: updatedAnalytics
   })
   
-  console.log("✅ Storage: Analytics settings saved:", updatedAnalytics)
+  // удален лишний console.log о сохранении настроек аналитики
 }
 
 // Проверка включена ли аналитика

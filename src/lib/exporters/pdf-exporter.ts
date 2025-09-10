@@ -130,6 +130,7 @@ const dataUrlToBlob = (dataUrl: string): Blob => {
 /**
  * Uploads PDF file to Google Drive
  */
+// функция uploadToGoogleDrive
 const uploadToGoogleDrive = async (
   filename: string,
   dataUrl: string
@@ -138,7 +139,7 @@ const uploadToGoogleDrive = async (
     const blob = dataUrlToBlob(dataUrl)
     const mimeType = 'application/pdf'
     
-    console.log(`☁️ Uploading PDF to Google Drive: ${filename} (${blob.size} bytes)`)
+    // удален лишний console.log о начале загрузки в Google Drive
     
     const result = await googleDriveService.uploadFile({
       filename,
@@ -147,7 +148,7 @@ const uploadToGoogleDrive = async (
     })
     
     if (result.success) {
-      console.log(`✅ Successfully uploaded PDF to Google Drive: ${filename}`)
+      // удалён лишний console.log
       return { success: true, webViewLink: result.webViewLink }
     } else {
       console.error(`❌ Failed to upload PDF to Google Drive: ${result.error}`)
@@ -250,13 +251,7 @@ export const exportToPDF = async (
   options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
-    console.log("Starting PDF export for:", tableData.source)
-    console.log("PDF export sample data:", {
-      headers: tableData.headers.slice(0, 2),
-      firstRow: tableData.rows[0]?.slice(0, 2),
-      chatTitle: tableData.chatTitle
-    })
-
+    // удалены лишние console.log
     // Создаем PDF документ в альбомной ориентации A4
     const doc = new jsPDF({
       orientation: "landscape",
@@ -280,12 +275,7 @@ export const exportToPDF = async (
     const tableRows = tableData.rows.map((row) =>
       row.map((cell) => encodeTextForPDF(cell))
     )
-
-    console.log("PDF export encoded data (with transliteration):", {
-      headers: tableHeaders.slice(0, 2),
-      firstRow: tableRows[0]?.slice(0, 2)
-    })
-
+    // удалён лишний console.log
     // Настройки стилей таблицы
     const tableConfig = {
       startY: startY,
@@ -344,13 +334,12 @@ export const exportToPDF = async (
     // Handle Google Drive upload if needed
     if (options.destination === 'google_drive') {
       const uploadResult = await uploadToGoogleDrive(filename, dataUrl)
-      
       if (uploadResult.success) {
-        console.log("PDF export and upload to Google Drive completed successfully with transliteration")
+        // удалён лишний console.log
         return {
           success: true,
           filename,
-          downloadUrl: uploadResult.webViewLink || dataUrl  // Use webViewLink or fallback to dataUrl
+          downloadUrl: uploadResult.webViewLink || dataUrl
         }
       } else {
         return {
@@ -359,9 +348,7 @@ export const exportToPDF = async (
         }
       }
     }
-
-    console.log("PDF export completed successfully with transliteration")
-
+    // удалён лишний console.log
     return {
       success: true,
       filename,

@@ -3,6 +3,7 @@
 import { authService } from "../../lib/supabase/auth-service"
 import { supabase } from "../../lib/supabase"
 import type { DailyUsageStats } from "../../lib/supabase/types"
+import { logger } from "../../utils/table-detection/common/logging";
 
 interface LimitWarningData {
   exports_remaining: number

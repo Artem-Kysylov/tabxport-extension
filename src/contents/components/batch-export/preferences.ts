@@ -9,7 +9,6 @@ export const FormatPreferences = {
   save: (format: ExportFormat): void => {
     try {
       localStorage.setItem(STORAGE_KEY_PREFERRED_FORMAT, format)
-      console.log(`💾 Saved preferred format: ${format}`)
     } catch (error) {
       console.warn("Failed to save format preference:", error)
     }
@@ -19,7 +18,6 @@ export const FormatPreferences = {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PREFERRED_FORMAT)
       if (saved && Object.keys(EXPORT_FORMATS).includes(saved)) {
-        console.log(`📂 Loaded preferred format: ${saved}`)
         return saved as ExportFormat
       }
     } catch (error) {
@@ -31,7 +29,6 @@ export const FormatPreferences = {
   clear: (): void => {
     try {
       localStorage.removeItem(STORAGE_KEY_PREFERRED_FORMAT)
-      console.log("🗑️ Cleared format preference")
     } catch (error) {
       console.warn("Failed to clear format preference:", error)
     }

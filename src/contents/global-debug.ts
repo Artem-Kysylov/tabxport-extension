@@ -4,7 +4,7 @@
  */
 
 import { runCompleteTableDiagnosis, clearDebugMarkers } from "../debug/table-detection-comparison"
-// ... existing code ...
+import { logger } from "../utils/table-detection/common/logging";
 import { 
   setDetectionMode, 
   getDetectionMode,

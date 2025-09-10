@@ -12,30 +12,24 @@ export const chatGPTDetector: PlatformDetector = {
 
   findTables: (): HTMLElement[] => {
     logger.debug("Searching for tables in ChatGPT interface")
-    console.log("TabXport ChatGPT: Starting table search")
+    // удален console.log "Starting table search"
 
     const elements: HTMLElement[] = []
     const processedElements = new Set<HTMLElement>()
 
-    // Find messages from the assistant - try multiple selectors
     let messageContainers = document.querySelectorAll(
       '[data-message-author-role="assistant"]'
     )
-    console.log(
-      `TabXport ChatGPT: Found ${messageContainers.length} messages with data-message-author-role="assistant"`
-    )
+    // удален console.log количества сообщений
 
-    // Fallback selectors if the main one doesn't work
     if (messageContainers.length === 0) {
-      console.log("TabXport ChatGPT: Trying fallback selectors...")
-
-      // Try other possible selectors
+      // удален console.log "Trying fallback selectors..."
       const fallbackSelectors = [
-        "[data-message-id]", // ChatGPT sometimes uses message IDs
+        "[data-message-id]",
         '.message[data-message-author-role="assistant"]',
         '[class*="message"]:has([class*="assistant"])',
         '[class*="assistant"] [class*="message"]',
-        ".prose", // Common class for message content
+        ".prose",
         '[class*="prose"]',
         '[class*="conversation"] [class*="response"]',
         '[class*="ai-message"]',
@@ -47,52 +41,36 @@ export const chatGPTDetector: PlatformDetector = {
       for (const selector of fallbackSelectors) {
         try {
           const found = document.querySelectorAll(selector)
-          console.log(
-            `TabXport ChatGPT: Trying selector "${selector}" - found ${found.length} elements`
-          )
+          // удален console.log результатов селектора
           if (found.length > 0) {
             messageContainers = found
-            console.log(
-              `TabXport ChatGPT: Using fallback selector: ${selector}`
-            )
+            // удален console.log выбранного селектора
             break
           }
         } catch (error) {
-          console.log(`TabXport ChatGPT: Selector "${selector}" failed:`, error)
+          // был console.log об ошибке — подавляем, чтобы не шуметь в проде
         }
       }
     }
 
-    // If still no messages found, try to find any elements with tables
     if (messageContainers.length === 0) {
-      console.log(
-        "TabXport ChatGPT: No message containers found, searching entire page for tables..."
-      )
-
-      // Look for any tables on the page
+      // удален console.log "No message containers..."
       const allTables = document.querySelectorAll("table")
-      console.log(
-        `TabXport ChatGPT: Found ${allTables.length} HTML tables on entire page`
-      )
+      // удален console.log количества таблиц на странице
 
       allTables.forEach((table, index) => {
         if (
           table.rows.length > 0 &&
           !processedElements.has(table as HTMLElement)
         ) {
-          console.log(
-            `TabXport ChatGPT: Adding HTML table ${index} from page scan (${table.rows.length} rows)`
-          )
+          // удален console.log добавления таблицы
           elements.push(table as HTMLElement)
           processedElements.add(table as HTMLElement)
         }
       })
 
-      // Look for code blocks with table content
       const allCodeBlocks = document.querySelectorAll("pre, code")
-      console.log(
-        `TabXport ChatGPT: Found ${allCodeBlocks.length} code blocks on entire page`
-      )
+      // удален console.log количества блоков кода
 
       allCodeBlocks.forEach((block, index) => {
         const htmlBlock = block as HTMLElement
@@ -119,39 +97,30 @@ export const chatGPTDetector: PlatformDetector = {
           )
 
           if (tableLines.length >= 2) {
-            console.log(
-              `TabXport ChatGPT: Adding markdown table from code block ${index} (${tableLines.length} lines)`
-            )
+            // удален console.log добавления markdown-таблицы
             elements.push(htmlBlock)
             processedElements.add(htmlBlock)
           }
         }
       })
 
-      console.log(
-        `TabXport ChatGPT: Page scan complete - found ${elements.length} table elements`
-      )
+      // удален console.log "Page scan complete..."
       return elements
     }
 
     logger.debug(`Found ${messageContainers.length} assistant messages`)
-    console.log(
-      `TabXport ChatGPT: Found ${messageContainers.length} assistant messages`
-    )
+    // удален console.log количества сообщений ассистента
 
     messageContainers.forEach((container, containerIndex) => {
       const messageElement = container as HTMLElement
       logger.debug(`Processing assistant message ${containerIndex}`)
-      console.log(`TabXport ChatGPT: Processing message ${containerIndex}`)
+      // удален console.log "Processing message ..."
 
-      // Find HTML tables in the message
       const htmlTables = messageElement.querySelectorAll("table")
       logger.debug(
         `Found ${htmlTables.length} HTML tables in message ${containerIndex}`
       )
-      console.log(
-        `TabXport ChatGPT: Found ${htmlTables.length} HTML tables in message ${containerIndex}`
-      )
+      // удален console.log количества HTML таблиц
 
       htmlTables.forEach((table) => {
         if (
@@ -159,22 +128,17 @@ export const chatGPTDetector: PlatformDetector = {
           !processedElements.has(table as HTMLElement)
         ) {
           logger.debug(`Adding HTML table from message ${containerIndex}`)
-          console.log(
-            `TabXport ChatGPT: Adding HTML table from message ${containerIndex} (${table.rows.length} rows)`
-          )
+          // удален console.log добавления таблицы
           elements.push(table as HTMLElement)
           processedElements.add(table as HTMLElement)
         }
       })
 
-      // Find markdown tables in code blocks
       const codeBlocks = messageElement.querySelectorAll("pre, code")
       logger.debug(
         `Found ${codeBlocks.length} code blocks in message ${containerIndex}`
       )
-      console.log(
-        `TabXport ChatGPT: Found ${codeBlocks.length} code blocks in message ${containerIndex}`
-      )
+      // удален console.log количества блоков кода
 
       codeBlocks.forEach((block) => {
         const htmlBlock = block as HTMLElement
@@ -183,7 +147,6 @@ export const chatGPTDetector: PlatformDetector = {
         }
 
         const text = domUtils.getTextContent(htmlBlock)
-        // Skip system elements and short content
         if (
           text.includes("window.__oai") ||
           text.includes("requestAnimationFrame") ||
@@ -205,17 +168,13 @@ export const chatGPTDetector: PlatformDetector = {
             logger.debug(
               `Adding markdown table from code block in message ${containerIndex}`
             )
-            console.log(
-              `TabXport ChatGPT: Adding markdown table from code block in message ${containerIndex} (${tableLines.length} lines)`
-            )
-            // Note: Removed attribute setting to avoid React conflicts
+            // удален console.log добавления markdown-таблицы
             elements.push(htmlBlock)
             processedElements.add(htmlBlock)
           }
         }
       })
 
-      // Find text-based tables in message content
       const textElements = messageElement.querySelectorAll(
         ".markdown p, .markdown div, p, div"
       )
@@ -230,7 +189,6 @@ export const chatGPTDetector: PlatformDetector = {
           return
         }
 
-        // Check if this element is inside an already processed block
         const isInsideProcessed = Array.from(processedElements).some(
           (processed) =>
             processed.contains(htmlElement) || htmlElement.contains(processed)
@@ -247,10 +205,7 @@ export const chatGPTDetector: PlatformDetector = {
 
           if (tableLines.length >= 2) {
             logger.debug(`Adding text table from message ${containerIndex}`)
-            console.log(
-              `TabXport ChatGPT: Adding text table from message ${containerIndex} (${tableLines.length} lines)`
-            )
-            // Note: Removed attribute setting to avoid React conflicts
+            // удален console.log добавления текстовой таблицы
             elements.push(htmlElement)
             processedElements.add(htmlElement)
           }
@@ -258,9 +213,7 @@ export const chatGPTDetector: PlatformDetector = {
       })
     })
 
-    console.log(
-      `TabXport ChatGPT: Final result - found ${elements.length} table elements`
-    )
+    // удален console.log финального результата
     return elements
   },
 

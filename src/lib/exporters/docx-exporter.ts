@@ -51,17 +51,14 @@ const uploadToGoogleDrive = async (
   try {
     const blob = dataUrlToBlob(dataUrl)
     const mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    
-    console.log(`☁️ Uploading DOCX to Google Drive: ${filename} (${blob.size} bytes)`)
-    
+    // удалён лог «Uploading DOCX to Google Drive...»
     const result = await googleDriveService.uploadFile({
       filename,
       content: blob,
       mimeType
     })
-    
     if (result.success) {
-      console.log(`✅ Successfully uploaded DOCX to Google Drive: ${filename}`)
+      // удалён лог «Successfully uploaded...»
       return { success: true, webViewLink: result.webViewLink }
     } else {
       console.error(`❌ Failed to upload DOCX to Google Drive: ${result.error}`)
@@ -69,10 +66,7 @@ const uploadToGoogleDrive = async (
     }
   } catch (error) {
     console.error('💥 Error uploading DOCX to Google Drive:', error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Upload failed' 
-    }
+    return { success: false, error: error instanceof Error ? error.message : 'Upload failed' }
   }
 }
 
@@ -191,8 +185,7 @@ export const exportToDOCX = async (
   options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
   try {
-    console.log("Starting DOCX export for:", tableData.source)
-
+    // удалён лог «Starting DOCX export for: ...»
     // Создаем элементы документа
     const documentElements = [
       createDocumentHeader(tableData),
@@ -255,37 +248,26 @@ export const exportToDOCX = async (
     // Handle Google Drive upload if needed
     if (options.destination === 'google_drive') {
       const uploadResult = await uploadToGoogleDrive(filename, dataUrl)
-      
       if (uploadResult.success) {
-        console.log("DOCX export and upload to Google Drive completed successfully")
+        // удалён лог «DOCX export and upload... completed successfully»
         return {
           success: true,
           filename,
-          downloadUrl: uploadResult.webViewLink || dataUrl  // Use webViewLink or fallback to dataUrl
+          downloadUrl: uploadResult.webViewLink || dataUrl
         }
       } else {
-        return {
-          success: false,
-          error: `Google Drive upload failed: ${uploadResult.error}`
-        }
+        return { success: false, error: `Google Drive upload failed: ${uploadResult.error}` }
       }
     }
-
-    console.log("DOCX export completed successfully")
-
-    return {
-      success: true,
-      filename,
-      downloadUrl: dataUrl
-    }
+    // удалён лог «DOCX export completed successfully»
+    return { success: true, filename, downloadUrl: dataUrl }
   } catch (error) {
     console.error("Error exporting to DOCX:", error)
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Unknown error occurred during DOCX export"
+      error: error instanceof Error
+        ? error.message
+        : "Unknown error occurred during DOCX export"
     }
   }
 }

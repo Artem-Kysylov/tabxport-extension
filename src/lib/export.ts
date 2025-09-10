@@ -143,6 +143,7 @@ const getMimeTypeForFormat = (format: "xlsx" | "csv" | "docx" | "pdf"): string =
 /**
  * Uploads file to Google Drive
  */
+// Функция загрузки в Google Drive
 const uploadToGoogleDrive = async (
   filename: string,
   dataUrl: string,
@@ -152,8 +153,8 @@ const uploadToGoogleDrive = async (
     const blob = dataUrlToBlob(dataUrl)
     const mimeType = getMimeTypeForFormat(format)
     
-    console.log(`☁️ Uploading to Google Drive: ${filename} (${blob.size} bytes, ${mimeType})`)
-    
+    // удалён лишний console.log: Uploading to Google Drive
+
     const result = await googleDriveService.uploadFile({
       filename,
       content: blob,
@@ -161,7 +162,7 @@ const uploadToGoogleDrive = async (
     })
     
     if (result.success) {
-      console.log(`✅ Successfully uploaded to Google Drive: ${filename}`)
+      // удалён лишний console.log: Successfully uploaded to Google Drive
       return { success: true, webViewLink: result.webViewLink }
     } else {
       console.error(`❌ Failed to upload to Google Drive: ${result.error}`)
@@ -385,7 +386,7 @@ export const exportToGoogleSheets = async (
       options.tableIndex
     )
 
-    console.log(`📊 Exporting table to Google Sheets: "${title}"`)
+    // удалён лишний console.log: Exporting table to Google Sheets
 
     const result = await googleSheetsService.exportTable(tableData, {
       spreadsheetTitle: title,
@@ -421,8 +422,7 @@ export const exportTable = async (
   tableData: TableData,
   options: ExportOptions & { tableIndex?: number }
 ): Promise<ExportResult> => {
-  console.log(`📤 Exporting table with destination: ${options.destination}`)
-  
+  // удалён лишний console.log: Exporting table with destination
   switch (options.format) {
     case "xlsx":
       return exportToXLSX(tableData, options)

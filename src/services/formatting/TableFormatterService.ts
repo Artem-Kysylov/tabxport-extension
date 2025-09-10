@@ -139,7 +139,6 @@ export class TableFormatterService {
     try {
       // 1. Обработка Markdown таблиц (если это текстовое содержимое)
       if (element && element.textContent && element.textContent.includes("|")) {
-        console.log("TabXport: Processing as Markdown table")
         const markdownResult = parseMarkdownTableAdvanced(
           element.textContent,
           options
@@ -160,7 +159,6 @@ export class TableFormatterService {
         formattedHeaders.some((h) => h.includes("\n")) ||
         formattedRows.some((row) => row.some((cell) => cell.includes("\n")))
       ) {
-        console.log("TabXport: Processing multiline cells")
         const multilineResult = processMultilineCells(
           formattedHeaders,
           formattedRows,
@@ -172,7 +170,6 @@ export class TableFormatterService {
       }
 
       // 3. Исправление структуры таблицы
-      console.log("TabXport: Fixing table structure")
       const structureResult = fixTableStructure(
         formattedHeaders,
         formattedRows,
@@ -184,7 +181,6 @@ export class TableFormatterService {
       allOperations.push(...structureResult.operations)
 
       // 4. Очистка содержимого ячеек
-      console.log("TabXport: Cleaning cell contents")
       const cleaningResults = await this.cleanTableContents(
         formattedHeaders,
         formattedRows,
@@ -196,7 +192,6 @@ export class TableFormatterService {
 
       // 5. Платформо-специфичная обработка
       if (options.platformSpecific) {
-        console.log(`TabXport: Applying ${source}-specific formatting`)
         const platformResult = await this.applyPlatformSpecificFormatting(
           formattedHeaders,
           formattedRows,
@@ -209,7 +204,6 @@ export class TableFormatterService {
       }
 
       // 6. Финальная валидация
-      console.log("TabXport: Final validation")
       const isValid = this.validateFormattedTable(
         formattedHeaders,
         formattedRows,
@@ -230,7 +224,6 @@ export class TableFormatterService {
       }
 
       const processingTime = Date.now() - startTime
-      console.log(`TabXport: Table formatting completed in ${processingTime}ms`)
 
       return {
         headers: formattedHeaders,
